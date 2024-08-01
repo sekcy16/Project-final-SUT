@@ -25,7 +25,8 @@ const SplashScreen = () => {
             dispatch(SET_USER(docSnap.data()));
           }
           setTimeout(() => {
-            navigation.replace("HealthDashboard");
+            /// อันเก่าที่ Error navigation.replace("HealthDashboard");
+            navigation.replace("Main", { screen: "HealthDashboard" });
           }, 2000);
         } catch (error) {
           console.error("Error fetching user data: ", error);

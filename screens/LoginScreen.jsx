@@ -25,6 +25,7 @@ const LoginScreen = () => {
 
   const hanldeLogin = async () => {
     if (getEmailValidationStatus && email !== "") {
+      console.log("Attempting login...");
       await signInWithEmailAndPassword(firebaseAuth, email, password)
         .then((useCred) => {
           if (useCred) {
@@ -33,7 +34,9 @@ const LoginScreen = () => {
               (docSnap) => {
                 if (docSnap.exists()) {
                   console.log("User Data :", docSnap.data());
-                  dispatch(SET_USER(docSnap.data()))
+                  dispatch(SET_USER(docSnap.data()));
+                  console.log("Navigating to Main / HealthDashboard");
+                  navigation.navigate('Main', { screen: 'HealthDashboard' });
                 }
               }
             );
@@ -48,6 +51,7 @@ const LoginScreen = () => {
       showAlert("Invalid Email Address");
     }
   };
+  
 
   const handleFirebaseError = (errorCode) => {
     switch (errorCode) {
