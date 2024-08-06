@@ -30,6 +30,8 @@ const MainTabNavigator = () => (
           iconName = focused ? 'water' : 'water-outline';
         } else if (route.name === 'ProfilePage') {
           iconName = focused ? 'person' : 'person-outline';
+        } else if (route.name === 'DiaryPage') {
+          iconName = focused ? 'book' : 'book-outline';
         }
 
         return <Icon name={iconName} size={size} color={color} />;
