@@ -1,8 +1,15 @@
 import React from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { useNavigation } from '@react-navigation/native';
 
 const MealEntry = () => {
+  const navigation = useNavigation();
+
+  const handleFoodRecognition = () => {
+    navigation.navigate('FoodARPage');
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -20,10 +27,10 @@ const MealEntry = () => {
         <Icon name="mic" size={20} color="#999" />
       </View>
 
-      <View style={styles.scanButton}>
-        <Icon name="barcode-outline" size={24} color="#000" />
-        <Text style={styles.scanButtonText}>แสกนบาร์โค้ดอาหาร</Text>
-      </View>
+      <TouchableOpacity style={styles.scanButton} onPress={handleFoodRecognition}>
+        <Icon name="fast-food-outline" size={24} color="#000" />
+        <Text style={styles.scanButtonText}>Food Recognition</Text>
+      </TouchableOpacity>
 
       <View style={styles.mealTypeSelector}>
         <Text style={styles.mealTypeActive}>อาหารแนะนำ</Text>
@@ -39,8 +46,6 @@ const MealEntry = () => {
         <FoodItem name="แซนวิช(ปุ้ม) ดี" amount="100 กรัม" calories="127 cals" />
         <FoodItem name="แซนวิช(ปุ้ม) ดี" amount="100 กรัม" calories="127 cals" />
       </ScrollView>
-
-   
     </View>
   );
 };

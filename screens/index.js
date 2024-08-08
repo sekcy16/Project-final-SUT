@@ -6,3 +6,4 @@ export { default as MealEntry } from './MealEntry';
 export { default as BloodSugar } from './BloodSugar';
 export { default as ProfilePage } from './ProfilePage';
 export { default as DiaryPage } from './DiaryPage';
+export { default as FoodARPage } from './FoodARPage';

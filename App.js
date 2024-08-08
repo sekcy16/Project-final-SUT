@@ -6,7 +6,7 @@ import Store from './context/store';
 import Icon from 'react-native-vector-icons/Ionicons';
 
 // นำเข้าหน้าจอทั้งหมด
-import { LoginScreen, SignUpScreen, SpiashScreen, HealthDashboard , MealEntry , BloodSugar, ProfilePage, DiaryPage  } from './screens';
+import { LoginScreen, SignUpScreen, SpiashScreen, HealthDashboard , MealEntry , BloodSugar, ProfilePage, DiaryPage, FoodARPage  } from './screens';
 
 // สร้าง Stack Navigator
 const Stack = createNativeStackNavigator();
@@ -78,6 +78,7 @@ const App = () => {
           <Stack.Screen name="LoginScreen" component={LoginScreen} />
           <Stack.Screen name="SignUpScreen" component={SignUpScreen} />
           <Stack.Screen name="Main" component={MainTabNavigator} />
+          <Stack.Screen name="FoodARPage" component={FoodARPage} />
         </Stack.Navigator>
       </Provider>
     </NavigationContainer>
