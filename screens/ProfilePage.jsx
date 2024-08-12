@@ -64,24 +64,47 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F6FFF5',
   },
-  header: {
+header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    padding: 20,
+    backgroundColor: '#4CAF50',
+    elevation: 2, // Add shadow for header
+    borderBottomWidth: 1, // Divider line at the bottom of the header
+    borderBottomColor: '#E0E0E0',
+    borderBottomLeftRadius: 20, // Rounded bottom-left corner
+    borderBottomRightRadius: 20, // Rounded bottom-right corner
+    // Shadow properties for iOS
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    // Elevation property for Android
+    elevation: 4,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 24, // Increased font size
+    fontWeight: '700', // You can use '700' for a thicker bold text or choose '900' for an even bolder look
+    letterSpacing: 1, // Added letter spacing for readability
+    textAlign: 'center', // Centered text
+    flex: 1, // Take up available space for centering
+
   },
   profileSection: {
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 40, // Adjusted margin to make space for the header
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 20,
+    borderBottomWidth: 1, // Divider line after profile section
+    borderBottomColor: '#E0E0E0',
   },
   profileImage: {
     width: 100,
     height: 100,
     borderRadius: 50,
+    borderWidth: 2,
+    borderColor: '#4CAF50',
   },
   userName: {
     fontSize: 20,
@@ -105,6 +128,8 @@ const styles = StyleSheet.create({
     marginTop: 20,
     paddingVertical: 20,
     backgroundColor: 'white',
+    borderBottomWidth: 1, // Divider line after stats section
+    borderBottomColor: '#E0E0E0',
   },
   statItem: {
     alignItems: 'center',

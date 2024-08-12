@@ -38,6 +38,28 @@ const MainTabNavigator = () => (
       },
       tabBarActiveTintColor: '#4CAF50',
       tabBarInactiveTintColor: 'gray',
+      tabBarStyle: {
+        position: 'absolute',
+        bottom: 20,
+        left: 20,
+        right: 20,
+        elevation: 0,
+        backgroundColor: '#ffffff',
+        borderRadius: 15,
+        height: 60,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 5 },
+        shadowOpacity: 0.1,
+        shadowRadius: 15,
+        paddingHorizontal: 20,
+      },
+      tabBarItemStyle: {
+        marginTop: 10,
+      },
+      tabBarLabelStyle: {
+        fontSize: 12,
+        marginBottom: 5,
+      },
     })}
   >
     <Tab.Screen 
