@@ -7,3 +7,6 @@ export { default as BloodSugar } from './BloodSugar';
 export { default as ProfilePage } from './ProfilePage';
 export { default as DiaryPage } from './DiaryPage';
 export { default as FoodARPage } from './FoodARPage';
+export { default as FoodResultPage } from './FoodResultPage';
+export { default as FoodResult } from '../components/FoodResult';
+export { default as Nutrition } from '../components/Nutrition';

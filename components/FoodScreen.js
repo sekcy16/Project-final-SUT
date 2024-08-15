@@ -4,12 +4,13 @@ import { Camera, CameraView } from 'expo-camera';
 import { BlurView } from 'expo-blur';
 import axios from 'axios';
 import * as ImageManipulator from 'expo-image-manipulator';
+import { useNavigation } from '@react-navigation/native';
 
 const FoodCamera = () => {
   const [permission, setPermission] = useState(null);
-  const [predictions, setPredictions] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const cameraRef = useRef(null);
+  const navigation = useNavigation();
 
   const API_KEY = '8c07338e937343cb819301d4ac60e191'; // Replace with your Clarifai API key
   const CLARIFAI_FOOD_MODEL = 'food-item-recognition'; // Updated Clarifai model ID for food recognition
@@ -25,17 +26,13 @@ const FoodCamera = () => {
   const convertImageToBase64 = async (imageUri) => {
     try {
       const response = await fetch(imageUri);
-      console.log('Fetched image blob');
       const blob = await response.blob();
-      console.log('Blob size:', blob.size);
-      
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onloadend = () => {
           if (reader.error) {
             reject(reader.error);
           } else {
-            console.log('Image converted to base64');
             resolve(reader.result.split(',')[1]);
           }
         };
@@ -43,7 +40,7 @@ const FoodCamera = () => {
       });
     } catch (error) {
       console.error('Error during base64 conversion:', error);
-      throw error; // Re-throw to handle in the main function
+      throw error;
     }
   };
 
@@ -51,24 +48,14 @@ const FoodCamera = () => {
     try {
       setIsLoading(true);
 
-      console.log('Starting image classification...');
-      console.log('Image URI:', imageUri);
-
-      // Resize image
       const resizedImage = await ImageManipulator.manipulateAsync(
         imageUri,
         [{ resize: { width: 800, height: 800 } }],
         { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
       );
-      console.log('Resized image URI:', resizedImage.uri);
 
-      // Convert resized image to base64
       const base64Image = await convertImageToBase64(resizedImage.uri);
 
-      console.log('Base64 Image:', base64Image);
-      console.log('Base64 Image Length:', base64Image.length);
-
-      console.log('API Key:', API_KEY);
       const requestPayload = {
         inputs: [
           {
@@ -80,7 +67,6 @@ const FoodCamera = () => {
           },
         ],
       };
-      console.log('Request Payload:', JSON.stringify(requestPayload));
 
       const response = await axios.post(
         CLARIFAI_API_URL,
@@ -93,11 +79,15 @@ const FoodCamera = () => {
         }
       );
 
-      console.log('Response Status:', response.status);
-      console.log('Clarifai Response:', response.data);
-
-      const outputs = response.data.outputs[0].data.concepts;
-      setPredictions(outputs);
+      if (response.status === 200) {
+        const outputs = response.data.outputs[0].data.concepts;
+        navigation.navigate('FoodResult', {
+          predictions: outputs,
+          capturedImageUri: resizedImage.uri,
+        });
+      } else {
+        console.error('Error: Clarifai response status not OK', response.status);
+      }
     } catch (error) {
       console.error('Error classifying image:', error);
     } finally {
@@ -108,19 +98,15 @@ const FoodCamera = () => {
   const captureFrame = useCallback(async () => {
     if (cameraRef.current) {
       try {
-        console.log('Capturing frame...');
         const photo = await cameraRef.current.takePictureAsync({
           skipProcessing: true,
         });
-        console.log('Frame captured:', photo.uri);
         handleImageClassification(photo.uri);
       } catch (error) {
         console.error('Error capturing frame:', error);
       }
-    } else {
-      console.log('Camera not ready for capture');
     }
-  }, [handleImageClassification]);
+  }, []);
 
   if (permission === null) {
     return <View />;
@@ -139,10 +125,7 @@ const FoodCamera = () => {
 
   return (
     <View style={styles.container}>
-      <CameraView
-        ref={cameraRef}
-        style={styles.camera}
-      >
+      <CameraView ref={cameraRef} style={styles.camera}>
         {isLoading && (
           <BlurView intensity={50} style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#fff" />
@@ -153,17 +136,6 @@ const FoodCamera = () => {
           <Button title="Capture Frame" onPress={captureFrame} />
         </View>
       </CameraView>
-      <View style={styles.predictionContainer}>
-        {predictions.length > 0 ? (
-          predictions.map((prediction, index) => (
-            <Text key={index} style={styles.predictionText}>
-              {`${prediction.name} (${(prediction.value * 100).toFixed(2)}%)`}
-            </Text>
-          ))
-        ) : (
-          <Text style={styles.predictionText}>No objects detected</Text>
-        )}
-      </View>
     </View>
   );
 };
@@ -195,18 +167,6 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     backgroundColor: 'transparent',
     margin: 64,
-  },
-  predictionContainer: {
-    position: 'absolute',
-    bottom: 80,
-    alignSelf: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    padding: 10,
-    borderRadius: 5,
-  },
-  predictionText: {
-    fontSize: 18,
-    color: 'white',
   },
 });
 

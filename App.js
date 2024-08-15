@@ -5,16 +5,14 @@ import { Provider } from "react-redux";
 import Store from './context/store';
 import Icon from 'react-native-vector-icons/Ionicons';
 
-// นำเข้าหน้าจอทั้งหมด
-import { LoginScreen, SignUpScreen, SpiashScreen, HealthDashboard , MealEntry , BloodSugar, ProfilePage, DiaryPage, FoodARPage  } from './screens';
+import { LoginScreen, SignUpScreen, SpiashScreen, HealthDashboard, MealEntry, BloodSugar, ProfilePage, DiaryPage, FoodARPage, FoodResultPage } from './screens';
+import  FoodResult from './components/FoodResult';
+import Nutrition from './components/Nutrition';
 
-// สร้าง Stack Navigator
+
 const Stack = createNativeStackNavigator();
-
-// สร้าง Tab Navigator
 const Tab = createBottomTabNavigator();
 
-// สร้าง Tab Navigator สำหรับหน้าจอหลัก
 const MainTabNavigator = () => (
   <Tab.Navigator
     screenOptions={({ route }) => ({
@@ -90,7 +88,6 @@ const MainTabNavigator = () => (
   </Tab.Navigator>
 );
 
-// สร้าง Stack Navigator สำหรับการนำทางหลัก
 const App = () => {
   return (
     <NavigationContainer>
@@ -101,6 +98,10 @@ const App = () => {
           <Stack.Screen name="SignUpScreen" component={SignUpScreen} />
           <Stack.Screen name="Main" component={MainTabNavigator} />
           <Stack.Screen name="FoodARPage" component={FoodARPage} />
+          <Stack.Screen name="FoodResultPage" component={FoodResultPage} />
+          <Stack.Screen name="FoodResult" component={FoodResult} />
+          <Stack.Screen name="Nutrition" component={Nutrition} />
+
         </Stack.Navigator>
       </Provider>
     </NavigationContainer>
