@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Dimensions, TouchableOpacity, ScrollView } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Icon from 'react-native-vector-icons/Ionicons';
 
 const HealthDashboard = ({ navigation }) => {
   const [chartData, setChartData] = useState([]);
@@ -49,24 +50,30 @@ const HealthDashboard = ({ navigation }) => {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
+      {/* Header Section */}
       <View style={styles.header}>
-        <Text style={styles.greetingText}>Hello, Jacob!</Text>
-      </View>
-
-      <View style={styles.titleContainer}>
-        <Text style={styles.date}>23/7/2024</Text>
-        <Text style={styles.title}>พลังงานต่อวันคงเหลือ</Text>
-        <Text style={styles.calories}>2,000 Calories</Text>
-      </View>
-
-      <View style={styles.healthCard}>
-        <View style={styles.macroCard}>
-        <MacroItem label="โปรตีน:" value={110} total={130} color="#FF6B6B" />
-        <MacroItem label="ไขมัน:" value={40} total={70} color="#FFD93D" />
-        <MacroItem label="คาร์โบไฮเดรต:" value={230} total={250} color="#4D96FF" />
+        <TouchableOpacity style={styles.iconButton}>
+          <Icon name="chevron-back" size={24} color="#fff" />
+        </TouchableOpacity>
+        <View style={styles.profileIcon}>
+          <Icon name="person-circle-outline" size={24} color="#fff" />
         </View>
       </View>
 
+      {/* Macro Information */}
+      <View style={styles.macroSection}>
+        <Text style={styles.date}>23/7/2024</Text>
+        <Text style={styles.title}>พลังงานต่อวันคงเหลือ</Text>
+        <Text style={styles.calories}>2,000 Calories</Text>
+
+        <View style={styles.macroCard}>
+          <MacroItem label="โปรตีน:" value={110} total={130} color="#8FBC8F" />
+          <MacroItem label="ไขมัน:" value={40} total={70} color="#F0E68C" />
+          <MacroItem label="คาร์โบไฮเดรต:" value={230} total={250} color="#556B2F" />
+        </View>
+      </View>
+
+      {/* Health Section */}
       <View style={styles.cardContainer}>
         <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('BloodSugar')}>
           <LineChart
@@ -75,21 +82,11 @@ const HealthDashboard = ({ navigation }) => {
             }}
             width={Dimensions.get('window').width / 2 - 30}
             height={100}
-            chartConfig={{
-              backgroundGradientFrom: '#FFFFFF',
-              backgroundGradientTo: '#FFFFFF',
-              color: (opacity = 1) => `rgba(255, 107, 107, ${opacity})`,
-              labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-              propsForDots: {
-                r: "4",
-                strokeWidth: "2",
-                stroke: "#FF6B6B"
-              }
-            }}
+            chartConfig={chartConfig('#8FBC8F')}
             bezier
             style={styles.chart}
           />
-          <Text style={styles.cardText}>ระดับน้ำตาลในเลือด: {bloodSugarChartData.length > 0 ? `${bloodSugarChartData[bloodSugarChartData.length - 1]} mg/dL` : 'ไม่มีข้อมูล'} </Text> 
+          <Text style={styles.cardText}>ระดับน้ำตาลในเลือด: {bloodSugarChartData.length > 0 ? `${bloodSugarChartData[bloodSugarChartData.length - 1]} mg/dL` : 'ไม่มีข้อมูล'}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('WeightProgress')}>
@@ -99,30 +96,12 @@ const HealthDashboard = ({ navigation }) => {
             }}
             width={Dimensions.get('window').width / 2 - 30}
             height={100}
-            chartConfig={{
-              backgroundGradientFrom: '#FFFFFF',
-              backgroundGradientTo: '#FFFFFF',
-              color: (opacity = 1) => `rgba(77, 150, 255, ${opacity})`,
-              labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-              propsForDots: {
-                r: "4",
-                strokeWidth: "2",
-                stroke: "#4D96FF"
-              }
-            }}
+            chartConfig={chartConfig('#556B2F')}
             bezier
             style={styles.chart}
           />
           <Text style={styles.cardText}>น้ำหนัก: {latestWeight ? `${latestWeight} KG` : 'ไม่มีข้อมูล'}</Text>
         </TouchableOpacity>
-      </View>
-
-      <View style={styles.statsContainer}>
-        {/* Additional content as needed */}
-      </View>
-
-      <View style={styles.doctorContainer}>
-        {/* Doctor section */}
       </View>
     </ScrollView>
   );
@@ -138,61 +117,75 @@ const MacroItem = ({ label, value, total, color }) => (
   </View>
 );
 
+const chartConfig = (color) => ({
+  backgroundGradientFrom: '#F5F5DC',
+  backgroundGradientTo: '#F5F5DC',
+  color: (opacity = 1) => `${color}${opacity}`,
+  labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+  propsForDots: {
+    r: "4",
+    strokeWidth: "2",
+    stroke: color,
+  }
+});
+
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     padding: 20,
-    backgroundColor: '#F9F9F9',
+    backgroundColor: '#F5F5DC', // Light beige background
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#8FBC8F', // Soft green background for header
+    borderRadius: 12,
     marginBottom: 20,
   },
-  greetingText: {
-    fontSize: 18,
-    fontWeight: '600',
+  iconButton: {
+    padding: 10,
+    backgroundColor: '#556B2F', // Dark olive green for icon button
+    borderRadius: 8,
   },
-  titleContainer: {
+  profileIcon: {
+    padding: 10,
+    backgroundColor: '#BDB76B', // Khaki color for profile icon
+    borderRadius: 8,
+  },
+  macroSection: {
     marginBottom: 20,
-    alignItems: 'center', // Center-align the text elements
-    backgroundColor: '#FFF', // Add a background color
-    padding: 15, // Add padding for spacing
-    borderRadius: 12, // Round the corners
+    backgroundColor: '#FAFAD2', // Light goldenrod yellow for section background
+    padding: 15,
+    borderRadius: 15,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+    alignItems: 'center',
   },
   date: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#999', // Subtle color for the date
+    color: '#556B2F', // Dark olive for date
   },
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#333',
+    color: '#6B8E23', // Olive drab for title
     marginTop: 5,
     marginBottom: 5,
   },
   calories: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#FF6B6B', // Distinct color for the calories
-  },
-  healthCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 12,
-    padding: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 3,
-    marginBottom: 20,
+    color: '#8FBC8F', // Soft green for calories
   },
   macroCard: {
     alignItems: 'center',
+    width: '100%',
   },
   macroItem: {
     marginBottom: 15,
@@ -200,12 +193,12 @@ const styles = StyleSheet.create({
   },
   macroLabel: {
     fontSize: 16,
-    color: '#333',
+    color: '#556B2F', // Dark olive for label
     marginBottom: 5,
   },
   macroBar: {
     height: 8,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: '#E0E0E0', // Grey for background bar
     borderRadius: 5,
     width: '100%',
     overflow: 'hidden',
@@ -216,7 +209,7 @@ const styles = StyleSheet.create({
   },
   macroValue: {
     fontSize: 14,
-    color: '#555',
+    color: '#6B8E23', // Olive drab for value
     marginTop: 5,
     textAlign: 'center',
   },
@@ -226,31 +219,26 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   card: {
-    backgroundColor: '#FFF',
-    borderRadius: 12,
+    backgroundColor: '#FFF8DC', // Cornsilk for card background
+    borderRadius: 15,
     padding: 15,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 5,
-    elevation: 3,
+    elevation: 2,
     width: Dimensions.get('window').width / 2 - 30,
     alignItems: 'center',
   },
   cardText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: '#556B2F', // Dark olive for card text
     marginTop: 10,
+    textAlign: 'center',
   },
   chart: {
-    borderRadius: 12,
-  },
-  statsContainer: {
-    // Your other styles here
-  },
-  doctorContainer: {
-    // Your other styles here
+    marginBottom: 10,
   },
 });
 

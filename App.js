@@ -18,10 +18,12 @@ import {
   FoodResultPage, 
   DoctorHomePage, 
   BlogList, 
-  PatientListScreen 
+  PatientListScreen
 } from './screens';
 import FoodResult from './components/FoodResult';
 import Nutrition from './components/Nutrition';
+
+
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -43,7 +45,7 @@ const CentralButton = ({ onPress }) => (
     }}
     onPress={onPress}
   >
-    <Icon name="add" size={30} color="#fff" />
+    <Icon name="camera-outline" size={30} color="#fff" />
   </TouchableOpacity>
 );
 

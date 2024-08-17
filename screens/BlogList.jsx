@@ -78,8 +78,9 @@ const BlogList = () => {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Icon name="arrow-back" size={24} color="#000" />
+          <Icon name="arrow-back" size={24} color="#FFF" />
         </TouchableOpacity>
+        <Text style={styles.headerTitle}>Blogs & Recipes</Text>
       </View>
 
       <View style={styles.tabContainer}>
@@ -133,25 +134,41 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    paddingVertical: 30,
+    paddingHorizontal: 16,
+    backgroundColor: '#4CAF50',
+    elevation: 4, // Adds shadow on Android
+    shadowColor: '#000', // Shadow color for iOS
+    shadowOffset: { width: 0, height: 2 }, // Shadow offset for iOS
+    shadowOpacity: 0.1, // Shadow opacity for iOS
+    shadowRadius: 4, // Shadow blur radius for iOS
+    marginBottom: 16, // Add margin to push content down
+  },
+  headerTitle: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFF',
   },
   tabContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginVertical: 10,
   },
   activeTab: {
     backgroundColor: '#4CAF50',
     paddingHorizontal: 24,
     paddingVertical: 8,
     borderRadius: 20,
+    marginHorizontal: 4,
   },
   inactiveTab: {
     backgroundColor: '#CCCCCC',
     paddingHorizontal: 24,
     paddingVertical: 8,
     borderRadius: 20,
-    marginLeft: 8,
+    marginHorizontal: 4,
   },
   tabTextActive: {
     color: '#FFF',
@@ -173,6 +190,11 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginVertical: 8,
     borderRadius: 10,
+    elevation: 2, // Adds shadow on Android
+    shadowColor: '#000', // Shadow color for iOS
+    shadowOffset: { width: 0, height: 2 }, // Shadow offset for iOS
+    shadowOpacity: 0.1, // Shadow opacity for iOS
+    shadowRadius: 4, // Shadow blur radius for iOS
   },
   blogContent: {
     flex: 1,
@@ -194,7 +216,7 @@ const styles = StyleSheet.create({
   },
   blogAuthor: {
     fontSize: 14,
-    color: '#999',
+    color: '#666',
   },
 });
 

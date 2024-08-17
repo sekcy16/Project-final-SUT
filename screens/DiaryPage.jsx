@@ -6,34 +6,40 @@ const DiaryPage = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity>
-          <Icon name="chevron-back" size={24} color="#000" />
+        <TouchableOpacity style={styles.iconButton}>
+          <Icon name="chevron-back" size={24} color="#fff" />
         </TouchableOpacity>
         <View style={styles.profileIcon}>
-          <Icon name="person-circle-outline" size={24} color="#000" />
+          <Icon name="person-circle-outline" size={24} color="#fff" />
         </View>
       </View>
 
       <View style={styles.dateNavigation}>
-        <TouchableOpacity>
-          <Icon name="chevron-back" size={24} color="#000" />
+        <TouchableOpacity style={styles.iconButton}>
+          <Icon name="chevron-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.dateText}>23/7/2024</Text>
-        <TouchableOpacity>
-          <Icon name="chevron-forward" size={24} color="#000" />
+        <TouchableOpacity style={styles.iconButton}>
+          <Icon name="chevron-forward" size={24} color="#fff" />
         </TouchableOpacity>
       </View>
 
       <View style={styles.caloriesSummary}>
-        <Text style={styles.summaryText}>เป้าหมาย</Text>
-        <Text style={styles.summaryText}>รับประทานไป</Text>
-        <Text style={styles.summaryText}>คงเหลือ</Text>
-        <Text style={styles.caloriesText}>2,700 Calories -</Text>
-        <Text style={styles.caloriesText}>700 Calories =</Text>
-        <Text style={styles.caloriesText}>2,000 Calories</Text>
+        <View style={styles.caloriesColumn}>
+          <Text style={styles.summaryText}>เป้าหมาย</Text>
+          <Text style={styles.caloriesText}>2,700 Calories</Text>
+        </View>
+        <View style={styles.caloriesColumn}>
+          <Text style={styles.summaryText}>รับประทานไป</Text>
+          <Text style={styles.caloriesText}>700 Calories</Text>
+        </View>
+        <View style={styles.caloriesColumn}>
+          <Text style={styles.summaryText}>คงเหลือ</Text>
+          <Text style={styles.caloriesText}>2,000 Calories</Text>
+        </View>
       </View>
 
-      <ScrollView>
+      <ScrollView style={styles.mealContainer}>
         <MealSection title="มื้อเช้า" calories={700} items={[
           { name: 'Large Size Egg', amount: '3 eggs', calories: 273 },
           { name: 'Chicken Breast', amount: '100 g', calories: 273 },
@@ -83,28 +89,37 @@ const MealSection = ({ title, calories, items = [] }) => (
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F5F5DC',  // Light beige background
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
+    backgroundColor: '#8FBC8F',  // Soft green background for header
   },
   profileIcon: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: '#BDB76B',  // Khaki color for profile icon
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  iconButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#556B2F',  // Dark olive green for icon button
   },
   dateNavigation: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#4caf50',
+    backgroundColor: '#8FBC8F',  // Same soft green for navigation
     padding: 8,
+    marginVertical: 16,
+    marginHorizontal: 16,
+    borderRadius: 8,
   },
   dateText: {
     color: '#fff',
@@ -113,29 +128,46 @@ const styles = StyleSheet.create({
   },
   caloriesSummary: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     justifyContent: 'space-between',
     padding: 16,
-    backgroundColor: '#e8f5e9',
+    backgroundColor: '#F0E68C',  // Khaki background for summary
+    marginHorizontal: 16,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  caloriesColumn: {
+    alignItems: 'center',
   },
   summaryText: {
-    width: '33%',
-    textAlign: 'center',
     fontWeight: 'bold',
+    color: '#556B2F',  // Dark olive text for contrast
   },
   caloriesText: {
-    width: '33%',
-    textAlign: 'center',
+    fontSize: 16,
+    color: '#6B8E23',  // Olive drab for text
+    marginTop: 4,
+  },
+  mealContainer: {
+    paddingHorizontal: 16,
   },
   mealSection: {
     marginBottom: 16,
+    borderRadius: 8,
+    backgroundColor: '#FAFAD2',  // Light goldenrod yellow for meal sections
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
   mealHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#4caf50',
+    backgroundColor: '#8FBC8F',  // Soft green for meal headers
     padding: 16,
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
   },
   mealTitleContainer: {
     flexDirection: 'row',
@@ -155,17 +187,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#FFF8DC',  // Cornsilk color for food items
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: '#EEE8AA',  // Pale goldenrod for border
   },
   foodName: {
     fontSize: 16,
     fontWeight: 'bold',
+    color: '#556B2F',  // Dark olive for food names
   },
   foodAmount: {
-    color: '#999',
+    color: '#6B8E23',  // Olive drab for food amounts
   },
   foodCaloriesContainer: {
     flexDirection: 'row',
@@ -173,14 +206,17 @@ const styles = StyleSheet.create({
   },
   foodCalories: {
     marginRight: 8,
+    fontSize: 14,
+    color: '#6B8E23',  // Olive drab for calories
   },
   emptyMeal: {
-    backgroundColor: '#fff',
     padding: 16,
     alignItems: 'center',
+    backgroundColor: '#EEE8AA',  // Pale goldenrod for empty meals
   },
   emptyMealText: {
     color: '#999',
+    fontSize: 14,
   },
 });
 

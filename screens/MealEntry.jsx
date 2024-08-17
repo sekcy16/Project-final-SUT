@@ -12,10 +12,13 @@ const MealEntry = () => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Icon name="arrow-back" size={24} color="#FFF" />
-        <Text style={styles.headerTitle}>มื้อเช้า</Text>
-        <Icon name="person-circle-outline" size={24} color="#FFF" />
+     <View style={styles.header}>
+        <TouchableOpacity style={styles.iconButton}>
+          <Icon name="chevron-back" size={24} color="#fff" />
+        </TouchableOpacity>
+        <View style={styles.profileIcon}>
+          <Icon name="person-circle-outline" size={24} color="#fff" />
+        </View>
       </View>
 
       <View style={styles.searchBar}>
@@ -59,7 +62,7 @@ const FoodItem = ({ name, amount, calories }) => (
     <View style={styles.caloriesContainer}>
       <Text style={styles.calories}>{calories}</Text>
       <TouchableOpacity style={styles.addItemButton}>
-        <Icon name="add" size={20} color="#4CAF50" />
+        <Icon name="add" size={20} color="#6B8E23" />
       </TouchableOpacity>
     </View>
   </View>
@@ -68,31 +71,28 @@ const FoodItem = ({ name, amount, calories }) => (
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F6FFF5',
+    backgroundColor: '#F5F5DC',  // Light beige background
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#4CAF50',
-    elevation: 2, // Add shadow for header
-    borderBottomWidth: 1, // Divider line at the bottom of the header
-    borderBottomColor: '#E0E0E0',
-    borderBottomLeftRadius: 20, // Rounded bottom-left corner
-    borderBottomRightRadius: 20, // Rounded bottom-right corner
-    // Shadow properties for iOS
+    backgroundColor: '#8FBC8F',  // Soft green for header
+    elevation: 2,
+    borderBottomWidth: 1,
+    borderBottomColor: '#8FBC8F',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
-    // Elevation property for Android
-    elevation: 4,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#FFF', // White text
+    color: '#FFF',
   },
   searchBar: {
     flexDirection: 'row',
@@ -111,13 +111,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4CAF50', // Green background
+    backgroundColor: '#8FBC8F',  // Soft green for scan button
     borderRadius: 25,
     margin: 16,
     paddingVertical: 12,
     paddingHorizontal: 20,
-    elevation: 5, // Shadow for Android
-    shadowColor: '#000', // Shadow for iOS
+    elevation: 5,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
     color: '#999',
   },
   mealTypeActive: {
-    color: '#4CAF50',
+    color: '#8FBC8F',  // Soft green for active meal type
     fontWeight: 'bold',
   },
   foodList: {
@@ -148,27 +148,29 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginLeft: 16,
     marginTop: 16,
+    color: '#556B2F',  // Dark olive green for section title
   },
   foodItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#FFF',
+    backgroundColor: '#FFF8DC',  // Cornsilk color for food items
     padding: 16,
     marginHorizontal: 16,
     marginVertical: 8,
     borderRadius: 10,
-    elevation: 3, // Shadow for Android
-    shadowColor: '#000', // Shadow for iOS
+    elevation: 3,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
   foodName: {
     fontWeight: 'bold',
+    color: '#556B2F',  // Dark olive green for food name
   },
   foodAmount: {
-    color: '#999',
+    color: '#6B8E23',  // Olive drab for food amount
   },
   caloriesContainer: {
     flexDirection: 'row',
@@ -176,13 +178,13 @@ const styles = StyleSheet.create({
   },
   calories: {
     marginRight: 8,
+    color: '#6B8E23',  // Olive drab for calories
   },
   addItemButton: {
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#EEE8AA',  // Pale goldenrod for add button
     borderRadius: 15,
     padding: 4,
   },
-
 });
 
 export default MealEntry;
