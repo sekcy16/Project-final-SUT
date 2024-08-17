@@ -5,16 +5,35 @@ import { Provider } from "react-redux";
 import Store from './context/store';
 import Icon from 'react-native-vector-icons/Ionicons';
 
-// นำเข้าหน้าจอทั้งหมด
-import { LoginScreen, SignUpScreen, SpiashScreen, HealthDashboard , MealEntry , BloodSugar, ProfilePage, DiaryPage, FoodARPage  } from './screens';
+import { LoginScreen, SignUpScreen, SpiashScreen, HealthDashboard, MealEntry, BloodSugar, ProfilePage, DiaryPage, FoodARPage, FoodResultPage } from './screens';
+import  FoodResult from './components/FoodResult';
+import Nutrition from './components/Nutrition';
 
-// สร้าง Stack Navigator
+
 const Stack = createNativeStackNavigator();
-
-// สร้าง Tab Navigator
 const Tab = createBottomTabNavigator();
 
-// สร้าง Tab Navigator สำหรับหน้าจอหลัก
+const CentralButton = ({ onPress }) => (
+  <TouchableOpacity
+    style={{
+      width: 70,
+      height: 70,
+      borderRadius: 35,
+      backgroundColor: '#4CAF50',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 20,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.3,
+      shadowRadius: 5,
+    }}
+    onPress={onPress}
+  >
+    <Icon name="add" size={30} color="#fff" />
+  </TouchableOpacity>
+);
+
 const MainTabNavigator = () => (
   <Tab.Navigator
     screenOptions={({ route }) => ({
@@ -22,16 +41,21 @@ const MainTabNavigator = () => (
       tabBarIcon: ({ focused, color, size }) => {
         let iconName;
 
-        if (route.name === 'HealthDashboard') {
-          iconName = focused ? 'home' : 'home-outline';
-        } else if (route.name === 'MealEntry') {
-          iconName = focused ? 'restaurant' : 'restaurant-outline';
-        } else if (route.name === 'BloodSugar') {
-          iconName = focused ? 'water' : 'water-outline';
-        } else if (route.name === 'ProfilePage') {
-          iconName = focused ? 'person' : 'person-outline';
-        } else if (route.name === 'DiaryPage') {
-          iconName = focused ? 'book' : 'book-outline';
+        switch(route.name) {
+          case 'HealthDashboard':
+            iconName = focused ? 'home' : 'home-outline';
+            break;
+          case 'MealEntry':
+            iconName = focused ? 'restaurant' : 'restaurant-outline';
+            break;
+          case 'ProfilePage':
+            iconName = focused ? 'person' : 'person-outline';
+            break;
+          case 'DiaryPage':
+            iconName = focused ? 'book' : 'book-outline';
+            break;
+          default:
+            iconName = 'alert'; // fallback icon
         }
 
         return <Icon name={iconName} size={size} color={color} />;
@@ -73,9 +97,14 @@ const MainTabNavigator = () => (
       options={{ tabBarLabel: 'Meals' }}
     />
     <Tab.Screen 
-      name="BloodSugar" 
-      component={BloodSugar} 
-      options={{ tabBarLabel: 'Blood Sugar' }}
+      name="FoodARPage"
+      component={FoodARPage}
+      options={{
+        tabBarButton: (props) => (
+          <CentralButton {...props} />
+        ),
+        tabBarLabel: () => null,
+      }}
     />
     <Tab.Screen 
       name="ProfilePage" 
@@ -90,21 +119,19 @@ const MainTabNavigator = () => (
   </Tab.Navigator>
 );
 
-// สร้าง Stack Navigator สำหรับการนำทางหลัก
-const App = () => {
-  return (
-    <NavigationContainer>
-      <Provider store={Store}>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="SpiashScreen" component={SpiashScreen} />
-          <Stack.Screen name="LoginScreen" component={LoginScreen} />
-          <Stack.Screen name="SignUpScreen" component={SignUpScreen} />
-          <Stack.Screen name="Main" component={MainTabNavigator} />
-          <Stack.Screen name="FoodARPage" component={FoodARPage} />
-        </Stack.Navigator>
-      </Provider>
-    </NavigationContainer>
-  );
-};
+const App = () => (
+  <NavigationContainer>
+    <Provider store={Store}>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="SplashScreen" component={SplashScreen} />
+        <Stack.Screen name="LoginScreen" component={LoginScreen} />
+        <Stack.Screen name="SignUpScreen" component={SignUpScreen} />
+        <Stack.Screen name="Main" component={MainTabNavigator} />
+        <Stack.Screen name="FoodARPage" component={FoodARPage} />
+        <Stack.Screen name="FoodResultPage" component={FoodResultPage} />
+      </Stack.Navigator>
+    </Provider>
+  </NavigationContainer>
+);
 
 export default App;
