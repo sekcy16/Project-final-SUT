@@ -1,12 +1,15 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { useNavigation } from '@react-navigation/native';
 
 const ProfilePage = () => {
+  const navigation = useNavigation();
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
           <Icon name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>โปรไฟล์</Text>
@@ -21,9 +24,19 @@ const ProfilePage = () => {
           style={styles.profileImage}
         />
         <Text style={styles.userName}>ชื่อผู้ใช้</Text>
-        <TouchableOpacity style={styles.editButton}>
-          <Text style={styles.editButtonText}>แก้ไขโปรไฟล์</Text>
-        </TouchableOpacity>
+        
+        {/* ปุ่มแก้ไขโปรไฟล์และออกจากระบบ */}
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity style={styles.editButton}>
+            <Text style={styles.editButtonText}>แก้ไขโปรไฟล์</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.logoutButton} 
+            onPress={() => navigation.navigate('LoginScreen')}
+          >
+            <Text style={styles.logoutButtonText}>ออกจากระบบ</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.statsSection}>
@@ -38,7 +51,13 @@ const ProfilePage = () => {
         <MenuItem icon="calendar-outline" label="ประวัติ" />
         <MenuItem icon="heart-outline" label="สุขภาพ" />
         <MenuItem icon="notifications-outline" label="การแจ้งเตือน" />
+        <MenuItem 
+          icon="water-outline" 
+          label="น้ำตาลในเลือด" 
+          onPress={() => navigation.navigate('BloodSugar')}
+        />
       </View>
+
     </ScrollView>
   );
 };
@@ -64,39 +83,35 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F6FFF5',
   },
-header: {
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
     backgroundColor: '#4CAF50',
-    elevation: 2, // Add shadow for header
-    borderBottomWidth: 1, // Divider line at the bottom of the header
+    elevation: 2,
+    borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
-    borderBottomLeftRadius: 20, // Rounded bottom-left corner
-    borderBottomRightRadius: 20, // Rounded bottom-right corner
-    // Shadow properties for iOS
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
-    // Elevation property for Android
-    elevation: 4,
   },
   headerTitle: {
-    fontSize: 24, // Increased font size
-    fontWeight: '700', // You can use '700' for a thicker bold text or choose '900' for an even bolder look
-    letterSpacing: 1, // Added letter spacing for readability
-    textAlign: 'center', // Centered text
-    flex: 1, // Take up available space for centering
-
+    fontSize: 24,
+    fontWeight: '700',
+    letterSpacing: 1,
+    textAlign: 'center',
+    flex: 1,
   },
   profileSection: {
     alignItems: 'center',
-    marginTop: 40, // Adjusted margin to make space for the header
+    marginTop: 40,
     backgroundColor: '#FFFFFF',
     paddingVertical: 20,
-    borderBottomWidth: 1, // Divider line after profile section
+    borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
   },
   profileImage: {
@@ -111,16 +126,31 @@ header: {
     fontWeight: 'bold',
     marginTop: 10,
   },
+  buttonContainer: {
+    flexDirection: 'row',
+    marginTop: 10,
+  },
   editButton: {
     backgroundColor: '#4CAF50',
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 20,
-    marginTop: 10,
+    marginRight: 10,  // เพิ่มระยะห่างระหว่างปุ่ม
   },
   editButtonText: {
     color: 'white',
     fontWeight: 'bold',
+  },
+  logoutButton: {
+    backgroundColor: '#D32F2F',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  logoutButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
   statsSection: {
     flexDirection: 'row',
@@ -128,7 +158,7 @@ header: {
     marginTop: 20,
     paddingVertical: 20,
     backgroundColor: 'white',
-    borderBottomWidth: 1, // Divider line after stats section
+    borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
   },
   statItem: {
