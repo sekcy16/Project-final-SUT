@@ -4,9 +4,9 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Provider } from "react-redux";
 import Store from './context/store';
 import Icon from 'react-native-vector-icons/Ionicons';
-
+import { TouchableOpacity } from 'react-native';
 import { LoginScreen, SignUpScreen, SpiashScreen, HealthDashboard, MealEntry, BloodSugar, ProfilePage, DiaryPage, FoodARPage, FoodResultPage } from './screens';
-import  FoodResult from './components/FoodResult';
+import FoodResult from './components/FoodResult';
 import Nutrition from './components/Nutrition';
 
 
@@ -123,12 +123,14 @@ const App = () => (
   <NavigationContainer>
     <Provider store={Store}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="SplashScreen" component={SplashScreen} />
-        <Stack.Screen name="LoginScreen" component={LoginScreen} />
-        <Stack.Screen name="SignUpScreen" component={SignUpScreen} />
-        <Stack.Screen name="Main" component={MainTabNavigator} />
-        <Stack.Screen name="FoodARPage" component={FoodARPage} />
-        <Stack.Screen name="FoodResultPage" component={FoodResultPage} />
+      <Stack.Screen name="SpiashScreen" component={SpiashScreen} />
+          <Stack.Screen name="LoginScreen" component={LoginScreen} />
+          <Stack.Screen name="SignUpScreen" component={SignUpScreen} />
+          <Stack.Screen name="Main" component={MainTabNavigator} />
+          <Stack.Screen name="FoodARPage" component={FoodARPage} />
+          <Stack.Screen name="FoodResultPage" component={FoodResultPage} />
+          <Stack.Screen name="FoodResult" component={FoodResult} />
+          <Stack.Screen name="Nutrition" component={Nutrition} />
       </Stack.Navigator>
     </Provider>
   </NavigationContainer>
