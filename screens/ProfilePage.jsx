@@ -1,10 +1,24 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
+import { firebaseAuth } from '../config/firebase.config'; // Import your Firebase Auth configuration
 
 const ProfilePage = () => {
   const navigation = useNavigation();
+
+  const handleSignOut = () => {
+    firebaseAuth.signOut()
+      .then(() => {
+        // Sign-out successful, navigate to LoginScreen
+        navigation.navigate('LoginScreen');
+      })
+      .catch((error) => {
+        // An error happened during sign out
+        console.error('Sign out error: ', error);
+        Alert.alert('Error', 'Failed to sign out. Please try again.');
+      });
+  };
 
   return (
     <ScrollView style={styles.container}>
@@ -32,7 +46,7 @@ const ProfilePage = () => {
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.logoutButton} 
-            onPress={() => navigation.navigate('LoginScreen')}
+            onPress={handleSignOut} // Attach the sign-out handler here
           >
             <Text style={styles.logoutButtonText}>ออกจากระบบ</Text>
           </TouchableOpacity>
@@ -70,8 +84,8 @@ const StatItem = ({ icon, label, value }) => (
   </View>
 );
 
-const MenuItem = ({ icon, label }) => (
-  <TouchableOpacity style={styles.menuItem}>
+const MenuItem = ({ icon, label, onPress }) => (
+  <TouchableOpacity style={styles.menuItem} onPress={onPress}>
     <Icon name={icon} size={24} color="#4CAF50" />
     <Text style={styles.menuLabel}>{label}</Text>
     <Icon name="chevron-forward-outline" size={24} color="#999" />

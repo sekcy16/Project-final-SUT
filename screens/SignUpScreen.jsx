@@ -6,7 +6,8 @@ import {
   TouchableOpacity,
   ScrollView,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  Alert,
 } from "react-native";
 import React, { useState } from "react";
 import { BGimage, Logo } from "../assets";
@@ -18,6 +19,7 @@ import { BlurView } from "expo-blur";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { firebaseAuth, firebaseDB } from "../config/firebase.config";
 import { doc, setDoc } from "firebase/firestore";
+import { signOut } from "firebase/auth"; // Import the signOut function
 
 const SignUpScreen = () => {
   const screenWidth = Math.round(Dimensions.get("window").width);
@@ -36,27 +38,60 @@ const SignUpScreen = () => {
     setAvatar(item?.image.asset.url);
     setIsAvatarMenu(false);
   };
+  
+
+  // Enhanced Email Validation
+  const validateEmail = (email) => {
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    const validDomains = ["com", "net", "org", "edu", "gov"]; // Add more valid domains if needed
+    const domain = email.split('.').pop();
+
+    return emailPattern.test(email) && validDomains.includes(domain);
+  };
 
   const handleSignUp = async () => {
-    if (getEmailValidationStatus && email !== "") {
+    if (validateEmail(email) && email !== "" && getEmailValidationStatus) {
       try {
-        const userCred = await createUserWithEmailAndPassword(firebaseAuth, email, password);
+        const userCred = await createUserWithEmailAndPassword(
+          firebaseAuth,
+          email,
+          password
+        );
         console.log("User Credential:", userCred);
-
+  
         const data = {
-          _id: userCred?.user.uid,
+          _id: userCred?.user.uid, // UID should be stored properly
           fullName: name,
           profilePic: avatar,
-          providerData: userCred.user.providerData[0],
-          role: "User"
+          providerData: {
+            ...userCred.user.providerData[0],
+            email: userCred.user.email, // Ensure email is correct
+            uid: userCred.user.uid, // Correct UID
+          },
+          role: "User",
         };
-
-        await setDoc(doc(firebaseDB, 'users', userCred?.user.uid), data);
+  
+        await setDoc(doc(firebaseDB, "users", userCred?.user.uid), data);
         console.log("Document successfully written!");
-        navigation.navigate("LoginScreen");
+  
+        // Sign out the user immediately after successful signup
+        await signOut(firebaseAuth);
+  
+        Alert.alert("Success", "Account created successfully!", [
+          {
+            text: "OK",
+            onPress: () => navigation.navigate("LoginScreen"),
+          },
+        ]);
       } catch (error) {
         console.error("Error signing up:", error);
+        Alert.alert("Error", error.message);
       }
+    } else {
+      Alert.alert(
+        "Error",
+        "Please enter a valid email and complete all fields."
+      );
     }
   };
 
@@ -75,35 +110,33 @@ const SignUpScreen = () => {
           />
 
           {isAvatarMenu && (
-            <>
-              <View
-                className="absolute inset-0 z-10 w-full"
-                style={{ width: screenWidth, height: screenHeight }}
-              >
-                <ScrollView>
-                  <BlurView
-                    className="w-full h-full px-4 py-16 flex-row flex-wrap items-center justify-evenly"
-                    tint="light"
-                    intensity={80}
-                    style={{ width: screenWidth, height: screenHeight }}
-                  >
-                    {avatars?.map((item) => (
-                      <TouchableOpacity
-                        onPress={() => handleAvatar(item)}
-                        key={item._id}
-                        className="w-20 m-3 h-20 p-1 rounded-full border-2 border-Primary"
-                      >
-                        <Image
-                          source={{ uri: item?.image.asset.url }}
-                          className="w-full h-full"
-                          resizeMode="contain"
-                        />
-                      </TouchableOpacity>
-                    ))}
-                  </BlurView>
-                </ScrollView>
-              </View>
-            </>
+            <View
+              className="absolute inset-0 z-10 w-full"
+              style={{ width: screenWidth, height: screenHeight }}
+            >
+              <ScrollView>
+                <BlurView
+                  className="w-full h-full px-4 py-16 flex-row flex-wrap items-center justify-evenly"
+                  tint="light"
+                  intensity={80}
+                  style={{ width: screenWidth, height: screenHeight }}
+                >
+                  {avatars?.map((item) => (
+                    <TouchableOpacity
+                      onPress={() => handleAvatar(item)}
+                      key={item._id}
+                      className="w-20 m-3 h-20 p-1 rounded-full border-2 border-Primary"
+                    >
+                      <Image
+                        source={{ uri: item?.image.asset.url }}
+                        className="w-full h-full"
+                        resizeMode="contain"
+                      />
+                    </TouchableOpacity>
+                  ))}
+                </BlurView>
+              </ScrollView>
+            </View>
           )}
 
           <View

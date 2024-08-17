@@ -1,4 +1,4 @@
-import { View, Text, TextInput, TouchableOpacity } from "react-native";
+import { View, TextInput, TouchableOpacity } from "react-native";
 import React, { useLayoutEffect, useState } from "react";
 import { Entypo, MaterialIcons } from "@expo/vector-icons";
 
@@ -15,11 +15,11 @@ const UserTextinput = ({
 
   const handleTextChanged = (text) => {
     setValue(text);
-    setStatValue(value);
+    setStatValue(text);
 
-    if (placeholder == "Email") {
+    if (placeholder === "Email") {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      const status = emailRegex.test(value);
+      const status = emailRegex.test(text);
       setIsEmailValid(status);
       setGetEmailValidationStatus(status);
     }
@@ -28,26 +28,45 @@ const UserTextinput = ({
   useLayoutEffect(() => {
     switch (placeholder) {
       case "Full Name":
-        return setIcon("person");
+        setIcon("person");
+        break;
       case "Email":
-        return setIcon("email");
+        setIcon("email");
+        break;
       case "Password":
-        return setIcon("lock");
+        setIcon("lock");
+        break;
+      default:
+        setIcon(null);
     }
-  }, []);
+  }, [placeholder]);
 
   return (
     <View
-      className={`border rounded-2xl px-4 py-6 flex-row items-center justify-between space-x-4 my-2 
-        ${
-          !isEmailValid && placeholder == "Email" && value.length > 0
-            ? "border-red-500 "
-            : "border-gray-200"
-        }`}
+      style={{
+        borderWidth: 1,
+        borderColor:
+          !isEmailValid && placeholder === "Email" && value.length > 0
+            ? "red"
+            : "gray",
+        borderRadius: 15,
+        paddingVertical: 15,
+        paddingHorizontal: 20,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginVertical: 8,
+      }}
     >
       <MaterialIcons name={icon} size={24} color="#6c6d83" />
       <TextInput
-        className="flex-1 text-base text-primaryText font-semibold -mt-1"
+        style={{
+          flex: 1,
+          fontSize: 16,
+          color: "#333",
+          fontWeight: "600",
+          marginTop: -2,
+        }}
         placeholder={placeholder}
         value={value}
         onChangeText={handleTextChanged}
@@ -57,7 +76,7 @@ const UserTextinput = ({
       {isPass && (
         <TouchableOpacity onPress={() => setShowPass(!showPass)}>
           <Entypo
-            name={`${showPass ? "eye" : "eye-with-line"}`}
+            name={showPass ? "eye" : "eye-with-line"}
             size={24}
             color="#6c6d83"
           />

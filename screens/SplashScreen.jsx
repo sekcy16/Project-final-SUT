@@ -33,11 +33,11 @@ const SplashScreen = () => {
           console.error("Error fetching user data: ", error);
         }
       } else {
+        console.log("No logged-in user, navigating to LoginScreen");
         navigation.navigate("LoginScreen");
       }
     });
   };
-  
 
   return (
     <View className="flex-1 items-center space-y-24 justify-center">

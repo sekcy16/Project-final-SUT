@@ -1,8 +1,8 @@
-import { View, Text, Dimensions, Image, TouchableOpacity } from "react-native";
-import React, { useState } from "react";
+import { View, Text, Dimensions, Image, TouchableOpacity, BackHandler } from "react-native";
+import React, { useState, useEffect } from "react";
 import { BGimage, Logo } from "../assets";
 import { UserTextinput } from "../components";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useIsFocused } from "@react-navigation/native";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { firebaseAuth, firebaseDB } from "../config/firebase.config";
 import { doc, getDoc } from "firebase/firestore";
@@ -14,14 +14,30 @@ const LoginScreen = () => {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [getEmailValidationStatus, setGetEmailValidationStatus] =
-    useState(false);
-
+  const [getEmailValidationStatus, setGetEmailValidationStatus] = useState(false);
   const [alert, setAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState(null);
 
   const navigation = useNavigation();
-  const dispatch = useDispatch()
+  const dispatch = useDispatch();
+  const isFocused = useIsFocused(); // Hook to detect if the screen is focused
+
+  useEffect(() => {
+    const backAction = () => {
+      if (isFocused) {
+        BackHandler.exitApp(); // Exit the app only if on LoginScreen
+        return true; // Prevent the default back action
+      }
+      return false;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      backAction
+    );
+
+    return () => backHandler.remove(); // Clean up the event listener when the component unmounts
+  }, [isFocused]);
 
   const handleLogin = async () => {
     if (getEmailValidationStatus && email !== "") {
@@ -61,8 +77,6 @@ const LoginScreen = () => {
       showAlert("Invalid Email Address");
     }
   };
-  
-  
 
   const handleFirebaseError = (errorCode) => {
     switch (errorCode) {
@@ -99,8 +113,7 @@ const LoginScreen = () => {
         style={{ width: screenWidth }}
       />
 
-      {/*Main View*/}
-
+      {/* Main View */}
       <View
         className="w-full h-full bg-white rounded-tl-[90px] -mt-44 flex items-center 
             justify-start py-6 px-6 space-y-6"
@@ -112,26 +125,27 @@ const LoginScreen = () => {
         </Text>
 
         <View className="w-full flex items-center justify-center">
-          {/* alert */}
-
+          {/* Alert */}
           {alert && (
             <Text className="text-base text-red-600">{alertMessage}</Text>
           )}
 
-          {/* email */}
+          {/* Email */}
           <UserTextinput
             placeholder="Email"
             isPass={false}
             setStatValue={setEmail}
             setGetEmailValidationStatus={setGetEmailValidationStatus}
           />
-          {/* password */}
+
+          {/* Password */}
           <UserTextinput
             placeholder="Password"
             isPass={true}
             setStatValue={setPassword}
           />
-          {/* login button */}
+
+          {/* Login Button */}
           <TouchableOpacity
             onPress={handleLogin}
             className="w-full px-4 py-2 rounded-xl bg-Primary my-3 flex items-center justify-center"
