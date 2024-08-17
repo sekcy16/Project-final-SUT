@@ -23,7 +23,7 @@ const LoginScreen = () => {
   const navigation = useNavigation();
   const dispatch = useDispatch()
 
-  const hanldeLogin = async () => {
+  const handleLogin = async () => {
     if (getEmailValidationStatus && email !== "") {
       console.log("Attempting login...");
       await signInWithEmailAndPassword(firebaseAuth, email, password)
@@ -33,10 +33,20 @@ const LoginScreen = () => {
             getDoc(doc(firebaseDB, "users", useCred?.user.uid)).then(
               (docSnap) => {
                 if (docSnap.exists()) {
-                  console.log("User Data :", docSnap.data());
-                  dispatch(SET_USER(docSnap.data()));
-                  console.log("Navigating to Main / HealthDashboard");
-                  navigation.navigate('Main', { screen: 'HealthDashboard' });
+                  const userData = docSnap.data();
+                  console.log("User Data :", userData);
+                  
+                  // Dispatch user data to Redux store
+                  dispatch(SET_USER(userData));
+                  
+                  // Check user role and navigate accordingly
+                  if (userData.role === "Doctor") {
+                    console.log("Navigating to Doctor Home Page");
+                    navigation.navigate('Main', { screen: 'DoctorHomePage' });
+                  } else {
+                    console.log("Navigating to HealthDashboard");
+                    navigation.navigate('Main', { screen: 'HealthDashboard' });
+                  }
                 }
               }
             );
@@ -51,6 +61,7 @@ const LoginScreen = () => {
       showAlert("Invalid Email Address");
     }
   };
+  
   
 
   const handleFirebaseError = (errorCode) => {
@@ -122,7 +133,7 @@ const LoginScreen = () => {
           />
           {/* login button */}
           <TouchableOpacity
-            onPress={hanldeLogin}
+            onPress={handleLogin}
             className="w-full px-4 py-2 rounded-xl bg-Primary my-3 flex items-center justify-center"
           >
             <Text className="py-2 text-white text-xl font-semibold">

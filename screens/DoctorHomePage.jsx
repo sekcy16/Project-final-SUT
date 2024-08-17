@@ -43,9 +43,13 @@ const DoctorHomePage = () => {
           <Icon name="person-circle-outline" size={40} color="#FFF" />
           <Text style={styles.profileText}>Dr.KK</Text>
         </View>
-        <TouchableOpacity style={styles.notificationIcon} onPress={() => navigation.navigate('NotificationList')}>
-          <Image source={require('./noti.png')} style={styles.icon} />
+        <TouchableOpacity
+          style={styles.notificationIcon}
+          onPress={() => navigation.navigate('NotificationList')}
+        >
+          <Icon name="notifications-outline" size={24} color="#000" style={styles.icon} />
         </TouchableOpacity>
+
       </View>
 
       <ScrollView style={styles.content}>
