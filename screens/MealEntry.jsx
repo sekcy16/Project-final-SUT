@@ -70,29 +70,32 @@ const FoodItem = ({ name, amount, calories }) => (
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: '#F5F5DC',  // Light beige background
+    flexGrow: 1,
+    backgroundColor: '#F5F5DC', // Light beige background
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#8FBC8F',  // Soft green for header
-    elevation: 2,
-    borderBottomWidth: 1,
-    borderBottomColor: '#8FBC8F',
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
+    padding: 16,
+    backgroundColor: '#8FBC8F', // Soft green background for header
+    borderRadius: 12,
+    marginBottom: 20,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#FFF',
+  },
+  iconButton: {
+    padding: 10,
+    backgroundColor: '#556B2F', // Dark olive green for icon button
+    borderRadius: 8,
+  },
+  profileIcon: {
+    padding: 10,
+    backgroundColor: '#BDB76B', // Khaki color for profile icon
+    borderRadius: 8,
   },
   searchBar: {
     flexDirection: 'row',

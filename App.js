@@ -1,12 +1,13 @@
+import React, { useEffect } from 'react';
+import { View, TouchableOpacity } from 'react-native'; // Import View here
 import { NavigationContainer } from '@react-navigation/native';
-import React, { useEffect, useState } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Provider, useSelector } from "react-redux"; // Import useSelector here
-import Store from './context/store';
+import { Provider, useSelector } from "react-redux";
 import Icon from 'react-native-vector-icons/Ionicons';
-import { TouchableOpacity } from 'react-native';
-import { 
+import Store from './context/store';
+
+import {
   LoginScreen, 
   SignUpScreen, 
   SplashScreen, 
@@ -18,34 +19,54 @@ import {
   FoodResultPage, 
   DoctorHomePage, 
   BlogList, 
-  PatientListScreen
+  PatientListScreen, 
+  BloodSugar,
+  NotificationListScreen,
+  NotificationDetailScreen,
+  PatientDetailScreen,
+  AdvicePage
 } from './screens';
 import FoodResult from './components/FoodResult';
 import Nutrition from './components/Nutrition';
 
 
 
+
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-const CentralButton = ({ onPress }) => (
+const CentralButton = ({ children, onPress }) => (
   <TouchableOpacity
     style={{
-      width: 70,
-      height: 70,
-      borderRadius: 35,
-      backgroundColor: '#4CAF50',
+      top: -20, // elevate the central button
       justifyContent: 'center',
       alignItems: 'center',
-      marginBottom: 20,
-      shadowColor: '#000',
+      shadowColor: '#8FBC8F',
       shadowOffset: { width: 0, height: 10 },
-      shadowOpacity: 0.3,
-      shadowRadius: 5,
+      shadowOpacity: 0.25,
+      shadowRadius: 3.5,
+      elevation: 5,
     }}
     onPress={onPress}
   >
-    <Icon name="camera-outline" size={30} color="#fff" />
+    <View
+      style={{
+        width: 70,
+        height: 70,
+        borderRadius: 35,
+        backgroundColor: '#8FBC8F',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2, // Add border width
+        borderColor: '#fff', // Set border color (white or a lighter shade for dimension)
+        shadowColor: '#000', // Deep shadow for dimensional effect
+        shadowOffset: { width: 0, height: 4 }, // Adjust shadow offset
+        shadowOpacity: 0.2, // Slightly reduced opacity for subtlety
+        shadowRadius: 5, // Adjust shadow radius for a softer effect
+      }}
+    >
+      {children}
+    </View>
   </TouchableOpacity>
 );
 
@@ -66,6 +87,9 @@ const DoctorTabNavigator = () => (
           case 'BlogList':
             iconName = focused ? 'document' : 'document-outline';
             break;
+            case 'ProfilePage':
+              iconName = focused ? 'person' : 'person-outline';
+              break;
           default:
             iconName = 'alert'; // fallback icon
         }
@@ -76,17 +100,12 @@ const DoctorTabNavigator = () => (
       tabBarInactiveTintColor: 'gray',
       tabBarStyle: {
         position: 'absolute',
-        bottom: 20,
-        left: 20,
-        right: 20,
         elevation: 0,
         backgroundColor: '#ffffff',
         borderRadius: 15,
         height: 60,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 5 },
-        shadowOpacity: 0.1,
-        shadowRadius: 15,
+        shadowColor: 'transparent', // Remove shadow
+        borderTopWidth: 0, // Remove top border
         paddingHorizontal: 20,
       },
       tabBarItemStyle: {
@@ -113,6 +132,11 @@ const DoctorTabNavigator = () => (
       component={BlogList} 
       options={{ tabBarLabel: 'Blogs' }}
     />
+     <Tab.Screen 
+      name="ProfilePage" 
+      component={ProfilePage} 
+      options={{ tabBarLabel: 'Profile' }}
+    />
   </Tab.Navigator>
 );
 
@@ -123,7 +147,7 @@ const MainTabNavigator = () => (
       tabBarIcon: ({ focused, color, size }) => {
         let iconName;
 
-        switch(route.name) {
+        switch (route.name) {
           case 'HealthDashboard':
             iconName = focused ? 'home' : 'home-outline';
             break;
@@ -146,17 +170,12 @@ const MainTabNavigator = () => (
       tabBarInactiveTintColor: 'gray',
       tabBarStyle: {
         position: 'absolute',
-        bottom: 20,
-        left: 20,
-        right: 20,
         elevation: 0,
         backgroundColor: '#ffffff',
         borderRadius: 15,
         height: 60,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 5 },
-        shadowOpacity: 0.1,
-        shadowRadius: 15,
+        shadowColor: 'transparent', // Remove shadow
+        borderTopWidth: 0, // Remove top border
         paddingHorizontal: 20,
       },
       tabBarItemStyle: {
@@ -183,9 +202,11 @@ const MainTabNavigator = () => (
       component={FoodARPage}
       options={{
         tabBarButton: (props) => (
-          <CentralButton {...props} />
+          <CentralButton {...props}>
+            <Icon name="camera-outline" size={25} color="#fff" />
+          </CentralButton>
         ),
-        tabBarLabel: () => null,
+        tabBarLabel: () => null, // Hide label for central button
       }}
     />
     <Tab.Screen 
@@ -200,6 +221,7 @@ const MainTabNavigator = () => (
     />
   </Tab.Navigator>
 );
+
 
 
 
@@ -224,6 +246,12 @@ const RootNavigator = () => {
       <Stack.Screen name="FoodResultPage" component={FoodResultPage} />
       <Stack.Screen name="FoodResult" component={FoodResult} />
       <Stack.Screen name="Nutrition" component={Nutrition} />
+      <Stack.Screen name="BloodSugar" component={BloodSugar} />
+      <Stack.Screen name="PatientDetailScreen" component={PatientDetailScreen}/>
+      <Stack.Screen name="NotificationListScreen" component={NotificationListScreen}/>
+      <Stack.Screen name="NotificationDetailScreen" component={NotificationDetailScreen}/>
+      <Stack.Screen name="AdvicePage" component={ AdvicePage}/>
+
     </Stack.Navigator>
   );
 };

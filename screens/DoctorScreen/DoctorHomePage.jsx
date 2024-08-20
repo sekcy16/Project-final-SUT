@@ -13,80 +13,55 @@ import { useNavigation } from "@react-navigation/native";
 const DoctorHomePage = () => {
   const navigation = useNavigation();
   const [tasks, setTasks] = useState([
-    {
-      id: 1,
-      time: "9:00",
-      title: "Johny",
-      description: "ตรวจวัดระดับน้ำตาลในเลือด",
-      completed: true,
-    },
-    {
-      id: 2,
-      time: "10:00",
-      title: "Jackky",
-      description: "ตรวจอาการทั่วไปและการออกกำลังกาย",
-      completed: true,
-    },
-    {
-      id: 3,
-      time: "12:00",
-      title: "พักผ่อน",
-      description: "พัก",
-      completed: true,
-    },
+    { id: 1, time: '9:00', title: 'Johny', description: 'ตรวจวัดระดับน้ำตาลในเลือด', completed: true },
+    { id: 2, time: '10:00', title: 'Jackky', description: 'ตรวจอาการทั่วไปและการออกกำลังกาย', completed: true },
+    { id: 3, time: '12:00', title: 'พักผ่อน', description: 'พัก', completed: true },
   ]);
-  const [newTask, setNewTask] = useState("");
+  const [newTask, setNewTask] = useState('');
   const [blogs, setBlogs] = useState([]);
+  const [bookmarked, setBookmarked] = useState({});
 
   useEffect(() => {
-    setBlogs([
-      {
-        id: 1,
-        title: "แนวทางการออกกำลังกายสำหรับผู้ป่วยเบาหวาน",
-        author: "Dr.K",
-        color: "red",
-      },
-      {
-        id: 2,
-        title: "วิธีจัดการความเครียด จากการออกกำลังกาย",
-        author: "Dr.C",
-        color: "green",
-      },
-      {
-        id: 3,
-        title: "ไฟเบอร์คืออะไร? ทำไมทุกคนควรกินไฟเบอร์?",
-        author: "Dr.A",
-        color: "blue",
-      },
-    ]);
+    const initialBlogs = [
+      { id: 1, title: 'แนวทางการออกกำลังกายสำหรับผู้ป่วยเบาหวาน', author: 'Dr.K', color: 'red', bookmarked: false },
+      { id: 2, title: 'วิธีจัดการความเครียด จากการออกกำลังกาย', author: 'Dr.C', color: 'green', bookmarked: true },
+      { id: 3, title: 'ไฟเบอร์คืออะไร? ทำไมทุกคนควรกินไฟเบอร์?', author: 'Dr.A', color: 'blue', bookmarked: false },
+    ];
+    setBlogs(initialBlogs);
+    const initialBookmarkState = initialBlogs.reduce((acc, blog) => {
+      acc[blog.id] = blog.bookmarked;
+      return acc;
+    }, {});
+    setBookmarked(initialBookmarkState);
   }, []);
 
   const addTask = () => {
-    if (newTask.trim() !== "") {
-      setTasks([
-        ...tasks,
-        {
-          id: Date.now(),
-          time: "12:00",
-          title: newTask,
-          description: "",
-          completed: false,
-        },
-      ]);
-      setNewTask("");
+    if (newTask.trim() !== '') {
+      setTasks([...tasks, { id: Date.now(), time: '12:00', title: newTask, description: '', completed: false }]);
+      setNewTask('');
     }
   };
 
   const toggleTask = (id) => {
-    setTasks(
-      tasks.map((task) =>
-        task.id === id ? { ...task, completed: !task.completed } : task
-      )
-    );
+    setTasks(tasks.map(task => task.id === id ? { ...task, completed: !task.completed } : task));
   };
 
   const deleteTask = (id) => {
-    setTasks(tasks.filter((task) => task.id !== id));
+    setTasks(tasks.filter(task => task.id !== id));
+  };
+
+  const toggleBookmark = (id) => {
+    setBookmarked((prevState) => ({
+      ...prevState,
+      [id]: !prevState[id],
+    }));
+  };
+
+  const handleBlogPress = (id) => {
+    // Navigate to blog detail page or any other action
+    console.log('Blog ID:', id);
+    // Example navigation:
+    // navigation.navigate('BlogDetail', { blogId: id });
   };
 
   return (
@@ -98,7 +73,7 @@ const DoctorHomePage = () => {
         </View>
         <TouchableOpacity
           style={styles.notificationIcon}
-          onPress={() => navigation.navigate("NotificationList")}
+          onPress={() => navigation.navigate("NotificationListScreen")}
         >
           <Icon
             name="notifications-outline"
@@ -116,25 +91,12 @@ const DoctorHomePage = () => {
             <View key={task.id} style={styles.taskCard}>
               <Text style={styles.taskTime}>{task.time}</Text>
               <View style={styles.taskContent}>
-                <Text
-                  style={[
-                    styles.taskTitle,
-                    task.completed && styles.taskCompleted,
-                  ]}
-                >
-                  {task.title}
-                </Text>
+                <Text style={[styles.taskTitle, task.completed && styles.taskCompleted]}>{task.title}</Text>
                 <Text style={styles.taskDescription}>{task.description}</Text>
               </View>
               <View style={styles.taskActions}>
                 <TouchableOpacity onPress={() => toggleTask(task.id)}>
-                  <Icon
-                    name={
-                      task.completed ? "checkmark-circle" : "ellipse-outline"
-                    }
-                    size={24}
-                    color={task.completed ? "#4CAF50" : "#000"}
-                  />
+                  <Icon name={task.completed ? "checkmark-circle" : "ellipse-outline"} size={24} color={task.completed ? "#4CAF50" : "#000"} />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => deleteTask(task.id)}>
                   <Icon name="close-circle-outline" size={24} color="#FF0000" />
@@ -159,20 +121,25 @@ const DoctorHomePage = () => {
         <View style={styles.blogContainer}>
           <Text style={styles.sectionTitle}>บทความ</Text>
           {blogs.map((blog) => (
-            <TouchableOpacity key={blog.id} style={styles.blogItem}>
+            <TouchableOpacity
+              key={blog.id}
+              style={styles.blogItem}
+              onPress={() => handleBlogPress(blog.id)}
+            >
               <View style={styles.blogContent}>
                 <Text style={styles.blogTitle}>{blog.title}</Text>
                 <View style={styles.blogInfo}>
-                  <View
-                    style={[
-                      styles.authorIndicator,
-                      { backgroundColor: blog.color },
-                    ]}
-                  />
+                  <View style={[styles.authorIndicator, { backgroundColor: blog.color }]} />
                   <Text style={styles.blogAuthor}>{blog.author}</Text>
                 </View>
               </View>
-              <Icon name="bookmark-outline" size={24} color="#000" />
+              <TouchableOpacity onPress={() => toggleBookmark(blog.id)}>
+                <Icon
+                  name={bookmarked[blog.id] ? "bookmark" : "bookmark-outline"}
+                  size={24}
+                  color={bookmarked[blog.id] ? "#FFCC00" : "#000"}
+                />
+              </TouchableOpacity>
             </TouchableOpacity>
           ))}
         </View>
@@ -184,14 +151,14 @@ const DoctorHomePage = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F6FFF5",
+    backgroundColor: "#FAFAD2", // Light beige background
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 30,
-    backgroundColor: '#4CAF50',
+    backgroundColor: "#8FBC8F", // Dark olive green background for header
     elevation: 4, // Adding elevation for shadow effect
   },
   profileContainer: {
@@ -199,7 +166,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   profileText: {
-    color: "#FFF",
+    color: "#fff", // Light beige for profile text
     fontSize: 20,
     fontWeight: "bold",
     marginLeft: 10,
@@ -208,7 +175,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   todoContainer: {
-    backgroundColor: "#FFF",
+    backgroundColor: "#8FBC8F", // Cornsilk background for to-do container
     margin: 16,
     padding: 16,
     borderRadius: 12,
@@ -217,7 +184,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#4CAF50",
+    color: "#556B2F", // Dark olive green for section title
     marginBottom: 12,
   },
   taskCard: {
@@ -225,7 +192,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 12,
     marginBottom: 12,
-    backgroundColor: "#F9F9F9",
+    backgroundColor: "#FFF8DC", // Cornsilk for task cards
     borderRadius: 10,
     elevation: 2,
   },
@@ -241,9 +208,10 @@ const styles = StyleSheet.create({
   taskTitle: {
     fontSize: 16,
     fontWeight: "bold",
+    color: "#556B2F", // Dark olive green for task title
   },
   taskCompleted: {
-    color: "#4CAF50",
+    color: "#8FBC8F", // Soft green for completed task title
     textDecorationLine: "line-through",
   },
   taskDescription: {
@@ -262,18 +230,19 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     borderWidth: 1,
-    borderColor: "#CCC",
+    borderColor: "#EEE8AA", // Pale goldenrod for input border
     borderRadius: 5,
     padding: 10,
     marginRight: 8,
+    backgroundColor: "#FFF8DC", // Cornsilk for input background
   },
   addButton: {
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#556B2F", // Dark olive green for add button
     borderRadius: 5,
     padding: 10,
   },
   blogContainer: {
-    backgroundColor: "#FFF",
+    backgroundColor: "#FFF8DC", // Cornsilk for blog container
     margin: 16,
     padding: 16,
     borderRadius: 12,
@@ -285,7 +254,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#EEE",
+    borderBottomColor: "#8FBC8F", // Pale goldenrod for border
   },
   blogContent: {
     flex: 1,
@@ -293,7 +262,7 @@ const styles = StyleSheet.create({
   blogTitle: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#333",
+    color: "#556B2F", // Dark olive green for blog title
   },
   blogInfo: {
     flexDirection: "row",
@@ -308,7 +277,7 @@ const styles = StyleSheet.create({
   },
   blogAuthor: {
     fontSize: 14,
-    color: "#888",
+    color: "#999",
   },
   notificationIcon: {
     marginRight: 16, // Add margin to the right for spacing

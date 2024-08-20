@@ -17,7 +17,7 @@ const PatientListScreen = ({ navigation }) => {
         <Text style={styles.patientName}>{item.name}</Text>
         <Text style={styles.patientDetails}>อายุ {item.age} | เบาหวานระดับ {item.level}</Text>
       </View>
-      <Ionicons name="chevron-forward" size={24} color="#4CAF50" />
+      <Ionicons name="chevron-forward" size={24} color="#8FBC8F" />
     </TouchableOpacity>
   );
 
@@ -27,7 +27,7 @@ const PatientListScreen = ({ navigation }) => {
         <Text style={styles.headerTitle}>Patient List</Text>
       </View>
       <View style={styles.searchContainer}>
-        <Ionicons name="search" size={24} color="#4CAF50" />
+        <Ionicons name="search" size={24} color="#8FBC8F" />
         <TextInput 
           style={styles.searchInput}
           placeholder="ค้นหาคนไข้"
@@ -47,11 +47,11 @@ const PatientListScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F6FFF5",
+    backgroundColor: "#FAFAD2",
   },
   header: {
     paddingVertical: 30,
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#8FBC8F',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
     elevation: 4, // Adds shadow on Android
@@ -95,6 +95,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#e0e0e0',
     backgroundColor: 'white', // Add background color to ensure shadow is visible
     marginHorizontal: 16, // Margin to add spacing between items
+    marginBottom: 10, // Add margin bottom to space out each patient item
     borderRadius: 5, // Rounded corners
     elevation: 2, // Adds shadow on Android
     shadowColor: '#000', // Shadow color for iOS

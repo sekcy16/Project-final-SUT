@@ -116,7 +116,7 @@ const BlogList = () => {
               <Icon
                 name={bookmarked[item.id] ? "bookmark" : "bookmark-outline"}
                 size={24}
-                color={bookmarked[item.id] ? "#FFCC00" : "#000"}
+                color={bookmarked[item.id] ? "#FFCC00" : "#556B2F"} // Use Dark olive green for unbookmarked icons
               />
             </TouchableOpacity>
           </TouchableOpacity>
@@ -129,20 +129,20 @@ const BlogList = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F6FFF5',
+    backgroundColor: '#FAFAD2', // Light goldenrod yellow background
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 30,
     paddingHorizontal: 16,
-    backgroundColor: '#4CAF50',
-    elevation: 4, // Adds shadow on Android
-    shadowColor: '#000', // Shadow color for iOS
-    shadowOffset: { width: 0, height: 2 }, // Shadow offset for iOS
-    shadowOpacity: 0.1, // Shadow opacity for iOS
-    shadowRadius: 4, // Shadow blur radius for iOS
-    marginBottom: 16, // Add margin to push content down
+    backgroundColor: '#8FBC8F', // Soft green background for header
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    marginBottom: 16,
   },
   headerTitle: {
     flex: 1,
@@ -157,14 +157,14 @@ const styles = StyleSheet.create({
     marginVertical: 10,
   },
   activeTab: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#8FBC8F', // Soft green for active tab
     paddingHorizontal: 24,
     paddingVertical: 8,
     borderRadius: 20,
     marginHorizontal: 4,
   },
   inactiveTab: {
-    backgroundColor: '#CCCCCC',
+    backgroundColor: '#CCCCCC', // Light gray for inactive tab
     paddingHorizontal: 24,
     paddingVertical: 8,
     borderRadius: 20,
@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   tabTextInactive: {
-    color: '#000',
+    color: '#556B2F', // Dark olive green for inactive tab text
     fontWeight: 'bold',
   },
   blogList: {
@@ -185,16 +185,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#FFF',
+    backgroundColor: '#FFF8DC', // Cornsilk color for blog items
     padding: 16,
     marginHorizontal: 16,
     marginVertical: 8,
     borderRadius: 10,
-    elevation: 2, // Adds shadow on Android
-    shadowColor: '#000', // Shadow color for iOS
-    shadowOffset: { width: 0, height: 2 }, // Shadow offset for iOS
-    shadowOpacity: 0.1, // Shadow opacity for iOS
-    shadowRadius: 4, // Shadow blur radius for iOS
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   blogContent: {
     flex: 1,
@@ -202,6 +202,7 @@ const styles = StyleSheet.create({
   blogTitle: {
     fontWeight: 'bold',
     fontSize: 16,
+    color: '#556B2F', // Dark olive green for blog titles
   },
   blogInfo: {
     flexDirection: 'row',

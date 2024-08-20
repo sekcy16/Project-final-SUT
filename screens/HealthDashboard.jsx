@@ -132,7 +132,6 @@ const chartConfig = (color) => ({
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    padding: 20,
     backgroundColor: '#F5F5DC', // Light beige background
   },
   header: {

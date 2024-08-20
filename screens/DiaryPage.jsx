@@ -96,15 +96,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#8FBC8F',  // Soft green background for header
+    backgroundColor: '#8FBC8F', // Soft green background for header
+    borderRadius: 12,
+    marginBottom: 20,// Soft green background for header
   },
   profileIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#BDB76B',  // Khaki color for profile icon
-    justifyContent: 'center',
-    alignItems: 'center',
+    padding: 10,
+    backgroundColor: '#BDB76B', // Khaki color for profile icon
+    borderRadius: 8,
   },
   iconButton: {
     padding: 8,
