@@ -120,7 +120,7 @@ const MacroItem = ({ label, value, total, color }) => (
 const chartConfig = (color) => ({
   backgroundGradientFrom: '#F5F5DC',
   backgroundGradientTo: '#F5F5DC',
-  color: (opacity = 1) => `${color}${opacity}`,
+  color: (opacity = 1) => `rgba(${parseInt(color.substring(1, 3), 16)}, ${parseInt(color.substring(3, 5), 16)}, ${parseInt(color.substring(5, 7), 16)}, ${opacity})`,
   labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
   propsForDots: {
     r: "4",
@@ -128,6 +128,7 @@ const chartConfig = (color) => ({
     stroke: color,
   }
 });
+
 
 const styles = StyleSheet.create({
   container: {

@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, Button, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, BackHandler } from 'react-native';
 import { Camera, CameraView } from 'expo-camera';
 import { BlurView } from 'expo-blur';
 import axios from 'axios';
 import * as ImageManipulator from 'expo-image-manipulator';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { MaterialIcons } from '@expo/vector-icons';
 
 const FoodCamera = () => {
   const [permission, setPermission] = useState(null);
@@ -108,6 +109,20 @@ const FoodCamera = () => {
     }
   }, []);
 
+  const handleBackAction = useCallback(() => {
+    navigation.navigate('HealthDashboard'); // Navigate to HealthDashboard instead of going back
+    return true; // Return true to indicate we've handled the back action
+  }, [navigation]);
+
+  useFocusEffect(
+    useCallback(() => {
+      BackHandler.addEventListener('hardwareBackPress', handleBackAction);
+      return () => {
+        BackHandler.removeEventListener('hardwareBackPress', handleBackAction);
+      };
+    }, [handleBackAction])
+  );
+
   if (permission === null) {
     return <View />;
   }
@@ -118,7 +133,9 @@ const FoodCamera = () => {
         <Text style={styles.message}>
           We need your permission to show the camera
         </Text>
-        <Button onPress={Camera.requestCameraPermissionsAsync} title="Grant Permission" />
+        <TouchableOpacity onPress={Camera.requestCameraPermissionsAsync} style={styles.permissionButton}>
+          <Text style={styles.permissionButtonText}>Grant Permission</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -129,11 +146,13 @@ const FoodCamera = () => {
         {isLoading && (
           <BlurView intensity={50} style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#fff" />
-            <Text style={styles.loadingText}>Loading model...</Text>
+            <Text style={styles.loadingText}>Loading...</Text>
           </BlurView>
         )}
         <View style={styles.buttonContainer}>
-          <Button title="Capture Frame" onPress={captureFrame} />
+          <TouchableOpacity style={styles.captureButton} onPress={captureFrame}>
+            <MaterialIcons name="camera-alt" size={30} color="#fff" />
+          </TouchableOpacity>
         </View>
       </CameraView>
     </View>
@@ -164,9 +183,40 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     flex: 1,
-    flexDirection: 'column',
-    backgroundColor: 'transparent',
-    margin: 64,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginBottom: 36,
+  },
+  captureButton: {
+    backgroundColor: '#ff4757',
+    borderRadius: 50,
+    height: 70,
+    width: 70,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    shadowOpacity: 0.29,
+    shadowRadius: 4.65,
+    elevation: 7,
+    position: 'absolute',
+    bottom: 80, // Adjust this value to move the button up or down
+    left: '50%',
+    transform: [{ translateX: -35 }], // Center the button horizontally
+  },
+  permissionButton: {
+    backgroundColor: '#4CAF50',
+    borderRadius: 5,
+    padding: 10,
+    marginTop: 10,
+  },
+  permissionButtonText: {
+    color: 'white',
+    textAlign: 'center',
+    fontWeight: 'bold',
   },
 });
 

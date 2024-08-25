@@ -1,19 +1,19 @@
-import React from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useEffect, useCallback } from 'react';
+import { View, Text, Image, StyleSheet, TouchableOpacity, BackHandler } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 
 const FoodResult = ({ route, navigation }) => {
   const { predictions, capturedImageUri } = route.params;
 
   const highestPrediction = predictions.reduce(
-    (prev, current) =>
-      prev.value > current.value ? prev : current,
+    (prev, current) => (prev.value > current.value ? prev : current),
     { name: 'Food not found', value: 0 }
   );
 
   const highestPercentage = (highestPrediction.value * 100).toFixed(2);
 
   const handleRetake = () => {
-    navigation.goBack(); // Go back to the camera screen
+    navigation.navigate('FoodARPage');
   };
 
   const handleNutrition = () => {
@@ -21,6 +21,20 @@ const FoodResult = ({ route, navigation }) => {
       foodName: highestPrediction.name,
     });
   };
+
+  const handleBackAction = useCallback(() => {
+    navigation.navigate('HealthDashboard'); // Navigate to FoodScreen instead of going back
+    return true; // Return true to indicate we've handled the back action
+  }, [navigation]);
+
+  useFocusEffect(
+    useCallback(() => {
+      BackHandler.addEventListener('hardwareBackPress', handleBackAction);
+      return () => {
+        BackHandler.removeEventListener('hardwareBackPress', handleBackAction);
+      };
+    }, [handleBackAction])
+  );
 
   return (
     <View style={styles.container}>
@@ -30,12 +44,12 @@ const FoodResult = ({ route, navigation }) => {
           {`${highestPrediction.name} (${highestPercentage}%)`}
         </Text>
       ) : (
-        <Text style={styles.errorText}>
+        <Text style={styles.resultText}>
           Food not found. Please try to capture it again with a different angle.
         </Text>
       )}
       <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.button} onPress={handleRetake}>
+        <TouchableOpacity style={[styles.button, styles.retakeButton]} onPress={handleRetake}>
           <Text style={styles.buttonText}>Retake</Text>
         </TouchableOpacity>
         {highestPrediction.value >= 0.35 && (
@@ -53,46 +67,44 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#f7f7f7',
+    padding: 16,
   },
   image: {
     width: 300,
     height: 300,
-    borderRadius: 15,
-    marginBottom: 30,
-    borderColor: '#ddd',
-    borderWidth: 1,
-  },
-  resultText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
+    borderRadius: 10,
     marginBottom: 20,
   },
-  errorText: {
-    fontSize: 18,
-    color: '#ff6f61',
+  resultText: {
+    fontSize: 20,
+    fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 20,
   },
   buttonContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '80%',
+    justifyContent: 'space-between',
+    width: '100%',
+    paddingHorizontal: 20,
   },
   button: {
-    backgroundColor: '#4CAF50',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 25,
-    marginHorizontal: 10,
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: '#007BFF',
+    padding: 10,
+    marginHorizontal: 5,
+    borderRadius: 5,
+  },
+  retakeButton: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.8,
+    shadowRadius: 2,
+    elevation: 5,
   },
   buttonText: {
+    color: '#FFF',
     fontSize: 16,
-    color: '#fff',
-    textAlign: 'center',
   },
 });
 

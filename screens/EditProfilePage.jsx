@@ -19,7 +19,7 @@ import {
   reauthenticateWithCredential,
 } from "firebase/auth";
 import { useNavigation } from "@react-navigation/native";
-import { launchImageLibrary } from "react-native-image-picker";
+import * as ImagePicker from 'expo-image-picker';
 import { avatars } from "../utils/supports"; // Import avatars
 
 const EditProfilePage = () => {
@@ -61,17 +61,31 @@ const EditProfilePage = () => {
     setIsAvatarMenu(false);
   };
 
-  const handleImagePick = () => {
-    launchImageLibrary({ mediaType: 'photo' }, (response) => {
-      if (response.didCancel) {
-        console.log('User cancelled image picker');
-      } else if (response.errorCode) {
-        console.error('ImagePicker Error: ', response.errorMessage);
-      } else if (response.assets && response.assets.length > 0) {
-        const pickedImageUri = response.assets[0].uri;
-        setAvatar(pickedImageUri);
+  const handleImagePick = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  
+      if (permissionResult.granted === false) {
+        Alert.alert("Permission to access the camera roll is required!");
+        return;
       }
-    });
+  
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 1,
+      });
+  
+      if (!result.canceled) {
+        const pickedImageUri = result.assets[0].uri;
+        setAvatar(pickedImageUri);
+      } else {
+        console.log('User cancelled image picker');
+      }
+    } catch (error) {
+      console.error('ImagePicker Error: ', error);
+    }
   };
 
   const handleSave = async () => {
