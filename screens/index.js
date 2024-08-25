@@ -16,4 +16,5 @@ export { default as PatientListScreen } from './DoctorScreen/PatientListScreen';
 export { default as NotificationListScreen } from './NotificationListScreen';
 export { default as NotificationDetailScreen} from './NotificationDetailScreen';
 export { default as PatientDetailScreen} from './DoctorScreen/PatientDetailScreen';
-export { default as  AdvicePage} from './DoctorScreen/AdvicePage';
+export { default as AdvicePage} from './DoctorScreen/AdvicePage';
+export { default as EditProfilePage} from './EditProfilePage';

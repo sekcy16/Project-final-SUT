@@ -7,20 +7,20 @@ const DiaryPage = () => {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.iconButton}>
-          <Icon name="chevron-back" size={24} color="#fff" />
+          <Icon name="chevron-back" size={24} color="#FFF" />
         </TouchableOpacity>
         <View style={styles.profileIcon}>
-          <Icon name="person-circle-outline" size={24} color="#fff" />
+          <Icon name="person-circle-outline" size={24} color="#FFF" />
         </View>
       </View>
 
       <View style={styles.dateNavigation}>
         <TouchableOpacity style={styles.iconButton}>
-          <Icon name="chevron-back" size={24} color="#fff" />
+          <Icon name="chevron-back" size={24} color="#FFF" />
         </TouchableOpacity>
         <Text style={styles.dateText}>23/7/2024</Text>
         <TouchableOpacity style={styles.iconButton}>
-          <Icon name="chevron-forward" size={24} color="#fff" />
+          <Icon name="chevron-forward" size={24} color="#FFF" />
         </TouchableOpacity>
       </View>
 
@@ -56,12 +56,12 @@ const MealSection = ({ title, calories, items = [] }) => (
   <View style={styles.mealSection}>
     <TouchableOpacity style={styles.mealHeader}>
       <View style={styles.mealTitleContainer}>
-        <Icon name={title === 'มื้อเช้า' ? 'cafe' : title === 'มื้อเที่ยง' ? 'restaurant' : 'moon'} size={24} color="#fff" />
+        <Icon name={title === 'มื้อเช้า' ? 'cafe' : title === 'มื้อเที่ยง' ? 'restaurant' : 'moon'} size={24} color="#FFF" />
         <Text style={styles.mealTitle}>{title}</Text>
       </View>
       <Text style={styles.mealCalories}>{calories} cal</Text>
       <TouchableOpacity>
-        <Icon name="add" size={24} color="#fff" />
+        <Icon name="add" size={24} color="#FFF" />
       </TouchableOpacity>
     </TouchableOpacity>
     {items.map((item, index) => (
@@ -85,53 +85,54 @@ const MealSection = ({ title, calories, items = [] }) => (
     )}
   </View>
 );
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5DC',  // Light beige background
+    backgroundColor: '#E6F4EA',  // Light Green background for the container
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#8FBC8F', // Soft green background for header
+    backgroundColor: '#004d00', // Dark Green for header
+    borderBottomWidth: 1,
+    borderBottomColor: '#003300', // Even darker Green for contrast
     borderRadius: 12,
-    marginBottom: 20,// Soft green background for header
+    marginBottom: 16,
   },
   profileIcon: {
     padding: 10,
-    backgroundColor: '#BDB76B', // Khaki color for profile icon
+    backgroundColor: '#FF8C00', // Dark Orange for profile icon (contrast)
     borderRadius: 8,
   },
   iconButton: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: '#556B2F',  // Dark olive green for icon button
+    backgroundColor: '#FF8C00',  // Dark Orange for icon button
   },
   dateNavigation: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#8FBC8F',  // Same soft green for navigation
-    padding: 8,
-    marginVertical: 16,
-    marginHorizontal: 16,
+    backgroundColor: '#004d00',  // Dark Green for date navigation
+    padding: 12,
     borderRadius: 8,
+    marginHorizontal: 16,
+    marginBottom: 16,
   },
   dateText: {
-    color: '#fff',
+    color: '#FFF',
     fontSize: 18,
     fontWeight: 'bold',
   },
   caloriesSummary: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
     padding: 16,
-    backgroundColor: '#F0E68C',  // Khaki background for summary
-    marginHorizontal: 16,
+    backgroundColor: '#d0f0c0',  // Honeydew for summary background
     borderRadius: 8,
+    marginHorizontal: 16,
     marginBottom: 16,
   },
   caloriesColumn: {
@@ -139,11 +140,11 @@ const styles = StyleSheet.create({
   },
   summaryText: {
     fontWeight: 'bold',
-    color: '#556B2F',  // Dark olive text for contrast
+    color: '#004d00',  // Dark Green for text
   },
   caloriesText: {
     fontSize: 16,
-    color: '#6B8E23',  // Olive drab for text
+    color: '#006400',  // Darker Green for calorie values
     marginTop: 4,
   },
   mealContainer: {
@@ -152,7 +153,7 @@ const styles = StyleSheet.create({
   mealSection: {
     marginBottom: 16,
     borderRadius: 8,
-    backgroundColor: '#FAFAD2',  // Light goldenrod yellow for meal sections
+    backgroundColor: '#FFFFFF',  // White for meal sections
     shadowColor: '#000',
     shadowOpacity: 0.2,
     shadowRadius: 8,
@@ -163,7 +164,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#8FBC8F',  // Soft green for meal headers
+    backgroundColor: '#228B22',  // Forest Green for meal headers
     padding: 16,
     borderTopLeftRadius: 8,
     borderTopRightRadius: 8,
@@ -173,31 +174,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   mealTitle: {
-    color: '#fff',
+    color: '#FFF',
     fontSize: 18,
     fontWeight: 'bold',
     marginLeft: 8,
   },
   mealCalories: {
-    color: '#fff',
+    color: '#FFF',
     fontSize: 16,
   },
   foodItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#FFF8DC',  // Cornsilk color for food items
+    backgroundColor: '#E6F4EA',  // Light Green background for food items
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#EEE8AA',  // Pale goldenrod for border
+    borderBottomColor: '#d0f0c0',  // Honeydew for borders
   },
   foodName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#556B2F',  // Dark olive for food names
+    color: '#004d00',  // Dark Green for food names
   },
   foodAmount: {
-    color: '#6B8E23',  // Olive drab for food amounts
+    color: '#006400',  // Dark Green for food amounts
   },
   foodCaloriesContainer: {
     flexDirection: 'row',
@@ -206,17 +207,18 @@ const styles = StyleSheet.create({
   foodCalories: {
     marginRight: 8,
     fontSize: 14,
-    color: '#6B8E23',  // Olive drab for calories
+    color: '#006400',  // Dark Green for calories
   },
   emptyMeal: {
     padding: 16,
     alignItems: 'center',
-    backgroundColor: '#EEE8AA',  // Pale goldenrod for empty meals
+    backgroundColor: '#E6F4EA',  // Light Green background for empty meals
   },
   emptyMealText: {
-    color: '#999',
+    color: '#A9A9A9',  // Dark Gray for empty meal text
     fontSize: 14,
   },
 });
+
 
 export default DiaryPage;

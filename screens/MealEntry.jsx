@@ -1,25 +1,22 @@
 import React from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { useNavigation } from '@react-navigation/native';
+import { useRoute, useNavigation } from '@react-navigation/native';
 
 const MealEntry = () => {
+  const route = useRoute();
   const navigation = useNavigation();
-
-  const handleFoodRecognition = () => {
-    navigation.navigate('FoodARPage');
-  };
+  const mealType = route.params?.mealType || 'Meal'; // Provide a default value
 
   return (
     <View style={styles.container}>
-     <View style={styles.header}>
-        <TouchableOpacity style={styles.iconButton}>
-          <Icon name="chevron-back" size={24} color="#fff" />
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Icon name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
-        <View style={styles.profileIcon}>
-          <Icon name="person-circle-outline" size={24} color="#fff" />
-        </View>
       </View>
+
+
 
       <View style={styles.searchBar}>
         <Icon name="search" size={20} color="#999" />
@@ -30,10 +27,10 @@ const MealEntry = () => {
         <Icon name="mic" size={20} color="#999" />
       </View>
 
-      <TouchableOpacity style={styles.scanButton} onPress={handleFoodRecognition}>
-        <Icon name="fast-food-outline" size={24} color="#FFF" />
-        <Text style={styles.scanButtonText}>Food Recognition</Text>
-      </TouchableOpacity>
+      <View style={styles.scanButton}>
+        <Icon name="barcode-outline" size={24} color="#000" />
+        <Text style={styles.scanButtonText}>แสกนบาร์โค้ดอาหาร</Text>
+      </View>
 
       <View style={styles.mealTypeSelector}>
         <Text style={styles.mealTypeActive}>อาหารแนะนำ</Text>
@@ -43,12 +40,14 @@ const MealEntry = () => {
       </View>
 
       <ScrollView style={styles.foodList}>
-        <FoodItem name="ข้าวไรซ์ ดี" amount="100 กรัม" calories="379 cals" />
-        <FoodItem name="ข้าวกล้อง ดี" amount="100 กรัม" calories="110 cals" />
+        <FoodItem name="ข้าวไรซ์เบอรี่ย์" amount="100 กรัม" calories="379 cals" />
+        <FoodItem name="ข้าวกล้อง" amount="100 กรัม" calories="110 cals" />
         <Text style={styles.sectionTitle}>ประจำ</Text>
-        <FoodItem name="แซนวิช(ปุ้ม) ดี" amount="100 กรัม" calories="127 cals" />
-        <FoodItem name="แซนวิช(ปุ้ม) ดี" amount="100 กรัม" calories="127 cals" />
+        <FoodItem name="แซนวิช" amount="100 กรัม" calories="127 cals" />
+        <FoodItem name="แซลมอน" amount="100 กรัม" calories="127 cals" />
       </ScrollView>
+
+   
     </View>
   );
 };
@@ -62,7 +61,7 @@ const FoodItem = ({ name, amount, calories }) => (
     <View style={styles.caloriesContainer}>
       <Text style={styles.calories}>{calories}</Text>
       <TouchableOpacity style={styles.addItemButton}>
-        <Icon name="add" size={20} color="#6B8E23" />
+        <Icon name="add" size={20} color="#4CAF50" />
       </TouchableOpacity>
     </View>
   </View>
@@ -70,32 +69,18 @@ const FoodItem = ({ name, amount, calories }) => (
 
 const styles = StyleSheet.create({
   container: {
-    flexGrow: 1,
-    backgroundColor: '#F5F5DC', // Light beige background
+    flex: 1,
+    backgroundColor: '#F6FFF5',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#8FBC8F', // Soft green background for header
-    borderRadius: 12,
-    marginBottom: 20,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#FFF',
-  },
-  iconButton: {
-    padding: 10,
-    backgroundColor: '#556B2F', // Dark olive green for icon button
-    borderRadius: 8,
-  },
-  profileIcon: {
-    padding: 10,
-    backgroundColor: '#BDB76B', // Khaki color for profile icon
-    borderRadius: 8,
   },
   searchBar: {
     flexDirection: 'row',
@@ -114,22 +99,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#8FBC8F',  // Soft green for scan button
-    borderRadius: 25,
+    backgroundColor: '#FFF',
+    borderRadius: 10,
     margin: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
+    padding: 12,
   },
   scanButtonText: {
-    color: '#FFF',
     marginLeft: 8,
-    fontWeight: 'bold',
-    fontSize: 16,
   },
   mealTypeSelector: {
     flexDirection: 'row',
@@ -140,7 +116,7 @@ const styles = StyleSheet.create({
     color: '#999',
   },
   mealTypeActive: {
-    color: '#8FBC8F',  // Soft green for active meal type
+    color: '#4CAF50',
     fontWeight: 'bold',
   },
   foodList: {
@@ -151,29 +127,22 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginLeft: 16,
     marginTop: 16,
-    color: '#556B2F',  // Dark olive green for section title
   },
   foodItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#FFF8DC',  // Cornsilk color for food items
+    backgroundColor: '#FFF',
     padding: 16,
     marginHorizontal: 16,
     marginVertical: 8,
     borderRadius: 10,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
   },
   foodName: {
     fontWeight: 'bold',
-    color: '#556B2F',  // Dark olive green for food name
   },
   foodAmount: {
-    color: '#6B8E23',  // Olive drab for food amount
+    color: '#999',
   },
   caloriesContainer: {
     flexDirection: 'row',
@@ -181,13 +150,13 @@ const styles = StyleSheet.create({
   },
   calories: {
     marginRight: 8,
-    color: '#6B8E23',  // Olive drab for calories
   },
   addItemButton: {
-    backgroundColor: '#EEE8AA',  // Pale goldenrod for add button
+    backgroundColor: '#E8F5E9',
     borderRadius: 15,
     padding: 4,
   },
+
 });
 
 export default MealEntry;

@@ -24,7 +24,8 @@ import {
   NotificationListScreen,
   NotificationDetailScreen,
   PatientDetailScreen,
-  AdvicePage
+  AdvicePage,
+  EditProfilePage
 } from './screens';
 import FoodResult from './components/FoodResult';
 import Nutrition from './components/Nutrition';
@@ -251,6 +252,7 @@ const RootNavigator = () => {
       <Stack.Screen name="NotificationListScreen" component={NotificationListScreen}/>
       <Stack.Screen name="NotificationDetailScreen" component={NotificationDetailScreen}/>
       <Stack.Screen name="AdvicePage" component={ AdvicePage}/>
+      <Stack.Screen name='EditProfilePage' component={ EditProfilePage}/>
 
     </Stack.Navigator>
   );
