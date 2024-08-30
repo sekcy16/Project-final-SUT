@@ -19,8 +19,9 @@ import {
   reauthenticateWithCredential,
 } from "firebase/auth";
 import { useNavigation } from "@react-navigation/native";
-import * as ImagePicker from 'expo-image-picker';
+import * as ImagePicker from "expo-image-picker";
 import { avatars } from "../utils/supports"; // Import avatars
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const EditProfilePage = () => {
   const [email, setEmail] = useState("");
@@ -28,6 +29,9 @@ const EditProfilePage = () => {
   const [currentPassword, setCurrentPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [avatar, setAvatar] = useState(null);
+  const [weight, setWeight] = useState("");
+  const [height, setHeight] = useState("");
+  const [bmi, setBmi] = useState("");
   const [isAvatarMenu, setIsAvatarMenu] = useState(false);
   const navigation = useNavigation();
 
@@ -43,7 +47,10 @@ const EditProfilePage = () => {
             const userData = userDoc.data();
             setEmail(user.email || "");
             setFullName(userData.fullName || "");
-            setAvatar(userData.profilePic || avatars[0]?.image.asset.url); // Set avatar
+            setAvatar(userData.profilePic || avatars[0]?.image.asset.url);
+            setWeight(userData.weight?.toString() || "0");
+            setHeight(userData.height?.toString() || "0");
+            setBmi(userData.bmi?.toString() || "0");
           } else {
             console.error("No such document!");
           }
@@ -61,12 +68,12 @@ const EditProfilePage = () => {
     setIsAvatarMenu(false);
   };
 
-  const handleImagePick = async () => {
+  const handleImagePickAndUpload = async () => {
     try {
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
   
       if (permissionResult.granted === false) {
-        Alert.alert("Permission to access the camera roll is required!");
+        Alert.alert("ต้องการสิทธิ์ในการเข้าถึงคลังภาพ!");
         return;
       }
   
@@ -79,12 +86,29 @@ const EditProfilePage = () => {
   
       if (!result.canceled) {
         const pickedImageUri = result.assets[0].uri;
-        setAvatar(pickedImageUri);
+  
+        const storage = getStorage();
+        const imageRef = ref(storage, `profilePics/${firebaseAuth.currentUser.uid}.jpg`);
+  
+        const response = await fetch(pickedImageUri);
+        const blob = await response.blob();
+  
+        await uploadBytes(imageRef, blob);
+  
+        const downloadURL = await getDownloadURL(imageRef);
+  
+        setAvatar(downloadURL);
+  
+        const userDocRef = doc(firebaseDB, "users", firebaseAuth.currentUser.uid);
+        await updateDoc(userDocRef, { profilePic: downloadURL });
+  
+        Alert.alert("สำเร็จ", "อัปโหลดรูปภาพสำเร็จแล้ว");
       } else {
-        console.log('User cancelled image picker');
+        console.log("ผู้ใช้ยกเลิกการเลือกภาพ");
       }
     } catch (error) {
-      console.error('ImagePicker Error: ', error);
+      console.error("ImagePicker หรือ Firebase Storage มีข้อผิดพลาด: ", error);
+      Alert.alert("ข้อผิดพลาด", "ไม่สามารถอัปโหลดรูปภาพได้ กรุณาลองใหม่");
     }
   };
 
@@ -93,11 +117,15 @@ const EditProfilePage = () => {
       const user = firebaseAuth.currentUser;
       if (!user) return;
 
-      // Update Firestore document
       const userDocRef = doc(firebaseDB, "users", user.uid);
-      await updateDoc(userDocRef, { fullName, profilePic: avatar });
+      await updateDoc(userDocRef, { 
+        fullName, 
+        profilePic: avatar, 
+        weight: parseFloat(weight) || 0, 
+        height: parseFloat(height) || 0, 
+        bmi: parseFloat(bmi) || 0 
+      });
 
-      // Update email if necessary
       if (email !== user.email) {
         if (!currentPassword) {
           Alert.alert(
@@ -114,7 +142,6 @@ const EditProfilePage = () => {
         await updateEmail(user, email);
       }
 
-      // Update password if necessary
       if (password && password !== "******") {
         if (!currentPassword) {
           Alert.alert(
@@ -155,7 +182,10 @@ const EditProfilePage = () => {
       </View>
 
       <View style={styles.formSection}>
-        <TouchableOpacity onPress={() => setIsAvatarMenu(true)} style={styles.avatarContainer}>
+        <TouchableOpacity
+          onPress={() => setIsAvatarMenu(true)}
+          style={styles.avatarContainer}
+        >
           <Image source={{ uri: avatar }} style={styles.avatar} />
           <View style={styles.editIconContainer}>
             <Icon name="camera" size={20} color="#FFF" />
@@ -169,12 +199,18 @@ const EditProfilePage = () => {
                   key={item._id}
                   onPress={() => handleAvatarSelection(item)}
                 >
-                  <Image source={{ uri: item?.image.asset.url }} style={styles.avatarOption} />
+                  <Image
+                    source={{ uri: item?.image.asset.url }}
+                    style={styles.avatarOption}
+                  />
                 </TouchableOpacity>
               ))}
             </ScrollView>
-            <TouchableOpacity onPress={handleImagePick} style={styles.pickImageButton}>
-              <Text style={styles.pickImageText}>Choose from device</Text>
+            <TouchableOpacity
+              onPress={handleImagePickAndUpload}
+              style={styles.pickImageButton}
+            >
+              <Text style={styles.pickImageText}>Choose and Upload Image</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -205,6 +241,33 @@ const EditProfilePage = () => {
           onChangeText={setPassword}
           placeholder="Enter your new password (optional)"
           secureTextEntry
+        />
+
+        <Text style={styles.label}>Weight</Text>
+        <TextInput
+          style={styles.input}
+          value={weight}
+          onChangeText={setWeight}
+          placeholder="Enter your weight"
+          keyboardType="numeric"
+        />
+
+        <Text style={styles.label}>Height</Text>
+        <TextInput
+          style={styles.input}
+          value={height}
+          onChangeText={setHeight}
+          placeholder="Enter your height"
+          keyboardType="numeric"
+        />
+
+        <Text style={styles.label}>BMI</Text>
+        <TextInput
+          style={styles.input}
+          value={bmi}
+          onChangeText={setBmi}
+          placeholder="Enter your BMI"
+          keyboardType="numeric"
         />
 
         <Button title="Save Changes" onPress={handleSave} color="#004d00" />

@@ -1,10 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, TextInput, TouchableOpacity } from 'react-native';
-import { LineChart } from 'react-native-chart-kit';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Dimensions,
+  TextInput,
+  TouchableOpacity,
+} from "react-native";
+import { LineChart } from "react-native-chart-kit";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  doc,
+  setDoc,
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  orderBy,
+  deleteDoc,
+} from "firebase/firestore";
+import { firebaseDB, firebaseAuth } from "../config/firebase.config"; // นำเข้า firebaseConfig ของคุณ
 
 const BloodSugar = ({ navigation }) => {
-  const [bloodSugarLevel, setBloodSugarLevel] = useState('');
+  const [bloodSugarLevel, setBloodSugarLevel] = useState("");
   const [history, setHistory] = useState([]);
   const [chartData, setChartData] = useState([]);
 
@@ -13,60 +32,122 @@ const BloodSugar = ({ navigation }) => {
   }, []);
 
   const loadHistory = async () => {
-    try {
-      const savedHistory = await AsyncStorage.getItem('bloodSugarHistory');
-      if (savedHistory !== null) {
-        const parsedHistory = JSON.parse(savedHistory);
-        setHistory(parsedHistory);
-        updateChartData(parsedHistory);
+    const user = firebaseAuth.currentUser;
+
+    if (user) {
+      try {
+        const bloodSugarHistoryRef = collection(
+          firebaseDB,
+          "users",
+          user.uid,
+          "bloodSugarHistory"
+        );
+        const q = query(
+          bloodSugarHistoryRef,
+          orderBy("date", "desc"),
+          orderBy("time", "desc")
+        );
+        const querySnapshot = await getDocs(q);
+
+        const fetchedHistory = [];
+        querySnapshot.forEach((doc) => {
+          fetchedHistory.push({ ...doc.data(), id: doc.id });
+        });
+
+        setHistory(fetchedHistory);
+        updateChartData(fetchedHistory);
+      } catch (error) {
+        console.error("Error loading history from Firestore:", error);
       }
-    } catch (error) {
-      console.error('Error loading history:', error);
+    } else {
+      console.error("No user is logged in");
     }
   };
 
   const updateChartData = (historyData) => {
-    const last7Days = historyData.slice(-7).map(item => parseInt(item.level));
-    setChartData(last7Days.reverse());
+    const last7Days = historyData
+      .slice(-7)
+      .map((item) => parseInt(item.level, 10))
+      .filter((level) => !isNaN(level)); // กรองค่า NaN ออก
+
+    if (last7Days.length > 0) {
+      setChartData(last7Days.reverse());
+    } else {
+      console.error("No valid data to update chart");
+    }
   };
 
   const addBloodSugarEntry = async () => {
-    if (bloodSugarLevel) {
+    const level = parseInt(bloodSugarLevel, 10);
+
+    if (!isNaN(level) && level >= 0) {
+      // ตรวจสอบว่า level เป็นตัวเลขที่ไม่เป็น NaN
       const now = new Date();
       const newEntry = {
         date: now.toLocaleDateString(),
         time: now.toLocaleTimeString(),
-        level: bloodSugarLevel,
-        status: getStatus(parseInt(bloodSugarLevel))
+        level: level,
+        status: getStatus(level),
       };
-      const updatedHistory = [newEntry, ...history];
-      setHistory(updatedHistory);
-      updateChartData(updatedHistory);
-      setBloodSugarLevel('');
-      
-      try {
-        await AsyncStorage.setItem('bloodSugarHistory', JSON.stringify(updatedHistory));
-      } catch (error) {
-        console.error('Error saving history:', error);
+
+      const user = firebaseAuth.currentUser;
+
+      if (user) {
+        try {
+          const userDocRef = doc(firebaseDB, "users", user.uid);
+          const bloodSugarHistoryRef = collection(
+            userDocRef,
+            "bloodSugarHistory"
+          );
+          await addDoc(bloodSugarHistoryRef, newEntry);
+
+          const updatedHistory = [newEntry, ...history];
+          setHistory(updatedHistory);
+          updateChartData(updatedHistory);
+          setBloodSugarLevel("");
+        } catch (error) {
+          console.error("Error saving to Firestore:", error);
+        }
+      } else {
+        console.error("No user is logged in");
       }
+    } else {
+      console.error("Invalid blood sugar level");
     }
   };
+  const deleteEntry = async (index, docId) => {
+    const user = firebaseAuth.currentUser;
 
-  const deleteEntry = async (index) => {
-    const updatedHistory = history.filter((_, i) => i !== index);
-    setHistory(updatedHistory);
-    updateChartData(updatedHistory);
-    try {
-      await AsyncStorage.setItem('bloodSugarHistory', JSON.stringify(updatedHistory));
-    } catch (error) {
-      console.error('Error saving history:', error);
+    if (user) {
+      try {
+        if (!docId) {
+          console.error("Document ID is undefined or null");
+          return;
+        }
+        const docRef = doc(
+          firebaseDB,
+          "users",
+          user.uid,
+          "bloodSugarHistory",
+          docId
+        );
+        await deleteDoc(docRef);
+
+        const updatedHistory = history.filter((_, i) => i !== index);
+        setHistory(updatedHistory);
+        updateChartData(updatedHistory);
+      } catch (error) {
+        console.error("Error deleting from Firestore:", error);
+      }
+    } else {
+      console.error("No user is logged in");
     }
   };
 
   const getStatus = (level) => {
-    if (level < 70) return 'ต่ำ';
-    if (level > 100) return 'สูง';
-    return 'ดี';
+    if (level < 70) return "ต่ำ";
+    if (level > 100) return "สูง";
+    return "ดี";
   };
 
   return (
@@ -91,26 +172,26 @@ const BloodSugar = ({ navigation }) => {
 
       <View style={styles.today}>
         <Text style={styles.todayText}>วันนี้</Text>
-        <Text style={styles.todayValue}>{history[0]?.level || '-'} mg/dL</Text>
+        <Text style={styles.todayValue}>{history[0]?.level || "-"} mg/dL</Text>
       </View>
 
       {chartData.length > 0 && (
         <LineChart
           data={{
-            datasets: [{ data: chartData }]
+            datasets: [{ data: chartData }],
           }}
-          width={Dimensions.get('window').width - 40}
+          width={Dimensions.get("window").width - 40}
           height={200}
           chartConfig={{
-            backgroundGradientFrom: '#F6FFF5',
-            backgroundGradientTo: '#F6FFF5',
+            backgroundGradientFrom: "#F6FFF5",
+            backgroundGradientTo: "#F6FFF5",
             color: (opacity = 1) => `rgba(255, 107, 107, ${opacity})`,
             labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
             propsForDots: {
               r: "6",
               strokeWidth: "2",
-              stroke: "#ffa726"
-            }
+              stroke: "#ffa726",
+            },
           }}
           bezier
           style={styles.chart}
@@ -119,17 +200,32 @@ const BloodSugar = ({ navigation }) => {
 
       <View style={styles.history}>
         <Text style={styles.historyTitle}>ประวัติ</Text>
-        {history.map((item, index) => (
-          <View key={index} style={styles.historyItem}>
+        {history.map((item) => (
+          <View key={item.id} style={styles.historyItem}>
             <Text style={styles.historyDate}>{item.date}</Text>
             <Text style={styles.historyTime}>{item.time}</Text>
-            <Text style={[
-              styles.historyValue,
-              item.status === 'สูง' ? styles.highValue : 
-              item.status === 'ต่ำ' ? styles.lowValue : styles.normalValue
-            ]}>{item.status}</Text>
+            <Text
+              style={[
+                styles.historyValue,
+                item.status === "สูง"
+                  ? styles.highValue
+                  : item.status === "ต่ำ"
+                  ? styles.lowValue
+                  : styles.normalValue,
+              ]}
+            >
+              {item.status}
+            </Text>
             <Text style={styles.historyLevel}>{item.level} mg/dL</Text>
-            <TouchableOpacity style={styles.deleteButton} onPress={() => deleteEntry(index)}>
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={() =>
+                deleteEntry(
+                  history.findIndex((entry) => entry.id === item.id),
+                  item.id
+                )
+              }
+            >
               <Text style={styles.deleteButtonText}>ลบ</Text>
             </TouchableOpacity>
           </View>
@@ -143,47 +239,47 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     padding: 20,
-    backgroundColor: '#F6FFF5',
+    backgroundColor: "#F6FFF5",
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 20,
   },
   headerText: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   profileIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#000',
+    backgroundColor: "#000",
   },
   inputContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginBottom: 20,
   },
   input: {
     flex: 1,
     height: 40,
-    borderColor: 'gray',
+    borderColor: "gray",
     borderWidth: 1,
     borderRadius: 5,
     paddingHorizontal: 10,
     marginRight: 10,
   },
   addButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: "#4CAF50",
     padding: 10,
     borderRadius: 5,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   addButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
+    color: "white",
+    fontWeight: "bold",
   },
   today: {
     marginBottom: 20,
@@ -194,7 +290,7 @@ const styles = StyleSheet.create({
   },
   todayValue: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   chart: {
     marginVertical: 20,
@@ -205,15 +301,15 @@ const styles = StyleSheet.create({
   },
   historyTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 10,
   },
   historyItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 10,
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
     borderRadius: 10,
     marginBottom: 10,
   },
@@ -227,25 +323,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   normalValue: {
-    color: 'green',
+    color: "green",
   },
   highValue: {
-    color: 'red',
+    color: "red",
   },
   lowValue: {
-    color: 'orange',
+    color: "orange",
   },
   historyLevel: {
     fontSize: 16,
   },
   deleteButton: {
-    backgroundColor: '#FF6347',
+    backgroundColor: "#FF6347",
     padding: 5,
     borderRadius: 5,
   },
   deleteButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
+    color: "white",
+    fontWeight: "bold",
   },
 });
 
