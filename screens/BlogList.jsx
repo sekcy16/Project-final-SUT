@@ -12,7 +12,7 @@ const BlogList = () => {
     {
       id: 1,
       title: 'แนวทางการออกกำลังกายสำหรับผู้ป่วยเบาหวาน',
-      author: 'Dr.K',
+      author: 'Dr.Kuuu',
       color: 'red',
       bookmarked: false,
     },
