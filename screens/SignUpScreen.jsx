@@ -18,7 +18,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { firebaseAuth, firebaseDB } from "../config/firebase.config";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, collection, getDocs } from "firebase/firestore";
 import { signOut } from "firebase/auth"; // Import the signOut function
 
 const SignUpScreen = () => {
@@ -59,6 +59,15 @@ const SignUpScreen = () => {
         );
         console.log("User Credential:", userCred);
   
+        // Query Firestore to get the total count of users
+        const usersCollectionRef = collection(firebaseDB, "users"); // Get a reference to the "users" collection
+        const usersSnapshot = await getDocs(usersCollectionRef); // Fetch all documents in the "users" collection
+        const userCount = usersSnapshot.size; // Get the number of users
+  
+        const uidnum = userCount + 1; // Increment by 1 for the new user
+  
+        const currentTime = new Date().toISOString(); // Get current timestamp
+  
         const data = {
           _id: userCred?.user.uid, // UID should be stored properly
           fullName: name,
@@ -67,8 +76,10 @@ const SignUpScreen = () => {
             ...userCred.user.providerData[0],
             email: userCred.user.email, // Ensure email is correct
             uid: userCred.user.uid, // Correct UID
+            uidnum: uidnum, // Add uidnum here
           },
           role: "User",
+          lastActive: currentTime, // Store the current timestamp
         };
   
         await setDoc(doc(firebaseDB, "users", userCred?.user.uid), data);
@@ -94,6 +105,8 @@ const SignUpScreen = () => {
       );
     }
   };
+  
+  
 
   return (
     <KeyboardAvoidingView

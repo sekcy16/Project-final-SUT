@@ -46,26 +46,31 @@ const LoginScreen = () => {
         .then((useCred) => {
           if (useCred) {
             console.log("User Id :", useCred?.user.uid);
-            getDoc(doc(firebaseDB, "users", useCred?.user.uid)).then(
-              (docSnap) => {
-                if (docSnap.exists()) {
-                  const userData = docSnap.data();
-                  console.log("User Data :", userData);
-                  
-                  // Dispatch user data to Redux store
-                  dispatch(SET_USER(userData));
-                  
-                  // Check user role and navigate accordingly
-                  if (userData.role === "Doctor") {
-                    console.log("Navigating to Doctor Home Page");
-                    navigation.navigate('Main', { screen: 'DoctorHomePage' });
-                  } else {
-                    console.log("Navigating to HealthDashboard");
-                    navigation.navigate('Main', { screen: 'HealthDashboard' });
-                  }
+            const userDocRef = doc(firebaseDB, "users", useCred?.user.uid);
+            
+            getDoc(userDocRef).then(async (docSnap) => {
+              if (docSnap.exists()) {
+                const userData = docSnap.data();
+                console.log("User Data :", userData);
+                
+                // Update Last Active Timestamp
+                await updateDoc(userDocRef, {
+                  lastActive: new Date().toISOString(),
+                });
+                
+                // Dispatch user data to Redux store
+                dispatch(SET_USER(userData));
+                
+                // Check user role and navigate accordingly
+                if (userData.role === "Doctor") {
+                  console.log("Navigating to Doctor Home Page");
+                  navigation.navigate('Main', { screen: 'DoctorHomePage' });
+                } else {
+                  console.log("Navigating to HealthDashboard");
+                  navigation.navigate('Main', { screen: 'HealthDashboard' });
                 }
               }
-            );
+            });
           }
         })
         .catch((err) => {
@@ -77,6 +82,7 @@ const LoginScreen = () => {
       showAlert("Invalid Email Address");
     }
   };
+  
 
   const handleFirebaseError = (errorCode) => {
     switch (errorCode) {
