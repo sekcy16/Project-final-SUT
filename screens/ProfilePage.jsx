@@ -12,50 +12,36 @@ import Icon from "react-native-vector-icons/Ionicons";
 import { useNavigation } from "@react-navigation/native";
 import { firebaseAuth, firebaseDB } from "../config/firebase.config";
 import { doc, getDoc } from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
 
 const ProfilePage = () => {
   const navigation = useNavigation();
   const [userData, setUserData] = useState(null);
 
   useEffect(() => {
-    fetchUserData(); // Initial fetch when component mounts
+    const unsubscribe = onAuthStateChanged(firebaseAuth, (user) => {
+      if (user) {
+        fetchUserData(user.uid);
+      } else {
+        setUserData(null); // Clear the data if no user is logged in
+      }
+    });
+
+    return () => unsubscribe(); // Clean up the listener on component unmount
   }, []);
-  
-  const updateUserData = async () => {
-    const user = firebaseAuth.currentUser;
-  
-    if (user) {
-      try {
-        const userDocRef = doc(firebaseDB, 'users', user.uid);
-        await setDoc(userDocRef, {
-          weight: 0,
-          height: 0,
-          bmi: 0,
-        }, { merge: true });  // Merge เพื่อป้องกันการเขียนทับ document ทั้งหมด
-        Alert.alert('Success', 'Profile updated successfully!');
-      } catch (error) {
-        console.error('Error updating user data:', error);
-        Alert.alert('Error', 'Failed to update profile. Please try again.');
-      }
-    }
-  };
-  const fetchUserData = async () => {
-    const user = firebaseAuth.currentUser;
 
-    if (user) {
-      try {
-        const userDocRef = doc(firebaseDB, "users", user.uid);
-        const userDoc = await getDoc(userDocRef);
+  const fetchUserData = async (uid) => {
+    try {
+      const userDocRef = doc(firebaseDB, "users", uid);
+      const userDoc = await getDoc(userDocRef);
 
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          setUserData(userData);
-        } else {
-          console.error("No such document!");
-        }
-      } catch (error) {
-        console.error("Error fetching user data:", error);
+      if (userDoc.exists()) {
+        setUserData(userDoc.data());
+      } else {
+        console.error("No such document!");
       }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
     }
   };
 
@@ -72,7 +58,10 @@ const ProfilePage = () => {
   };
 
   const handleRefresh = () => {
-    fetchUserData(); // Refresh the user data
+    const user = firebaseAuth.currentUser;
+    if (user) {
+      fetchUserData(user.uid); // Refresh the user data
+    }
   };
 
   return (
@@ -153,6 +142,7 @@ const ProfilePage = () => {
     </ScrollView>
   );
 };
+
 const StatItem = ({ icon, label, value }) => (
   <View style={styles.statItem}>
     <Icon name={icon} size={24} color="#004d00" />
@@ -169,52 +159,51 @@ const MenuItem = ({ icon, label, onPress }) => (
   </TouchableOpacity>
 );
 
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#E6F4EA", // Light Green background for the container
+    backgroundColor: "#E6F4EA",
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     padding: 16,
-    backgroundColor: "#004d00", // Dark Green for header
+    backgroundColor: "#004d00",
     borderBottomWidth: 1,
-    borderBottomColor: "#003300", // Even darker Green for contrast
+    borderBottomColor: "#003300",
     borderRadius: 12,
     marginBottom: 16,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#FFF", // White color for header title
+    color: "#FFF",
   },
   iconButton: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: "#006400", // Dark Green for icon button
+    backgroundColor: "#006400",
   },
   editButton: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: "#006400", // Dark Green for edit button
+    backgroundColor: "#006400",
   },
   profileSection: {
     alignItems: "center",
     marginTop: 20,
-    backgroundColor: "#FFFFFF", // White for profile section
+    backgroundColor: "#FFFFFF",
     paddingVertical: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "#E6F4EA", // Light Green for border
+    borderBottomColor: "#E6F4EA",
   },
   profileImage: {
     width: 100,
     height: 100,
     borderRadius: 50,
     borderWidth: 2,
-    borderColor: "#004d00", // Dark Green for profile image border
+    borderColor: "#004d00",
   },
   refreshButton: {
     position: "absolute",
@@ -225,7 +214,7 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#004d00", // Dark Green for user name
+    color: "#004d00",
     marginTop: 10,
   },
   buttonContainer: {
@@ -233,13 +222,13 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   logoutButton: {
-    backgroundColor: "#d82701", // Red for logout button
+    backgroundColor: "#d82701",
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 20,
   },
   logoutButtonText: {
-    color: "#FFF", // White color for logout button text
+    color: "#FFF",
     fontWeight: "bold",
   },
   statsSection: {
@@ -247,21 +236,21 @@ const styles = StyleSheet.create({
     justifyContent: "space-around",
     marginTop: 20,
     paddingVertical: 20,
-    backgroundColor: "#FFFFFF", // White for stats section
+    backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
-    borderBottomColor: "#E6F4EA", // Light Green for border
+    borderBottomColor: "#E6F4EA",
   },
   statItem: {
     alignItems: "center",
   },
   statLabel: {
-    color: "#004d00", // Dark Green for stat labels
+    color: "#004d00",
     marginTop: 5,
   },
   statValue: {
     fontWeight: "bold",
     marginTop: 5,
-    color: "#006400", // Darker Green for stat values
+    color: "#006400",
   },
   menuSection: {
     marginTop: 20,
@@ -269,16 +258,16 @@ const styles = StyleSheet.create({
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#E6F4EA", // Light Green for menu items
+    backgroundColor: "#E6F4EA",
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#E6F4EA", // Light Green for border
+    borderBottomColor: "#E6F4EA",
   },
   menuLabel: {
     flex: 1,
     marginLeft: 16,
     fontSize: 16,
-    color: "#004d00", // Dark Green for menu labels
+    color: "#004d00",
   },
 });
 
