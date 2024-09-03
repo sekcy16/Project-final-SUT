@@ -223,6 +223,7 @@ const RootNavigator = () => {
       <Stack.Screen name='CreateBlogScreen' component={CreateBlogOrRecipe} />
 
       <Stack.Screen name='CreateBlogOrRecipe' component={CreateBlogOrRecipe} />
+
     </Stack.Navigator>
   );
 };

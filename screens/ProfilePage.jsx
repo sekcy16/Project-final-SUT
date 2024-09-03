@@ -74,12 +74,7 @@ const ProfilePage = () => {
           <Icon name="arrow-back" size={24} color="#FFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Profile</Text>
-        <TouchableOpacity
-          onPress={() => navigation.navigate("EditProfilePage")}
-          style={styles.editButton}
-        >
-          <Icon name="pencil" size={24} color="#FFF" />
-        </TouchableOpacity>
+   
       </View>
 
       <View style={styles.profileSection}>
@@ -181,11 +176,6 @@ const styles = StyleSheet.create({
     color: "#FFF",
   },
   iconButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: "#006400",
-  },
-  editButton: {
     padding: 8,
     borderRadius: 8,
     backgroundColor: "#006400",

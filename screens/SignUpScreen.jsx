@@ -8,7 +8,7 @@ import {
   Platform,
   Alert,
   Image,
-  StyleSheet
+  StyleSheet,
 } from "react-native";
 import React, { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -16,11 +16,12 @@ import { UserTextinput } from "../components";
 import { useNavigation } from "@react-navigation/native";
 import { avatars } from "../utils/supports";
 import RNPickerSelect from "react-native-picker-select";
-import PagerView from 'react-native-pager-view';
+import PagerView from "react-native-pager-view";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { firebaseAuth, firebaseDB } from "../config/firebase.config";
 import { doc, setDoc } from "firebase/firestore";
 import { signOut } from "firebase/auth";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage"; 
 
 const SignUpScreen = () => {
   const screenWidth = Math.round(Dimensions.get("window").width);
@@ -32,15 +33,17 @@ const SignUpScreen = () => {
   const [isAvatarMenu, setIsAvatarMenu] = useState(false);
   const [getEmailValidationStatus, setGetEmailValidationStatus] = useState(false);
 
-  // New state variables for additional fields
+  // Additional fields
   const [diabetesType, setDiabetesType] = useState("");
   const [weight, setWeight] = useState("");
   const [height, setHeight] = useState("");
   const [age, setAge] = useState("");
   const [activityLevel, setActivityLevel] = useState("");
   const [goal, setGoal] = useState("");
-  const [gender, setGender] = useState(""); // New state for gender
+  const [gender, setGender] = useState("");
   const [currentPage, setCurrentPage] = useState(0);
+  const [bmi, setBmi] = useState(null);
+  const [bmiStatus, setBmiStatus] = useState("");
 
   const navigation = useNavigation();
 
@@ -52,7 +55,7 @@ const SignUpScreen = () => {
   const validateEmail = (email) => {
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
     const validDomains = ["com", "net", "org", "edu", "gov"];
-    const domain = email.split('.').pop();
+    const domain = email.split(".").pop();
 
     return emailPattern.test(email) && validDomains.includes(domain);
   };
@@ -66,7 +69,10 @@ const SignUpScreen = () => {
           password
         );
         console.log("User Credential:", userCred);
-
+  
+        // Calculate BMI
+        const calculatedBMI = calculateBMI(parseFloat(weight), parseFloat(height));
+  
         const data = {
           _id: userCred?.user.uid,
           fullName: name,
@@ -83,23 +89,28 @@ const SignUpScreen = () => {
           age: parseInt(age),
           activityLevel,
           goal,
-          gender // Add gender to the data object
+          gender,
+          bmi: calculatedBMI.bmiValue,
+          bmiStatus: calculatedBMI.bmiStatus,
         };
-
+  
+        // Save data to Firestore
         await setDoc(doc(firebaseDB, "users", userCred?.user.uid), data);
         console.log("Document successfully written!");
-
-        await signOut(firebaseAuth);
-
-        Alert.alert("Success", "Account created successfully!", [
-          {
-            text: "OK",
-            onPress: () => navigation.navigate("LoginScreen"),
-          },
-        ]);
+  
+        // After saving, navigate the user to another screen or show a success message
+        Alert.alert("Success", "Your account has been created successfully!");
       } catch (error) {
         console.error("Error signing up:", error);
-        Alert.alert("Error", error.message);
+  
+        if (error.code === "auth/email-already-in-use") {
+          Alert.alert(
+            "Email Already in Use",
+            "This email address is already associated with an account. Please log in or use a different email."
+          );
+        } else {
+          Alert.alert("Error", error.message);
+        }
       }
     } else {
       Alert.alert(
@@ -107,6 +118,45 @@ const SignUpScreen = () => {
         "Please enter a valid email and complete all fields."
       );
     }
+  };
+  
+
+  // Updated calculateBMI function to return values
+const calculateBMI = (weight, height) => {
+  if (weight && height) {
+    const bmiValue = (weight / Math.pow(height / 100, 2)).toFixed(1); // Calculate BMI
+    setBmi(bmiValue);
+
+    let status = "";
+    if (bmiValue < 18.5) {
+      status = "Underweight";
+    } else if (bmiValue >= 18.5 && bmiValue < 24.9) {
+      status = "Normal weight";
+    } else if (bmiValue >= 25 && bmiValue < 29.9) {
+      status = "Overweight";
+    } else {
+      status = "Obesity";
+    }
+    setBmiStatus(status);
+
+    return { bmiValue, bmiStatus: status };
+  }
+  return { bmiValue: null, bmiStatus: "" };
+};
+  const handleCalculateBMI = () => {
+    calculateBMI(parseFloat(weight), parseFloat(height));
+  };
+
+  const calculateBmiFill = (bmi) => {
+    const fillPercentage = Math.min(Math.max((bmi / 40) * 100, 0), 100); // Cap at 40 for max BMI
+    return `${fillPercentage}%`;
+  };
+
+  const determineBmiColor = (bmi) => {
+    if (bmi < 18.5) return "#FFD700"; // Yellow for underweight
+    if (bmi < 24.9) return "#4CAF50"; // Green for normal weight
+    if (bmi < 29.9) return "#FF8C00"; // Orange for overweight
+    return "#FF0000"; // Red for obesity
   };
 
   return (
@@ -130,15 +180,19 @@ const SignUpScreen = () => {
                 contentContainerStyle={styles.avatarScrollContainer}
               >
                 {avatars.map((avatarItem, index) => (
-                  <TouchableOpacity key={index} onPress={() => handleAvatar(avatarItem)}>
+                  <TouchableOpacity
+                    key={index}
+                    onPress={() => handleAvatar(avatarItem)}
+                  >
                     <Image
                       source={{ uri: avatarItem?.image.asset.url }}
                       style={[
                         styles.avatarImage,
                         {
-                          borderWidth: avatar === avatarItem?.image.asset.url ? 2 : 0,
-                          borderColor: 'blue'
-                        }
+                          borderWidth:
+                            avatar === avatarItem?.image.asset.url ? 2 : 0,
+                          borderColor: "blue",
+                        },
                       ]}
                     />
                   </TouchableOpacity>
@@ -166,7 +220,7 @@ const SignUpScreen = () => {
             </View>
           </ScrollView>
 
-          {/* Page 2: Additional Info */}
+          {/* Page 2: Additional Info and BMI */}
           <ScrollView key="2" contentContainerStyle={styles.scrollViewContent}>
             <View style={styles.fieldsContainer}>
               <Text style={styles.sectionTitle}>Additional Information</Text>
@@ -178,17 +232,22 @@ const SignUpScreen = () => {
                   { label: "Other", value: "Other" },
                 ]}
                 placeholder={{ label: "Select Gender", value: null }}
-                style={pickerSelectStyles}
               />
+              
               <RNPickerSelect
                 onValueChange={(value) => setDiabetesType(value)}
                 items={[
-                  { label: "Type 1", value: "Type1" },
-                  { label: "Type 2", value: "Type2" },
-                  { label: "Pre-diabetes", value: "Pre-diabetes" },
+                  { label: "Type 1", value: "Type 1" },
+                  { label: "Type 2", value: "Type 2" },
+                  { label: "Gestational", value: "Gestational" },
+                  { label: "Other", value: "Other" },
                 ]}
                 placeholder={{ label: "Select Diabetes Type", value: null }}
-                style={pickerSelectStyles}
+              />
+              <UserTextinput
+                placeholder="Age"
+                isPass={false}
+                setStatValue={setAge}
               />
               <UserTextinput
                 placeholder="Weight (kg)"
@@ -202,23 +261,15 @@ const SignUpScreen = () => {
                 setStatValue={setHeight}
                 keyboardType="numeric"
               />
-              <UserTextinput
-                placeholder="Age"
-                isPass={false}
-                setStatValue={setAge}
-                keyboardType="numeric"
-              />
               <RNPickerSelect
                 onValueChange={(value) => setActivityLevel(value)}
                 items={[
                   { label: "Sedentary", value: "Sedentary" },
-                  { label: "Lightly Active", value: "Lightly" },
-                  { label: "Moderately Active", value: "Moderately" },
-                  { label: "Active", value: "Active" },
+                  { label: "Lightly Active", value: "Lightly Active" },
+                  { label: "Moderately Active", value: "Moderately Active" },
                   { label: "Very Active", value: "Very Active" },
                 ]}
                 placeholder={{ label: "Select Activity Level", value: null }}
-                style={pickerSelectStyles}
               />
               <RNPickerSelect
                 onValueChange={(value) => setGoal(value)}
@@ -226,35 +277,63 @@ const SignUpScreen = () => {
                   { label: "Lose Weight", value: "Lose Weight" },
                   { label: "Maintain Weight", value: "Maintain Weight" },
                   { label: "Gain Weight", value: "Gain Weight" },
-                  { label: "Improve Blood Sugar Control", value: "Improve Blood Sugar Control" },
-                  { label: "Increase Physical Activity", value: "Increase Physical Activity" },
-                  { label: "Eat Healthier", value: "Eat Healthier" },
                 ]}
                 placeholder={{ label: "Select Goal", value: null }}
-                style={pickerSelectStyles}
               />
-              <TouchableOpacity
-                onPress={handleSignUp}
-                style={styles.signUpButton}
-              >
-                <Text style={styles.signUpText}>Sign Up</Text>
-              </TouchableOpacity>
             </View>
+
+            <TouchableOpacity style={styles.calculateButton} onPress={handleCalculateBMI}>
+              <Text style={styles.calculateButtonText}>Calculate BMI</Text>
+            </TouchableOpacity>
+
+            {bmi && (
+              <View style={styles.bmiResult}>
+                <Text style={styles.bmiText}>
+                  Your BMI is: {bmi} ({bmiStatus})
+                </Text>
+                <View style={styles.bmiHealthBar}>
+                  <View
+                    style={[
+                      styles.bmiFill,
+                      {
+                        width: calculateBmiFill(bmi),
+                        backgroundColor: determineBmiColor(bmi),
+                      },
+                    ]}
+                  />
+                </View>
+              </View>
+            )}
           </ScrollView>
         </PagerView>
 
-        {/* Page Indicator */}
-        <View style={styles.pageIndicatorContainer}>
-          <View style={[styles.dot, currentPage === 0 && styles.activeDot]} />
-          <View style={[styles.dot, currentPage === 1 && styles.activeDot]} />
-        </View>
+        {currentPage === 0 && (
+          <View style={styles.nextButtonContainer}>
+            <TouchableOpacity
+              style={styles.nextButton}
+              onPress={() => setCurrentPage(1)}
+            >
+              <Text style={styles.nextButtonText}>Next</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {currentPage === 1 && (
+          <View style={styles.submitButtonContainer}>
+            <TouchableOpacity style={styles.submitButton} onPress={handleSignUp}>
+              <Text style={styles.submitButtonText}>Sign Up</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#f5f5f5",
   },
   keyboardAvoidingView: {
     flex: 1,
@@ -263,89 +342,110 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollViewContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: 20,
+    paddingVertical: 20,
+    paddingHorizontal: 15,
   },
   avatarSection: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 20,
   },
   avatarTitle: {
     fontSize: 18,
+    fontWeight: "bold",
     marginBottom: 10,
-    fontWeight: 'bold',
   },
   avatarScrollContainer: {
-    alignItems: 'center',
+    flexDirection: "row",
   },
   avatarImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     marginHorizontal: 5,
   },
   fieldsContainer: {
-    flex: 1,
+    marginBottom: 20,
   },
   sectionTitle: {
     fontSize: 18,
-    marginVertical: 10,
-    fontWeight: 'bold',
+    fontWeight: "bold",
+    marginBottom: 10,
   },
-  signUpButton: {
-    width: '100%',
-    padding: 15,
-    borderRadius: 10,
-    backgroundColor: '#007BFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 20,
-  },
-  signUpText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  pageIndicatorContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    paddingVertical: 10,
-  },
-  dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#ccc',
-    marginHorizontal: 5,
-  },
-  activeDot: {
-    backgroundColor: '#007BFF',
-  },
-});
-
-const pickerSelectStyles = StyleSheet.create({
-  inputIOS: {
-    fontSize: 16,
+  calculateButton: {
+    backgroundColor: "#4CAF50",
     paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderWidth: 1,
-    borderColor: 'gray',
-    borderRadius: 4,
-    color: 'black',
-    paddingRight: 30, // to ensure the text is never behind the icon
+    borderRadius: 8,
+    alignItems: "center",
     marginBottom: 10,
   },
-  inputAndroid: {
+  calculateButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
     fontSize: 16,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderWidth: 0.5,
-    borderColor: 'gray',
-    borderRadius: 8,
-    color: 'black',
-    paddingRight: 30, // to ensure the text is never behind the icon
+  },
+  bmiResult: {
+    marginTop: 20,
+    alignItems: "center",
+  },
+  bmiText: {
+    fontSize: 16,
     marginBottom: 10,
+  },
+  bmiIndicator: {
+    width: "100%",
+    height: 10,
+    backgroundColor: "#E0E0E0",
+    borderRadius: 5,
+    position: "relative",
+    marginTop: 10,
+  },
+  bmiMarker: {
+    position: "absolute",
+    width: 10,
+    height: 20,
+    borderRadius: 5,
+  },
+  nextButtonContainer: {
+    paddingHorizontal: 15,
+    paddingBottom: 15,
+  },
+  nextButton: {
+    backgroundColor: "#4CAF50",
+    paddingVertical: 15,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  nextButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  submitButtonContainer: {
+    paddingHorizontal: 15,
+    paddingBottom: 15,
+  },
+  submitButton: {
+    backgroundColor: "#4CAF50",
+    paddingVertical: 15,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  submitButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  bmiHealthBar: {
+    width: '100%',
+    height: 20,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 10,
+    overflow: 'hidden',
+    marginTop: 10,
+  },
+  bmiFill: {
+    height: '100%',
+    borderRadius: 10,
   },
 });
 
