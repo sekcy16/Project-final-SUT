@@ -1,6 +1,6 @@
 // NotificationListScreen.js
 import React from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image,SafeAreaView } from 'react-native';
 
 const notificationData = [
   { id: '1', title: 'Dr.KK', subtitle: 'ทดสอบหัวข้อการแจ้งเตือน', date: '10/04/2566' },
@@ -26,13 +26,13 @@ export default function NotificationListScreen({ navigation }) {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <FlatList
         data={notificationData}
         renderItem={renderItem}
         keyExtractor={item => item.id}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 

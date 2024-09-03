@@ -1,25 +1,26 @@
 import React, { useEffect } from 'react';
-import { View, TouchableOpacity } from 'react-native'; // Import View here
+import { View, TouchableOpacity } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Provider, useSelector } from "react-redux";
+import { Provider, useSelector } from 'react-redux';
 import Icon from 'react-native-vector-icons/Ionicons';
 import Store from './context/store';
 
+// Import your screens and components
 import {
-  LoginScreen, 
-  SignUpScreen, 
-  SplashScreen, 
-  HealthDashboard, 
-  MealEntry, 
-  ProfilePage, 
-  DiaryPage, 
-  FoodARPage, 
-  FoodResultPage, 
-  DoctorHomePage, 
-  BlogList, 
-  PatientListScreen, 
+  LoginScreen,
+  SignUpScreen,
+  SplashScreen,
+  HealthDashboard,
+  MealEntry,
+  ProfilePage,
+  DiaryPage,
+  FoodARPage,
+  FoodResultPage,
+  DoctorHomePage,
+  BlogList,
+  PatientListScreen,
   BloodSugar,
   NotificationListScreen,
   NotificationDetailScreen,
@@ -30,7 +31,12 @@ import {
 import FoodResult from './components/FoodResult';
 import Nutrition from './components/Nutrition';
 
-
+import TotalCalories from './screens/TotalCalories';
+import ExerciseEntry from './screens/ExerciseEntry';
+import WeightProgress from './screens/WeightProgress';
+import BlogDetail from './screens/BlogDetail';
+import CreateBlogOrRecipe from './screens/CreateBlogOrRecipe';
+import CreateBlogScreen from './screens/CreateBlogScreen';
 
 
 const Stack = createNativeStackNavigator();
@@ -39,7 +45,7 @@ const Tab = createBottomTabNavigator();
 const CentralButton = ({ children, onPress }) => (
   <TouchableOpacity
     style={{
-      top: -20, // elevate the central button
+      top: -20,
       justifyContent: 'center',
       alignItems: 'center',
       shadowColor: '#8FBC8F',
@@ -58,12 +64,12 @@ const CentralButton = ({ children, onPress }) => (
         backgroundColor: '#8FBC8F',
         justifyContent: 'center',
         alignItems: 'center',
-        borderWidth: 2, // Add border width
-        borderColor: '#fff', // Set border color (white or a lighter shade for dimension)
-        shadowColor: '#000', // Deep shadow for dimensional effect
-        shadowOffset: { width: 0, height: 4 }, // Adjust shadow offset
-        shadowOpacity: 0.2, // Slightly reduced opacity for subtlety
-        shadowRadius: 5, // Adjust shadow radius for a softer effect
+        borderWidth: 2,
+        borderColor: '#fff',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 5,
       }}
     >
       {children}
@@ -77,8 +83,7 @@ const DoctorTabNavigator = () => (
       headerShown: false,
       tabBarIcon: ({ focused, color, size }) => {
         let iconName;
-
-        switch(route.name) {
+        switch (route.name) {
           case 'DoctorHomePage':
             iconName = focused ? 'home' : 'home-outline';
             break;
@@ -88,56 +93,36 @@ const DoctorTabNavigator = () => (
           case 'BlogList':
             iconName = focused ? 'document' : 'document-outline';
             break;
-            case 'ProfilePage':
-              iconName = focused ? 'person' : 'person-outline';
-              break;
+          case 'ProfilePage':
+            iconName = focused ? 'person' : 'person-outline';
+            break;
           default:
-            iconName = 'alert'; // fallback icon
+            iconName = 'alert';
         }
-
         return <Icon name={iconName} size={size} color={color} />;
       },
       tabBarActiveTintColor: '#4CAF50',
       tabBarInactiveTintColor: 'gray',
       tabBarStyle: {
-        position: 'absolute',
-        elevation: 0,
         backgroundColor: '#ffffff',
-        borderRadius: 15,
+        borderTopWidth: 1,
+        borderTopColor: '#e0e0e0',
         height: 60,
-        shadowColor: 'transparent', // Remove shadow
-        borderTopWidth: 0, // Remove top border
-        paddingHorizontal: 20,
+        paddingBottom: 5,
       },
       tabBarItemStyle: {
-        marginTop: 10,
+        marginTop: 5,
       },
       tabBarLabelStyle: {
         fontSize: 12,
-        marginBottom: 5,
+        marginBottom: 3,
       },
     })}
   >
-    <Tab.Screen 
-      name="DoctorHomePage" 
-      component={DoctorHomePage} 
-      options={{ tabBarLabel: 'Home' }}
-    />
-    <Tab.Screen 
-      name="PatientListScreen" 
-      component={PatientListScreen} 
-      options={{ tabBarLabel: 'Patients' }}
-    />
-    <Tab.Screen 
-      name="BlogList" 
-      component={BlogList} 
-      options={{ tabBarLabel: 'Blogs' }}
-    />
-     <Tab.Screen 
-      name="ProfilePage" 
-      component={ProfilePage} 
-      options={{ tabBarLabel: 'Profile' }}
-    />
+    <Tab.Screen name="DoctorHomePage" component={DoctorHomePage} options={{ tabBarLabel: 'Home' }} />
+    <Tab.Screen name="PatientListScreen" component={PatientListScreen} options={{ tabBarLabel: 'Patients' }} />
+    <Tab.Screen name="BlogList" component={BlogList} options={{ tabBarLabel: 'Blogs' }} />
+    <Tab.Screen name="ProfilePage" component={ProfilePage} options={{ tabBarLabel: 'Profile' }} />
   </Tab.Navigator>
 );
 
@@ -147,7 +132,6 @@ const MainTabNavigator = () => (
       headerShown: false,
       tabBarIcon: ({ focused, color, size }) => {
         let iconName;
-
         switch (route.name) {
           case 'HealthDashboard':
             iconName = focused ? 'home' : 'home-outline';
@@ -162,43 +146,31 @@ const MainTabNavigator = () => (
             iconName = focused ? 'book' : 'book-outline';
             break;
           default:
-            iconName = 'alert'; // fallback icon
+            iconName = 'alert';
         }
-
         return <Icon name={iconName} size={size} color={color} />;
       },
       tabBarActiveTintColor: '#4CAF50',
       tabBarInactiveTintColor: 'gray',
       tabBarStyle: {
-        position: 'absolute',
-        elevation: 0,
         backgroundColor: '#ffffff',
-        borderRadius: 15,
+        borderTopWidth: 1,
+        borderTopColor: '#e0e0e0',
         height: 60,
-        shadowColor: 'transparent', // Remove shadow
-        borderTopWidth: 0, // Remove top border
-        paddingHorizontal: 20,
+        paddingBottom: 5,
       },
       tabBarItemStyle: {
-        marginTop: 10,
+        marginTop: 5,
       },
       tabBarLabelStyle: {
         fontSize: 12,
-        marginBottom: 5,
+        marginBottom: 3,
       },
     })}
   >
-    <Tab.Screen 
-      name="HealthDashboard" 
-      component={HealthDashboard} 
-      options={{ tabBarLabel: 'Home' }}
-    />
-    <Tab.Screen 
-      name="MealEntry" 
-      component={MealEntry} 
-      options={{ tabBarLabel: 'Meals' }}
-    />
-    <Tab.Screen 
+    <Tab.Screen name="HealthDashboard" component={HealthDashboard} options={{ tabBarLabel: 'Home' }} />
+    <Tab.Screen name="DiaryPage" component={DiaryPage} options={{ tabBarLabel: 'Diary' }} />
+    <Tab.Screen
       name="FoodARPage"
       component={FoodARPage}
       options={{
@@ -207,31 +179,19 @@ const MainTabNavigator = () => (
             <Icon name="camera-outline" size={25} color="#fff" />
           </CentralButton>
         ),
-        tabBarLabel: () => null, // Hide label for central button
+        tabBarLabel: () => null,
       }}
     />
-    <Tab.Screen 
-      name="ProfilePage" 
-      component={ProfilePage} 
-      options={{ tabBarLabel: 'Profile' }}
-    />
-    <Tab.Screen 
-      name="DiaryPage" 
-      component={DiaryPage} 
-      options={{ tabBarLabel: 'Diary' }}
-    />
+        <Tab.Screen name="Blog" component={BlogList} options={{ tabBarLabel: 'Blog' }} />
+
+    <Tab.Screen name="ProfilePage" component={ProfilePage} options={{ tabBarLabel: 'Profile' }} />
   </Tab.Navigator>
 );
 
-
-
-
-
 const RootNavigator = () => {
-  const user = useSelector((state) => state.user?.user); // Access the nested user object
-
+  const user = useSelector((state) => state.user?.user);
   useEffect(() => {
-    console.log('Current User:', user); // Log to confirm
+    console.log('Current User:', user);
   }, [user]);
 
   const NavigatorComponent = user?.role === 'Doctor' ? DoctorTabNavigator : MainTabNavigator;
@@ -243,21 +203,29 @@ const RootNavigator = () => {
       <Stack.Screen name="LoginScreen" component={LoginScreen} />
       <Stack.Screen name="SignUpScreen" component={SignUpScreen} />
       <Stack.Screen name="Main" component={NavigatorComponent} />
+      <Stack.Screen name="MealEntry" component={MealEntry} />
+
       <Stack.Screen name="FoodARPage" component={FoodARPage} />
+      <Stack.Screen name="TotalCalories" component={TotalCalories} />
       <Stack.Screen name="FoodResultPage" component={FoodResultPage} />
       <Stack.Screen name="FoodResult" component={FoodResult} />
       <Stack.Screen name="Nutrition" component={Nutrition} />
+      <Stack.Screen name="ExerciseEntry" component={ExerciseEntry} />
       <Stack.Screen name="BloodSugar" component={BloodSugar} />
-      <Stack.Screen name="PatientDetailScreen" component={PatientDetailScreen}/>
-      <Stack.Screen name="NotificationListScreen" component={NotificationListScreen}/>
-      <Stack.Screen name="NotificationDetailScreen" component={NotificationDetailScreen}/>
-      <Stack.Screen name="AdvicePage" component={ AdvicePage}/>
-      <Stack.Screen name='EditProfilePage' component={ EditProfilePage}/>
+      <Stack.Screen name="WeightProgress" component={WeightProgress} />
+      <Stack.Screen name="PatientDetailScreen" component={PatientDetailScreen} />
+      <Stack.Screen name="NotificationListScreen" component={NotificationListScreen} />
+      <Stack.Screen name="NotificationDetailScreen" component={NotificationDetailScreen} />
+      <Stack.Screen name="AdvicePage" component={AdvicePage} />
+      <Stack.Screen name='EditProfilePage' component={EditProfilePage} />
+      <Stack.Screen name='BlogList' component={BlogList} />
+      <Stack.Screen name='BlogDetail' component={BlogDetail} />
+      <Stack.Screen name='CreateBlogScreen' component={CreateBlogOrRecipe} />
 
+      <Stack.Screen name='CreateBlogOrRecipe' component={CreateBlogOrRecipe} />
     </Stack.Navigator>
   );
 };
-
 
 const App = () => (
   <Provider store={Store}>

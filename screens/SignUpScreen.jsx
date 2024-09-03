@@ -2,28 +2,28 @@ import {
   View,
   Text,
   Dimensions,
-  Image,
   TouchableOpacity,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Image,
+  StyleSheet
 } from "react-native";
 import React, { useState } from "react";
-import { BGimage, Logo } from "../assets";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { UserTextinput } from "../components";
 import { useNavigation } from "@react-navigation/native";
 import { avatars } from "../utils/supports";
-import { MaterialIcons } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
+import RNPickerSelect from "react-native-picker-select";
+import PagerView from 'react-native-pager-view';
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { firebaseAuth, firebaseDB } from "../config/firebase.config";
-import { doc, setDoc, collection, getDocs } from "firebase/firestore";
-import { signOut } from "firebase/auth"; // Import the signOut function
+import { doc, setDoc } from "firebase/firestore";
+import { signOut } from "firebase/auth";
 
 const SignUpScreen = () => {
   const screenWidth = Math.round(Dimensions.get("window").width);
-  const screenHeight = Math.round(Dimensions.get("window").height);
 
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
@@ -32,18 +32,26 @@ const SignUpScreen = () => {
   const [isAvatarMenu, setIsAvatarMenu] = useState(false);
   const [getEmailValidationStatus, setGetEmailValidationStatus] = useState(false);
 
+  // New state variables for additional fields
+  const [diabetesType, setDiabetesType] = useState("");
+  const [weight, setWeight] = useState("");
+  const [height, setHeight] = useState("");
+  const [age, setAge] = useState("");
+  const [activityLevel, setActivityLevel] = useState("");
+  const [goal, setGoal] = useState("");
+  const [gender, setGender] = useState(""); // New state for gender
+  const [currentPage, setCurrentPage] = useState(0);
+
   const navigation = useNavigation();
 
   const handleAvatar = (item) => {
     setAvatar(item?.image.asset.url);
     setIsAvatarMenu(false);
   };
-  
 
-  // Enhanced Email Validation
   const validateEmail = (email) => {
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-    const validDomains = ["com", "net", "org", "edu", "gov"]; // Add more valid domains if needed
+    const validDomains = ["com", "net", "org", "edu", "gov"];
     const domain = email.split('.').pop();
 
     return emailPattern.test(email) && validDomains.includes(domain);
@@ -58,36 +66,31 @@ const SignUpScreen = () => {
           password
         );
         console.log("User Credential:", userCred);
-  
-        // Query Firestore to get the total count of users
-        const usersCollectionRef = collection(firebaseDB, "users"); // Get a reference to the "users" collection
-        const usersSnapshot = await getDocs(usersCollectionRef); // Fetch all documents in the "users" collection
-        const userCount = usersSnapshot.size; // Get the number of users
-  
-        const uidnum = userCount + 1; // Increment by 1 for the new user
-  
-        const currentTime = new Date().toISOString(); // Get current timestamp
-  
+
         const data = {
-          _id: userCred?.user.uid, // UID should be stored properly
+          _id: userCred?.user.uid,
           fullName: name,
           profilePic: avatar,
           providerData: {
             ...userCred.user.providerData[0],
-            email: userCred.user.email, // Ensure email is correct
-            uid: userCred.user.uid, // Correct UID
-            uidnum: uidnum, // Add uidnum here
+            email: userCred.user.email,
+            uid: userCred.user.uid,
           },
           role: "User",
-          lastActive: currentTime, // Store the current timestamp
+          diabetesType,
+          weight: parseFloat(weight),
+          height: parseFloat(height),
+          age: parseInt(age),
+          activityLevel,
+          goal,
+          gender // Add gender to the data object
         };
-  
+
         await setDoc(doc(firebaseDB, "users", userCred?.user.uid), data);
         console.log("Document successfully written!");
-  
-        // Sign out the user immediately after successful signup
+
         await signOut(firebaseAuth);
-  
+
         Alert.alert("Success", "Account created successfully!", [
           {
             text: "OK",
@@ -105,81 +108,45 @@ const SignUpScreen = () => {
       );
     }
   };
-  
-  
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={{ flex: 1 }}
-    >
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-        <View className="flex-1 items-center justify-start">
-          <Image
-            source={BGimage}
-            resizeMode="cover"
-            className="h-96"
-            style={{ width: screenWidth }}
-          />
-
-          {isAvatarMenu && (
-            <View
-              className="absolute inset-0 z-10 w-full"
-              style={{ width: screenWidth, height: screenHeight }}
-            >
-              <ScrollView>
-                <BlurView
-                  className="w-full h-full px-4 py-16 flex-row flex-wrap items-center justify-evenly"
-                  tint="light"
-                  intensity={80}
-                  style={{ width: screenWidth, height: screenHeight }}
-                >
-                  {avatars?.map((item) => (
-                    <TouchableOpacity
-                      onPress={() => handleAvatar(item)}
-                      key={item._id}
-                      className="w-20 m-3 h-20 p-1 rounded-full border-2 border-Primary"
-                    >
-                      <Image
-                        source={{ uri: item?.image.asset.url }}
-                        className="w-full h-full"
-                        resizeMode="contain"
-                      />
-                    </TouchableOpacity>
-                  ))}
-                </BlurView>
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.keyboardAvoidingView}
+      >
+        <PagerView
+          style={styles.pagerView}
+          initialPage={0}
+          onPageSelected={(e) => setCurrentPage(e.nativeEvent.position)}
+        >
+          {/* Page 1: Avatar and Basic Info */}
+          <ScrollView key="1" contentContainerStyle={styles.scrollViewContent}>
+            <View style={styles.avatarSection}>
+              <Text style={styles.avatarTitle}>Select Your Avatar</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.avatarScrollContainer}
+              >
+                {avatars.map((avatarItem, index) => (
+                  <TouchableOpacity key={index} onPress={() => handleAvatar(avatarItem)}>
+                    <Image
+                      source={{ uri: avatarItem?.image.asset.url }}
+                      style={[
+                        styles.avatarImage,
+                        {
+                          borderWidth: avatar === avatarItem?.image.asset.url ? 2 : 0,
+                          borderColor: 'blue'
+                        }
+                      ]}
+                    />
+                  </TouchableOpacity>
+                ))}
               </ScrollView>
             </View>
-          )}
 
-          <View
-            className="w-full h-full bg-white rounded-tl-[90px] -mt-44 flex items-center justify-start py-6 px-6 space-y-6"
-          >
-            <Image source={Logo} className="w-16 h-16" resizeMode="contain" />
-
-            <Text className="py-2 text-primaryText text-xl font-semibold">
-              Register your account
-            </Text>
-
-            <View className="w-full flex items-center justify-center relative -m-4">
-              <TouchableOpacity
-                onPress={() => setIsAvatarMenu(true)}
-                className="w-20 h-20 p-1 rounded-full border-2 border-Primary relative"
-              >
-                <Image
-                  source={{ uri: avatar }}
-                  className="w-full h-full"
-                  resizeMode="contain"
-                />
-                <View
-                  className="w-6 h-6 bg-Primary rounded-full absolute top-0 right-0 flex items-center justify-center"
-                >
-                  <MaterialIcons name="edit" size={18} color={"#fff"} />
-                </View>
-              </TouchableOpacity>
-            </View>
-
-            <View className="w-full flex items-center justify-center">
+            <View style={styles.fieldsContainer}>
               <UserTextinput
                 placeholder="Full Name"
                 isPass={false}
@@ -196,30 +163,190 @@ const SignUpScreen = () => {
                 isPass={true}
                 setStatValue={setPassword}
               />
+            </View>
+          </ScrollView>
+
+          {/* Page 2: Additional Info */}
+          <ScrollView key="2" contentContainerStyle={styles.scrollViewContent}>
+            <View style={styles.fieldsContainer}>
+              <Text style={styles.sectionTitle}>Additional Information</Text>
+              <RNPickerSelect
+                onValueChange={(value) => setGender(value)}
+                items={[
+                  { label: "Male", value: "Male" },
+                  { label: "Female", value: "Female" },
+                  { label: "Other", value: "Other" },
+                ]}
+                placeholder={{ label: "Select Gender", value: null }}
+                style={pickerSelectStyles}
+              />
+              <RNPickerSelect
+                onValueChange={(value) => setDiabetesType(value)}
+                items={[
+                  { label: "Type 1", value: "Type1" },
+                  { label: "Type 2", value: "Type2" },
+                  { label: "Pre-diabetes", value: "Pre-diabetes" },
+                ]}
+                placeholder={{ label: "Select Diabetes Type", value: null }}
+                style={pickerSelectStyles}
+              />
+              <UserTextinput
+                placeholder="Weight (kg)"
+                isPass={false}
+                setStatValue={setWeight}
+                keyboardType="numeric"
+              />
+              <UserTextinput
+                placeholder="Height (cm)"
+                isPass={false}
+                setStatValue={setHeight}
+                keyboardType="numeric"
+              />
+              <UserTextinput
+                placeholder="Age"
+                isPass={false}
+                setStatValue={setAge}
+                keyboardType="numeric"
+              />
+              <RNPickerSelect
+                onValueChange={(value) => setActivityLevel(value)}
+                items={[
+                  { label: "Sedentary", value: "Sedentary" },
+                  { label: "Lightly Active", value: "Lightly" },
+                  { label: "Moderately Active", value: "Moderately" },
+                  { label: "Active", value: "Active" },
+                  { label: "Very Active", value: "Very Active" },
+                ]}
+                placeholder={{ label: "Select Activity Level", value: null }}
+                style={pickerSelectStyles}
+              />
+              <RNPickerSelect
+                onValueChange={(value) => setGoal(value)}
+                items={[
+                  { label: "Lose Weight", value: "Lose Weight" },
+                  { label: "Maintain Weight", value: "Maintain Weight" },
+                  { label: "Gain Weight", value: "Gain Weight" },
+                  { label: "Improve Blood Sugar Control", value: "Improve Blood Sugar Control" },
+                  { label: "Increase Physical Activity", value: "Increase Physical Activity" },
+                  { label: "Eat Healthier", value: "Eat Healthier" },
+                ]}
+                placeholder={{ label: "Select Goal", value: null }}
+                style={pickerSelectStyles}
+              />
               <TouchableOpacity
                 onPress={handleSignUp}
-                className="w-full px-4 py-2 rounded-xl bg-Primary my-3 flex items-center justify-center"
+                style={styles.signUpButton}
               >
-                <Text className="py-2 text-white text-xl font-semibold">
-                  Sign Up
-                </Text>
+                <Text style={styles.signUpText}>Sign Up</Text>
               </TouchableOpacity>
-              <View className="w-full py-12 flex-row items-center justify-center space-x-2">
-                <Text className="text-base text-primaryText">Have an account?</Text>
-                <TouchableOpacity
-                  onPress={() => navigation.navigate("LoginScreen")}
-                >
-                  <Text className="text-base font-semibold text-primaryBold">
-                    Login Here!
-                  </Text>
-                </TouchableOpacity>
-              </View>
             </View>
-          </View>
+          </ScrollView>
+        </PagerView>
+
+        {/* Page Indicator */}
+        <View style={styles.pageIndicatorContainer}>
+          <View style={[styles.dot, currentPage === 0 && styles.activeDot]} />
+          <View style={[styles.dot, currentPage === 1 && styles.activeDot]} />
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
+  pagerView: {
+    flex: 1,
+  },
+  scrollViewContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    padding: 20,
+  },
+  avatarSection: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  avatarTitle: {
+    fontSize: 18,
+    marginBottom: 10,
+    fontWeight: 'bold',
+  },
+  avatarScrollContainer: {
+    alignItems: 'center',
+  },
+  avatarImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    marginHorizontal: 5,
+  },
+  fieldsContainer: {
+    flex: 1,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    marginVertical: 10,
+    fontWeight: 'bold',
+  },
+  signUpButton: {
+    width: '100%',
+    padding: 15,
+    borderRadius: 10,
+    backgroundColor: '#007BFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 20,
+  },
+  signUpText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  pageIndicatorContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    paddingVertical: 10,
+  },
+  dot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#ccc',
+    marginHorizontal: 5,
+  },
+  activeDot: {
+    backgroundColor: '#007BFF',
+  },
+});
+
+const pickerSelectStyles = StyleSheet.create({
+  inputIOS: {
+    fontSize: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: 'gray',
+    borderRadius: 4,
+    color: 'black',
+    paddingRight: 30, // to ensure the text is never behind the icon
+    marginBottom: 10,
+  },
+  inputAndroid: {
+    fontSize: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderWidth: 0.5,
+    borderColor: 'gray',
+    borderRadius: 8,
+    color: 'black',
+    paddingRight: 30, // to ensure the text is never behind the icon
+    marginBottom: 10,
+  },
+});
 
 export default SignUpScreen;

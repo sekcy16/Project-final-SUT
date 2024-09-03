@@ -1,78 +1,71 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
+import { getFirestore, collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { app } from "../config/firebase.config";  // Import the Firebase app instance
 
 const BlogList = () => {
   const navigation = useNavigation();
-  const [selectedTab, setSelectedTab] = useState('articles'); // 'articles' or 'recipes'
+  const [selectedTab, setSelectedTab] = useState('articles');
   const [bookmarked, setBookmarked] = useState({});
+  const [blogs, setBlogs] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const articles = [
-    {
-      id: 1,
-      title: 'แนวทางการออกกำลังกายสำหรับผู้ป่วยเบาหวาน',
-      author: 'Dr.K',
-      color: 'red',
-      bookmarked: false,
-    },
-    {
-      id: 2,
-      title: 'วิธีจัดการความเครียด จากการออกกำลังกาย',
-      author: 'Dr.C',
-      color: 'green',
-      bookmarked: true,
-    },
-    {
-      id: 3,
-      title: 'ไฟเบอร์คืออะไร? ทำไมทุกคนควรกินไฟเบอร์?',
-      author: 'Dr.A',
-      color: 'blue',
-      bookmarked: false,
-    },
-  ];
+  const db = getFirestore(app);  // Initialize Firestore trd
 
-  const recipes = [
-    {
-      id: 1,
-      title: 'สูตรขนมปังโฮลวีท',
-      author: 'Chef.A',
-      color: 'orange',
-      bookmarked: false,
-    },
-    {
-      id: 2,
-      title: 'สปาเก็ตตี้ซอสครีมเห็ด',
-      author: 'Chef.B',
-      color: 'purple',
-      bookmarked: true,
-    },
-    {
-      id: 3,
-      title: 'สลัดผักเพื่อสุขภาพ',
-      author: 'Chef.C',
-      color: 'green',
-      bookmarked: false,
-    },
-  ];
-
+  useEffect(() => {
+    const q = query(collection(db, 'blogs'), orderBy('createdAt', 'desc'));
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const blogData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setBlogs(blogData);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching blogs: ", error);
+      setLoading(false);
+    });
+  
+    return () => unsubscribe();
+  }, []);
+  
   const toggleBookmark = (id) => {
-    setBookmarked((prevState) => ({
+    setBookmarked(prevState => ({
       ...prevState,
       [id]: !prevState[id],
     }));
+    // You could also update the bookmark status in Firebase here
   };
 
   const handleBlogPress = (id) => {
-    // Navigate to blog detail page or any other action
-    console.log('Blog ID:', id);
-    // Example navigation:
-    // navigation.navigate('BlogDetail', { blogId: id });
+    navigation.navigate('BlogDetail', { blogId: id });
   };
 
-  const getDisplayedContent = () => {
-    return selectedTab === 'articles' ? articles : recipes;
-  };
+  const renderBlogItem = (item) => (
+    <TouchableOpacity
+      key={item.id}
+      style={styles.blogItem}
+      onPress={() => handleBlogPress(item.id)}
+    >
+      <View style={styles.blogContent}>
+        <Text style={styles.blogTitle}>{item.title}</Text>
+        <View style={styles.blogInfo}>
+          <View style={[styles.authorIndicator, { backgroundColor: item.color || '#8FBC8F' }]} />
+          <Text style={styles.blogAuthor}>{item.author}</Text>
+        </View>
+      </View>
+      <TouchableOpacity onPress={() => toggleBookmark(item.id)}>
+        <Icon
+          name={bookmarked[item.id] ? "bookmark" : "bookmark-outline"}
+          size={24}
+          color={bookmarked[item.id] ? "#FFCC00" : "#556B2F"}
+        />
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
 
   return (
     <View style={styles.container}>
@@ -98,30 +91,21 @@ const BlogList = () => {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.blogList}>
-        {getDisplayedContent().map((item) => (
-          <TouchableOpacity
-            key={item.id}
-            style={styles.blogItem}
-            onPress={() => handleBlogPress(item.id)}
-          >
-            <View style={styles.blogContent}>
-              <Text style={styles.blogTitle}>{item.title}</Text>
-              <View style={styles.blogInfo}>
-                <View style={[styles.authorIndicator, { backgroundColor: item.color }]} />
-                <Text style={styles.blogAuthor}>{item.author}</Text>
-              </View>
-            </View>
-            <TouchableOpacity onPress={() => toggleBookmark(item.id)}>
-              <Icon
-                name={bookmarked[item.id] ? "bookmark" : "bookmark-outline"}
-                size={24}
-                color={bookmarked[item.id] ? "#FFCC00" : "#556B2F"} // Use Dark olive green for unbookmarked icons
-              />
-            </TouchableOpacity>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      {loading ? (
+        <ActivityIndicator size="large" color="#8FBC8F" style={styles.loader} />
+      ) : (
+        <ScrollView style={styles.blogList}>
+          {blogs.filter(blog => blog.type === selectedTab).map(renderBlogItem)}
+        </ScrollView>
+      )}
+
+      <TouchableOpacity 
+        style={styles.createButton}
+        onPress={() => navigation.navigate('CreateBlogScreen')}
+      >
+        <Icon name="add" size={24} color="#FFF" />
+        <Text style={styles.createButtonText}>Create New Blog</Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -129,14 +113,14 @@ const BlogList = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFAD2', // Light goldenrod yellow background
+    backgroundColor: '#FAFAD2',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 30,
     paddingHorizontal: 16,
-    backgroundColor: '#8FBC8F', // Soft green background for header
+    backgroundColor: '#8FBC8F',
     elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -157,14 +141,14 @@ const styles = StyleSheet.create({
     marginVertical: 10,
   },
   activeTab: {
-    backgroundColor: '#8FBC8F', // Soft green for active tab
+    backgroundColor: '#8FBC8F',
     paddingHorizontal: 24,
     paddingVertical: 8,
     borderRadius: 20,
     marginHorizontal: 4,
   },
   inactiveTab: {
-    backgroundColor: '#CCCCCC', // Light gray for inactive tab
+    backgroundColor: '#CCCCCC',
     paddingHorizontal: 24,
     paddingVertical: 8,
     borderRadius: 20,
@@ -175,7 +159,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   tabTextInactive: {
-    color: '#556B2F', // Dark olive green for inactive tab text
+    color: '#556B2F',
     fontWeight: 'bold',
   },
   blogList: {
@@ -185,7 +169,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#FFF8DC', // Cornsilk color for blog items
+    backgroundColor: '#FFF8DC',
     padding: 16,
     marginHorizontal: 16,
     marginVertical: 8,
@@ -202,7 +186,7 @@ const styles = StyleSheet.create({
   blogTitle: {
     fontWeight: 'bold',
     fontSize: 16,
-    color: '#556B2F', // Dark olive green for blog titles
+    color: '#556B2F',
   },
   blogInfo: {
     flexDirection: 'row',
@@ -218,6 +202,28 @@ const styles = StyleSheet.create({
   blogAuthor: {
     fontSize: 14,
     color: '#666',
+  },
+  loader: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  createButton: {
+    position: 'absolute',
+    right: 20,
+    bottom: 20,
+    backgroundColor: '#8FBC8F',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+    elevation: 4,
+  },
+  createButtonText: {
+    color: '#FFF',
+    fontWeight: 'bold',
+    marginLeft: 10,
   },
 });
 

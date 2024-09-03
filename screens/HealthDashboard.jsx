@@ -1,244 +1,293 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, TouchableOpacity, ScrollView } from 'react-native';
-import { LineChart } from 'react-native-chart-kit';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { ProgressBar } from 'react-native-paper';
 
 const HealthDashboard = ({ navigation }) => {
-  const [chartData, setChartData] = useState([]);
-  const [bloodSugarChartData, setBloodSugarChartData] = useState([]);
-  const [weightChartData, setWeightChartData] = useState([]);
+  const [latestBloodSugar, setLatestBloodSugar] = useState(null);
   const [latestWeight, setLatestWeight] = useState(null);
+  const [carbIntake, setCarbIntake] = useState(null);
+  const [exerciseMinutes, setExerciseMinutes] = useState(null);
+  const [waterIntake, setWaterIntake] = useState(null);
+  const [averageBloodSugar, setAverageBloodSugar] = useState(null);
+  
+  // New state variables for calorie and macronutrient tracking
+  const [caloriesAllowed, setCaloriesAllowed] = useState(2000);
+  const [caloriesConsumed, setCaloriesConsumed] = useState(0);
+  const [proteinConsumed, setProteinConsumed] = useState(0);
+  const [carbsConsumed, setCarbsConsumed] = useState(0);
+  const [fatConsumed, setFatConsumed] = useState(0);
 
   useEffect(() => {
     const focusListener = navigation.addListener('focus', () => {
-      loadChartData();
+      loadLatestData();
     });
 
-    loadChartData();
+    loadLatestData();
 
     return () => {
       navigation.removeListener('focus', focusListener);
     };
   }, [navigation]);
 
-  const loadChartData = async () => {
+  const loadLatestData = async () => {
     try {
-      const savedHistory = await AsyncStorage.getItem('bloodSugarHistory');
+      // ... (existing data loading logic)
+
+      // Load calorie and macronutrient data
+      // This is placeholder logic. Replace with actual data loading from AsyncStorage or API
+      // Load latest blood sugar
+      const savedBloodSugarHistory = await AsyncStorage.getItem('bloodSugarHistory');
+      if (savedBloodSugarHistory) {
+          const bloodSugarHistory = JSON.parse(savedBloodSugarHistory);
+          if (bloodSugarHistory.length > 0) {
+              setLatestBloodSugar(bloodSugarHistory[0].level);
+          } else {
+              setLatestBloodSugar(null);
+          }
+      } else {
+          setLatestBloodSugar(null);
+      }
+
+      // Load average blood sugar
+      const savedAverageBloodSugar = await AsyncStorage.getItem('averageBloodSugarToday');
+      if (savedAverageBloodSugar) {
+          setAverageBloodSugar(parseFloat(savedAverageBloodSugar));
+      } else {
+          setAverageBloodSugar(null);
+      }
+
+      // Load latest weight
       const savedWeightHistory = await AsyncStorage.getItem('weightHistory');
-
-      if (savedHistory !== null) {
-        const parsedHistory = JSON.parse(savedHistory);
-        updateChartData(parsedHistory);
-        setBloodSugarChartData(parsedHistory.slice(-7).map(item => parseInt(item.level)).reverse());
+      if (savedWeightHistory) {
+          const weightHistory = JSON.parse(savedWeightHistory);
+          if (weightHistory.length > 0) {
+              setLatestWeight(weightHistory[0].weight);
+          } else {
+              setLatestWeight(null);
+          }
+      } else {
+          setLatestWeight(null);
       }
 
-      if (savedWeightHistory !== null) {
-        const parsedWeightHistory = JSON.parse(savedWeightHistory);
-        setWeightChartData(parsedWeightHistory.slice(-7).map(item => parseFloat(item.weight)).reverse());
-        setLatestWeight(parsedWeightHistory[parsedWeightHistory.length - 1].weight);
-      }
+      setCaloriesConsumed(0);
+      setProteinConsumed(150);
+      setCarbsConsumed(250);
+      setFatConsumed(50);
     } catch (error) {
-      console.error('Error loading chart data:', error);
+      console.error('Error loading latest data:', error);
     }
   };
 
-  const updateChartData = (historyData) => {
-    const last7Days = historyData.slice(-7).map(item => parseInt(item.level));
-    setChartData(last7Days.reverse());
+  const CalorieInfo = () => {
+    // Calculate the remaining amounts and percentages
+    const caloriesLeft = Math.max(caloriesAllowed - caloriesConsumed, 0);
+    const proteinLeft = 150 - proteinConsumed; // Replace 150 with your protein goal
+    const carbsLeft = 250 - carbsConsumed; // Replace 250 with your carbs goal
+    const fatLeft = 70 - fatConsumed; // Replace 70 with your fat goal
+
+    const caloriesPercentage = caloriesConsumed / caloriesAllowed;
+    const proteinPercentage = proteinConsumed / 150; // Adjust according to your protein goal
+    const carbsPercentage = carbsConsumed / 250; // Adjust according to your carbs goal
+    const fatPercentage = fatConsumed / 70; // Adjust according to your fat goal
+
+    return (
+      <View style={styles.calorieInfoContainer}>
+        <Text style={styles.calorieInfoTitle}>Today's Nutrition</Text>
+
+        <Text style={styles.calorieInfoText}>Calories: {caloriesConsumed} / {caloriesAllowed} kcal</Text>
+        <ProgressBar progress={caloriesPercentage} color="#FF6347" style={styles.progressBar} />
+        <Text style={styles.calorieInfoTextSmall}>{caloriesLeft} kcal left</Text>
+
+        <Text style={styles.calorieInfoText}>Protein: {proteinConsumed}g</Text>
+        <ProgressBar progress={proteinPercentage} color="#1E90FF" style={styles.progressBar} />
+        <Text style={styles.calorieInfoTextSmall}>{proteinLeft}g left</Text>
+
+        <Text style={styles.calorieInfoText}>Carbs: {carbsConsumed}g</Text>
+        <ProgressBar progress={carbsPercentage} color="#32CD32" style={styles.progressBar} />
+        <Text style={styles.calorieInfoTextSmall}>{carbsLeft}g left</Text>
+
+        <Text style={styles.calorieInfoText}>Fat: {fatConsumed}g</Text>
+        <ProgressBar progress={fatPercentage} color="#FFD700" style={styles.progressBar} />
+        <Text style={styles.calorieInfoTextSmall}>{fatLeft}g left</Text>
+      </View>
+    );
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      {/* Header Section */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.iconButton}>
-          <Icon name="chevron-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        <View style={styles.profileIcon}>
-          <Icon name="person-circle-outline" size={24} color="#fff" />
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollView}>
+        <View style={styles.header}>
+          <Text style={styles.headerText}>สวัสดี, คุณสมชาย</Text>
+          <TouchableOpacity
+            style={styles.notificationIcon}
+            onPress={() => navigation.navigate('NotificationListScreen')}>
+            <Icon name="bell" size={24} color="#333" />
+          </TouchableOpacity>
         </View>
-      </View>
 
-      {/* Macro Information */}
-      <View style={styles.macroSection}>
-        <Text style={styles.date}>23/7/2024</Text>
-        <Text style={styles.title}>พลังงานต่อวันคงเหลือ</Text>
-        <Text style={styles.calories}>2,000 Calories</Text>
+        <CalorieInfo />
 
-        <View style={styles.macroCard}>
-          <MacroItem label="โปรตีน:" value={110} total={130} color="#8FBC8F" />
-          <MacroItem label="ไขมัน:" value={40} total={70} color="#F0E68C" />
-          <MacroItem label="คาร์โบไฮเดรต:" value={230} total={250} color="#556B2F" />
+        <View style={styles.cardContainer}>
+          <HealthCard
+            title="ระดับน้ำตาลในเลือด"
+            value={latestBloodSugar !== null ? `${latestBloodSugar} mg/dL` : 'ไม่มีข้อมูล'}
+            icon="blood-bag"
+            color="#FF6B6B"
+            onPress={() => navigation.navigate('BloodSugar')}
+          />
+          <HealthCard
+            title="ค่าเฉลี่ยน้ำตาลในเลือดวันนี้"
+            value={averageBloodSugar !== null ? `${averageBloodSugar.toFixed(1)} mg/dL` : 'ไม่มีข้อมูล'}
+            icon="chart-line"
+            color="#9D84B7"
+            onPress={() => navigation.navigate('BloodSugar')}
+          />
+          <HealthCard
+            title="น้ำหนัก"
+            value={latestWeight !== null ? `${latestWeight} KG` : 'ไม่มีข้อมูล'}
+            icon="weight"
+            color="#4ECDC4"
+            onPress={() => navigation.navigate('WeightProgress')}
+          />
+          <HealthCard
+            title="คาร์โบไฮเดรต"
+            value={carbIntake !== null ? `${carbIntake} g` : 'ไม่มีข้อมูล'}
+            icon="pasta"
+            color="#FFD93D"
+            onPress={() => navigation.navigate('DiaryPage')}
+          />
+          <HealthCard
+            title="ออกกำลังกาย"
+            value={exerciseMinutes !== null ? `${exerciseMinutes} นาที` : 'ไม่มีข้อมูล'}
+            icon="run"
+            color="#6BCB77"
+            onPress={() => navigation.navigate('DiaryPage')}
+          />
+          <HealthCard
+            title="ดื่มน้ำ"
+            value={waterIntake !== null ? `${waterIntake} ml` : 'ไม่มีข้อมูล'}
+            icon="cup-water"
+            color="#4D96FF"
+            onPress={() => navigation.navigate('WaterIntake')}
+          />
         </View>
-      </View>
-
-      {/* Health Section */}
-      <View style={styles.cardContainer}>
-        <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('BloodSugar')}>
-          <LineChart
-            data={{
-              datasets: [{ data: bloodSugarChartData.length > 0 ? bloodSugarChartData : [60, 80, 40, 70, 50, 80, 60] }]
-            }}
-            width={Dimensions.get('window').width / 2 - 30}
-            height={100}
-            chartConfig={chartConfig('#8FBC8F')}
-            bezier
-            style={styles.chart}
-          />
-          <Text style={styles.cardText}>ระดับน้ำตาลในเลือด: {bloodSugarChartData.length > 0 ? `${bloodSugarChartData[bloodSugarChartData.length - 1]} mg/dL` : 'ไม่มีข้อมูล'}</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('WeightProgress')}>
-          <LineChart
-            data={{
-              datasets: [{ data: weightChartData.length > 0 ? weightChartData : [75, 76, 75.5, 75, 76.2, 75.8, 75.5] }]
-            }}
-            width={Dimensions.get('window').width / 2 - 30}
-            height={100}
-            chartConfig={chartConfig('#556B2F')}
-            bezier
-            style={styles.chart}
-          />
-          <Text style={styles.cardText}>น้ำหนัก: {latestWeight ? `${latestWeight} KG` : 'ไม่มีข้อมูล'}</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
-const MacroItem = ({ label, value, total, color }) => (
-  <View style={styles.macroItem}>
-    <Text style={styles.macroLabel}>{label}</Text>
-    <View style={styles.macroBar}>
-      <View style={[styles.macroProgress, { width: `${(value / total) * 100}%`, backgroundColor: color }]} />
+const HealthCard = ({ title, value, icon, color, onPress }) => (
+  <TouchableOpacity
+    style={[styles.card, { borderLeftColor: color }]}
+    onPress={onPress}>
+    <View style={styles.cardContent}>
+      <Icon name={icon} size={32} color={color} />
+      <View style={styles.cardTextContent}>
+        <Text style={styles.cardTitle}>{title}</Text>
+        <Text style={styles.cardValue}>{value}</Text>
+      </View>
     </View>
-    <Text style={styles.macroValue}>{value}/{total}</Text>
-  </View>
+  </TouchableOpacity>
 );
-
-const chartConfig = (color) => ({
-  backgroundGradientFrom: '#F5F5DC',
-  backgroundGradientTo: '#F5F5DC',
-  color: (opacity = 1) => `rgba(${parseInt(color.substring(1, 3), 16)}, ${parseInt(color.substring(3, 5), 16)}, ${parseInt(color.substring(5, 7), 16)}, ${opacity})`,
-  labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-  propsForDots: {
-    r: "4",
-    strokeWidth: "2",
-    stroke: color,
-  }
-});
-
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    backgroundColor: '#F7F7F7',
+  },
+  scrollView: {
     flexGrow: 1,
-    backgroundColor: '#F5F5DC', // Light beige background
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#8FBC8F', // Soft green background for header
-    borderRadius: 12,
-    marginBottom: 20,
+    padding: 20,
+    backgroundColor: '#FFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
   },
-  iconButton: {
-    padding: 10,
-    backgroundColor: '#556B2F', // Dark olive green for icon button
-    borderRadius: 8,
+  headerText: {
+    fontSize: 22,
+    fontWeight: 'bold',
   },
-  profileIcon: {
-    padding: 10,
-    backgroundColor: '#BDB76B', // Khaki color for profile icon
-    borderRadius: 8,
-  },
-  macroSection: {
-    marginBottom: 20,
-    backgroundColor: '#FAFAD2', // Light goldenrod yellow for section background
-    padding: 15,
-    borderRadius: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
-    alignItems: 'center',
-  },
-  date: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#556B2F', // Dark olive for date
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#6B8E23', // Olive drab for title
-    marginTop: 5,
-    marginBottom: 5,
-  },
-  calories: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#8FBC8F', // Soft green for calories
-  },
-  macroCard: {
-    alignItems: 'center',
-    width: '100%',
-  },
-  macroItem: {
-    marginBottom: 15,
-    width: '100%',
-  },
-  macroLabel: {
-    fontSize: 16,
-    color: '#556B2F', // Dark olive for label
-    marginBottom: 5,
-  },
-  macroBar: {
-    height: 8,
-    backgroundColor: '#E0E0E0', // Grey for background bar
-    borderRadius: 5,
-    width: '100%',
-    overflow: 'hidden',
-  },
-  macroProgress: {
-    height: 8,
-    borderRadius: 5,
-  },
-  macroValue: {
-    fontSize: 14,
-    color: '#6B8E23', // Olive drab for value
-    marginTop: 5,
-    textAlign: 'center',
+  notificationIcon: {
+    padding: 5,
   },
   cardContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
+    padding: 15,
   },
   card: {
-    backgroundColor: '#FFF8DC', // Cornsilk for card background
-    borderRadius: 15,
+    backgroundColor: '#FFF',
+    borderRadius: 10,
     padding: 15,
+    marginBottom: 15,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
     shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 2,
-    width: Dimensions.get('window').width / 2 - 30,
+    shadowRadius: 3.84,
+    elevation: 5,
+    borderLeftWidth: 5,
+  },
+  cardContent: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
-  cardText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#556B2F', // Dark olive for card text
-    marginTop: 10,
-    textAlign: 'center',
+  cardTextContent: {
+    marginLeft: 15,
   },
-  chart: {
+  cardTitle: {
+    fontSize: 16,
+    color: '#333',
+  },
+  cardValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  calorieInfoContainer: {
+    backgroundColor: '#FFF',
+    padding: 15,
+    margin: 15,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  calorieInfoTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
     marginBottom: 10,
+  },
+  calorieInfoText: {
+    fontSize: 16,
+    marginBottom: 5,
+  },
+  calorieInfoTextSmall: {
+    fontSize: 14,
+    color: '#888',
+    marginBottom: 10,
+  },
+  progressBar: {
+    height: 10,
+    borderRadius: 5,
+    marginBottom: 15,
   },
 });
 
