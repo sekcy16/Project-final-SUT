@@ -19,9 +19,11 @@ import RNPickerSelect from "react-native-picker-select";
 import PagerView from "react-native-pager-view";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { firebaseAuth, firebaseDB } from "../config/firebase.config";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, collection, getDocs } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage"; 
+import { useFocusEffect } from "@react-navigation/native";
+import { BackHandler } from "react-native";
 
 const SignUpScreen = () => {
   const screenWidth = Math.round(Dimensions.get("window").width);
@@ -32,6 +34,8 @@ const SignUpScreen = () => {
   const [avatar, setAvatar] = useState(avatars[0]?.image.asset.url);
   const [isAvatarMenu, setIsAvatarMenu] = useState(false);
   const [getEmailValidationStatus, setGetEmailValidationStatus] = useState(false);
+  const pagerRef = React.useRef(null);
+
 
   // Additional fields
   const [diabetesType, setDiabetesType] = useState("");
@@ -52,6 +56,28 @@ const SignUpScreen = () => {
     setIsAvatarMenu(false);
   };
 
+  useFocusEffect(
+    React.useCallback(() => {
+      const onBackPress = () => {
+        if (currentPage === 0) {
+          // If on the first page, exit the screen
+          navigation.goBack();
+          return true;
+        } else if (pagerRef.current) {
+          // If not on the first page, go back to the previous page
+          pagerRef.current.setPage(currentPage - 1);
+          return true;
+        }
+      };
+
+      BackHandler.addEventListener("hardwareBackPress", onBackPress);
+
+      return () => {
+        BackHandler.removeEventListener("hardwareBackPress", onBackPress);
+      };
+    }, [currentPage, navigation])
+  );
+
   const validateEmail = (email) => {
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
     const validDomains = ["com", "net", "org", "edu", "gov"];
@@ -70,6 +96,14 @@ const SignUpScreen = () => {
         );
         console.log("User Credential:", userCred);
   
+        // Query Firestore to get the total count of users
+        const usersCollectionRef = collection(firebaseDB, "users"); // Get a reference to the "users" collection
+        const usersSnapshot = await getDocs(usersCollectionRef); // Fetch all documents in the "users" collection
+        const userCount = usersSnapshot.size; // Get the number of users
+  
+        const uidnum = userCount + 1; // Increment by 1 for the new user
+        const currentTime = new Date().toISOString(); // Get current timestamp
+  
         // Calculate BMI
         const calculatedBMI = calculateBMI(parseFloat(weight), parseFloat(height));
   
@@ -81,6 +115,7 @@ const SignUpScreen = () => {
             ...userCred.user.providerData[0],
             email: userCred.user.email,
             uid: userCred.user.uid,
+            uidnum: uidnum, // Add uidnum here
           },
           role: "User",
           diabetesType,
@@ -90,16 +125,25 @@ const SignUpScreen = () => {
           activityLevel,
           goal,
           gender,
-          bmi: calculatedBMI.bmiValue,
-          bmiStatus: calculatedBMI.bmiStatus,
+          bmi: calculatedBMI.bmiValue, // Save calculated BMI value
+          bmiStatus: calculatedBMI.bmiStatus, // Save calculated BMI status
+          lastActive: currentTime, // Store the current timestamp
         };
   
         // Save data to Firestore
         await setDoc(doc(firebaseDB, "users", userCred?.user.uid), data);
         console.log("Document successfully written!");
   
-        // After saving, navigate the user to another screen or show a success message
-        Alert.alert("Success", "Your account has been created successfully!");
+        // Sign out the user immediately after successful signup
+        await signOut(firebaseAuth);
+  
+        // Navigate to the login screen
+        Alert.alert("Success", "Account created successfully!", [
+          {
+            text: "OK",
+            onPress: () => navigation.navigate("LoginScreen"),
+          },
+        ]);
       } catch (error) {
         console.error("Error signing up:", error);
   
@@ -119,6 +163,8 @@ const SignUpScreen = () => {
       );
     }
   };
+  
+  
   
 
   // Updated calculateBMI function to return values
@@ -166,8 +212,10 @@ const calculateBMI = (weight, height) => {
         style={styles.keyboardAvoidingView}
       >
         <PagerView
+          ref={pagerRef}
           style={styles.pagerView}
           initialPage={0}
+          scrollEnabled={false}
           onPageSelected={(e) => setCurrentPage(e.nativeEvent.position)}
         >
           {/* Page 1: Avatar and Basic Info */}
@@ -311,12 +359,17 @@ const calculateBMI = (weight, height) => {
           <View style={styles.nextButtonContainer}>
             <TouchableOpacity
               style={styles.nextButton}
-              onPress={() => setCurrentPage(1)}
+              onPress={() => {
+                if (pagerRef.current) {
+                  pagerRef.current.setPage(1); // Move to the second page
+                }
+              }}
             >
               <Text style={styles.nextButtonText}>Next</Text>
             </TouchableOpacity>
           </View>
         )}
+
 
         {currentPage === 1 && (
           <View style={styles.submitButtonContainer}>
