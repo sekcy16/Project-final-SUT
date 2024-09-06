@@ -50,7 +50,6 @@ const EditProfilePage = () => {
             setAvatar(userData.profilePic || avatars[0]?.image.asset.url);
             setWeight(userData.weight?.toString() || "0");
             setHeight(userData.height?.toString() || "0");
-            setBmi(userData.bmi?.toString() || "0");
           } else {
             console.error("No such document!");
           }
@@ -63,54 +62,17 @@ const EditProfilePage = () => {
     fetchUserData();
   }, []);
 
-  const handleAvatarSelection = (item) => {
-    setAvatar(item?.image.asset.url);
-    setIsAvatarMenu(false);
-  };
-
-  const handleImagePickAndUpload = async () => {
-    try {
-      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  
-      if (permissionResult.granted === false) {
-        Alert.alert("ต้องการสิทธิ์ในการเข้าถึงคลังภาพ!");
-        return;
+  useEffect(() => {
+    // Calculate BMI whenever weight or height changes
+    if (weight && height) {
+      const weightKg = parseFloat(weight);
+      const heightM = parseFloat(height) / 100; // Convert cm to meters
+      if (heightM > 0) {
+        const calculatedBmi = (weightKg / (heightM * heightM)).toFixed(2);
+        setBmi(calculatedBmi);
       }
-  
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 1,
-      });
-  
-      if (!result.canceled) {
-        const pickedImageUri = result.assets[0].uri;
-  
-        const storage = getStorage();
-        const imageRef = ref(storage, `profilePics/${firebaseAuth.currentUser.uid}.jpg`);
-  
-        const response = await fetch(pickedImageUri);
-        const blob = await response.blob();
-  
-        await uploadBytes(imageRef, blob);
-  
-        const downloadURL = await getDownloadURL(imageRef);
-  
-        setAvatar(downloadURL);
-  
-        const userDocRef = doc(firebaseDB, "users", firebaseAuth.currentUser.uid);
-        await updateDoc(userDocRef, { profilePic: downloadURL });
-  
-        Alert.alert("สำเร็จ", "อัปโหลดรูปภาพสำเร็จแล้ว");
-      } else {
-        console.log("ผู้ใช้ยกเลิกการเลือกภาพ");
-      }
-    } catch (error) {
-      console.error("ImagePicker หรือ Firebase Storage มีข้อผิดพลาด: ", error);
-      Alert.alert("ข้อผิดพลาด", "ไม่สามารถอัปโหลดรูปภาพได้ กรุณาลองใหม่");
     }
-  };
+  }, [weight, height]);
 
   const handleSave = async () => {
     try {
@@ -243,7 +205,7 @@ const EditProfilePage = () => {
           secureTextEntry
         />
 
-        <Text style={styles.label}>Weight</Text>
+        <Text style={styles.label}>Weight (kg)</Text>
         <TextInput
           style={styles.input}
           value={weight}
@@ -252,7 +214,7 @@ const EditProfilePage = () => {
           keyboardType="numeric"
         />
 
-        <Text style={styles.label}>Height</Text>
+        <Text style={styles.label}>Height (cm)</Text>
         <TextInput
           style={styles.input}
           value={height}
@@ -261,14 +223,7 @@ const EditProfilePage = () => {
           keyboardType="numeric"
         />
 
-        <Text style={styles.label}>BMI</Text>
-        <TextInput
-          style={styles.input}
-          value={bmi}
-          onChangeText={setBmi}
-          placeholder="Enter your BMI"
-          keyboardType="numeric"
-        />
+        <Text style={styles.label}>BMI: {bmi}</Text>
 
         <Button title="Save Changes" onPress={handleSave} color="#004d00" />
       </View>
