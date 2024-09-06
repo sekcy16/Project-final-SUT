@@ -22,6 +22,7 @@ import { useNavigation } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
 import { avatars } from "../utils/supports"; // Import avatars
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { LinearGradient } from "expo-linear-gradient"; // Import LinearGradient
 
 const EditProfilePage = () => {
   const [email, setEmail] = useState("");
@@ -80,12 +81,12 @@ const EditProfilePage = () => {
       if (!user) return;
 
       const userDocRef = doc(firebaseDB, "users", user.uid);
-      await updateDoc(userDocRef, { 
-        fullName, 
-        profilePic: avatar, 
-        weight: parseFloat(weight) || 0, 
-        height: parseFloat(height) || 0, 
-        bmi: parseFloat(bmi) || 0 
+      await updateDoc(userDocRef, {
+        fullName,
+        profilePic: avatar,
+        weight: parseFloat(weight) || 0,
+        height: parseFloat(height) || 0,
+        bmi: parseFloat(bmi) || 0,
       });
 
       if (email !== user.email) {
@@ -223,9 +224,11 @@ const EditProfilePage = () => {
           keyboardType="numeric"
         />
 
-        <Text style={styles.label}>BMI: {bmi}</Text>
+        <Text style={styles.bmiLabel}>BMI: {bmi}</Text>
 
-        <Button title="Save Changes" onPress={handleSave} color="#004d00" />
+        <TouchableOpacity style={styles.cartoonButton} onPress={handleSave}>
+          <Text style={styles.cartoonButtonText}>Save Changes</Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );
@@ -260,6 +263,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 8,
     color: "#004d00",
+  },
+  bmiLabel: {
+    fontSize: 24, // Larger font size for BMI
+    fontWeight: "bold",
+    marginBottom: 16,
+    color: "#004d00",
+    alignSelf: "center",
   },
   input: {
     borderWidth: 1,
@@ -307,6 +317,39 @@ const styles = StyleSheet.create({
   },
   pickImageText: {
     color: "#FFF",
+  },
+  cartoonButton: {
+    backgroundColor: "#4CAF50", // A soft green color
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 20, // Rounded corners
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#388E3C", // Slightly darker green border
+    elevation: 4, // For shadow effect on Android
+    shadowColor: "#000", // Shadow color for iOS
+    shadowOffset: { width: 0, height: 4 }, // Shadow offset
+    shadowOpacity: 0.3, // Shadow opacity
+    shadowRadius: 6, // Shadow blur radius
+  },
+  cartoonButtonText: {
+    fontSize: 18,
+    color: "#FFF", // White text color
+    fontWeight: "bold",
+  },
+  editIconContainer: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    backgroundColor: "#50D890",
+    borderRadius: 20,
+    padding: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 2, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 6,
   },
 });
 

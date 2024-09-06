@@ -59,7 +59,7 @@ const PatientDetailScreen = ({ route, navigation }) => {
                 backgroundGradientFrom: '#fff',
                 backgroundGradientTo: '#fff',
                 decimalPlaces: 0,
-                color: (opacity = 1) => `rgba(255, 0, 0, ${opacity})`,
+                color: (opacity = 1) => `rgba(0, 123, 255, ${opacity})`, // Blue color
               }}
               bezier
               style={styles.chart}
@@ -88,7 +88,7 @@ const PatientDetailScreen = ({ route, navigation }) => {
                 backgroundGradientFrom: '#fff',
                 backgroundGradientTo: '#fff',
                 decimalPlaces: 1,
-                color: (opacity = 1) => `rgba(0, 255, 0, ${opacity})`,
+                color: (opacity = 1) => `rgba(0, 123, 255, ${opacity})`, // Blue color
               }}
               bezier
               style={styles.chart}
@@ -196,17 +196,17 @@ const PatientDetailScreen = ({ route, navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
-  header: { padding: 20, backgroundColor: '#54D670', borderBottomLeftRadius: 20, borderBottomRightRadius: 20 },
+  container: { flex: 1, backgroundColor: '#E3F2FD' }, // Light blue background
+  header: { padding: 20, backgroundColor: '#2196F3', borderBottomLeftRadius: 20, borderBottomRightRadius: 20 },
   name: { fontSize: 26, fontWeight: 'bold', color: 'white' },
   age: { fontSize: 18, color: 'white', marginTop: 5 },
   tabContainer: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#ddd', backgroundColor: 'white' },
   tab: { flex: 1, padding: 15, alignItems: 'center' },
-  activeTab: { borderBottomWidth: 3, borderBottomColor: '#54D670' },
+  activeTab: { borderBottomWidth: 3, borderBottomColor: '#2196F3' },
   tabText: { fontSize: 16, color: '#333' },
   statsText: { fontSize: 18, fontWeight: 'bold', paddingHorizontal: 20, marginVertical: 10 },
   chart: { borderRadius: 12, marginVertical: 20, marginHorizontal: 10 },
-  historyTitle: { fontSize: 20, fontWeight: 'bold', padding: 20, color: '#54D670' },
+  historyTitle: { fontSize: 20, fontWeight: 'bold', padding: 20, color: '#2196F3' },
   historyItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
   },
   historyDate: { fontSize: 16, color: '#555' },
   historyValue: { fontSize: 16, fontWeight: 'bold', color: '#333' },
-  sectionTitle: { fontSize: 20, fontWeight: 'bold', padding: 20, color: '#54D670' },
+  sectionTitle: { fontSize: 20, fontWeight: 'bold', padding: 20, color: '#2196F3' },
   dietaryEntry: {
     paddingHorizontal: 20,
     paddingVertical: 15,
@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
   nutritionDetails: { marginTop: 10 },
   nutritionText: { fontSize: 16, color: '#666' },
   button: {
-    backgroundColor: '#54D670',
+    backgroundColor: '#2196F3',
     padding: 15,
     margin: 20,
     borderRadius: 8,

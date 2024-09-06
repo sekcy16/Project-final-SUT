@@ -20,43 +20,43 @@ const AdvicePage = ({ route, navigation }) => {
       <ScrollView>
         <View style={styles.header}>
           <Text style={styles.name}>{patientName}</Text>
-          <Text style={styles.details}>อายุ {patientAge} | เบาหวานระดับ {patientLevel}</Text>
+          <Text style={styles.details}>Age: {patientAge} | Diabetes Level: {patientLevel}</Text>
         </View>
 
         <View style={styles.contentContainer}>
           <View style={styles.adviceSection}>
-            <Text style={styles.sectionTitle}>การกิน</Text>
+            <Text style={styles.sectionTitle}>Eating Advice</Text>
             <TextInput
               style={styles.input}
               multiline
               numberOfLines={4}
               onChangeText={setEatingAdvice}
               value={eatingAdvice}
-              placeholder="ให้คำแนะนำเกี่ยวกับการกิน"
+              placeholder="Provide advice on eating"
             />
           </View>
 
           <View style={styles.adviceSection}>
-            <Text style={styles.sectionTitle}>การออกกำลังกาย</Text>
+            <Text style={styles.sectionTitle}>Exercise Advice</Text>
             <TextInput
               style={styles.input}
               multiline
               numberOfLines={4}
               onChangeText={setExerciseAdvice}
               value={exerciseAdvice}
-              placeholder="ให้คำแนะนำเกี่ยวกับการออกกำลังกาย"
+              placeholder="Provide advice on exercise"
             />
           </View>
 
           <View style={styles.adviceSection}>
-            <Text style={styles.sectionTitle}>คำแนะนำเพิ่มเติม</Text>
+            <Text style={styles.sectionTitle}>Additional Advice</Text>
             <TextInput
               style={styles.input}
               multiline
               numberOfLines={4}
               onChangeText={setAdditionalAdvice}
               value={additionalAdvice}
-              placeholder="ให้คำแนะนำเพิ่มเติม"
+              placeholder="Provide additional advice"
             />
           </View>
         </View>
@@ -64,10 +64,10 @@ const AdvicePage = ({ route, navigation }) => {
 
       <View style={styles.buttonContainer}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Text style={styles.buttonText}>กลับ</Text>
+          <Text style={styles.buttonText}>Back</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm}>
-          <Text style={styles.buttonText}>ยืนยัน</Text>
+          <Text style={styles.buttonText}>Confirm</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -77,10 +77,10 @@ const AdvicePage = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f0fff0',
+    backgroundColor: '#E8F0F2', // Light blue background
   },
   header: {
-    backgroundColor: '#54D670',
+    backgroundColor: '#007BFF', // Primary blue
     padding: 20,
   },
   name: {
@@ -106,11 +106,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 10,
-    color: '#54D670',
+    color: '#007BFF', // Blue title
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#B0BEC5', // Light blue-gray border
     borderRadius: 5,
     padding: 10,
     minHeight: 100,
@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   backButton: {
-    backgroundColor: '#FF5252',
+    backgroundColor: '#FF6F61', // Coral for back button
     borderRadius: 5,
     padding: 15,
     flex: 1,
@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   confirmButton: {
-    backgroundColor: '#54D670',
+    backgroundColor: '#007BFF', // Blue for confirm button
     borderRadius: 5,
     padding: 15,
     flex: 1,
@@ -143,6 +143,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 });
-
 
 export default AdvicePage;

@@ -106,9 +106,12 @@ const BlogDetail = ({ route }) => {
         <Text style={styles.contentText}>{blogData.content}</Text>
       </View>
 
-      <TouchableOpacity style={styles.reportButton} onPress={() => setModalVisible(true)}>
-        <Icon name="flag" size={24} color="red" />
-        <Text style={styles.reportButtonText}>รายงาน</Text>
+      {/* Report Button */}
+      <TouchableOpacity
+        style={styles.reportButton}
+        onPress={() => setModalVisible(true)}
+      >
+        <Icon name="flag" size={24} color="white" />
       </TouchableOpacity>
 
       {/* Report Type Selection Modal */}
@@ -121,15 +124,18 @@ const BlogDetail = ({ route }) => {
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>เลือกประเภทการรายงาน</Text>
-            <TouchableOpacity onPress={() => setSelectedReportType('เนื้อหาไม่เหมาะสม')}>
-              <Text style={styles.modalOption}>เนื้อหาไม่เหมาะสม</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setSelectedReportType('การละเมิดสิทธิบัตร')}>
-              <Text style={styles.modalOption}>การละเมิดสิทธิบัตร</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setSelectedReportType('อื่น ๆ')}>
-              <Text style={styles.modalOption}>อื่น ๆ</Text>
-            </TouchableOpacity>
+            {['เนื้อหาไม่เหมาะสม', 'การละเมิดสิทธิบัตร', 'อื่น ๆ'].map((type) => (
+              <TouchableOpacity
+                key={type}
+                style={[
+                  styles.modalOption,
+                  selectedReportType === type ? styles.selectedOption : null,
+                ]}
+                onPress={() => setSelectedReportType(type)}
+              >
+                <Text style={styles.modalOptionText}>{type}</Text>
+              </TouchableOpacity>
+            ))}
             <TextInput
               style={styles.commentsInput}
               placeholder="พิมพ์คำอธิบายเพิ่มเติม (ถ้ามี)"
@@ -183,17 +189,28 @@ const styles = StyleSheet.create({
   contentText: {
     fontSize: 16,
   },
+  // ปุ่มรายงาน
   reportButton: {
-    flexDirection: 'row',
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#FF4C4C', // สีแดงสำหรับธง
+    justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFF8DC',
-    padding: 10,
-    borderRadius: 10,
-    marginTop: 20,
+
+    // เพิ่มเงาเพื่อให้ดูเป็น 3D
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,  // สำหรับ Android
   },
   reportButtonText: {
     marginLeft: 8,
-    color: 'red',
+    color: 'white',
     fontWeight: 'bold',
   },
   loadingContainer: {
@@ -230,8 +247,27 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   modalOption: {
+    width: '100%',
+    padding: 10,
+    borderRadius: 5,
+    marginBottom: 10,
+    backgroundColor: '#FFF', // เปลี่ยนสีพื้นหลังปุ่ม
+    justifyContent: 'center',
+    alignItems: 'center',
+
+    // เพิ่มเงาให้ปุ่มเพื่อให้ดูมีมิติแบบ 3D
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,  // สำหรับ Android
+  },
+  selectedOption: {
+    backgroundColor: '#8FBC8F',
+  },
+  modalOptionText: {
     fontSize: 16,
-    marginVertical: 10,
+    color: '#333',
   },
   commentsInput: {
     width: '100%',
@@ -241,13 +277,23 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     padding: 10,
     marginTop: 10,
-    textAlignVertical: 'top', // Ensure text input starts at the top
+    textAlignVertical: 'top',
   },
+  // ปุ่มส่ง
   submitButton: {
     backgroundColor: '#8FBC8F',
     padding: 10,
     borderRadius: 5,
     marginTop: 10,
+    width: '100%',
+    alignItems: 'center',
+
+    // เพิ่มเงาเพื่อให้ดูมีมิติแบบ 3D
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,  // สำหรับ Android
   },
   submitButtonText: {
     color: 'white',
@@ -258,6 +304,15 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 5,
     marginTop: 10,
+    width: '100%',
+    alignItems: 'center',
+
+    // เพิ่มเงาเพื่อให้ดูมีมิติแบบ 3D
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,  // สำหรับ Android
   },
   cancelButtonText: {
     color: '#000',

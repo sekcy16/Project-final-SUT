@@ -78,7 +78,7 @@ const DoctorHomePage = () => {
           <Icon
             name="notifications-outline"
             size={24}
-            color="#000"
+            color="#FFF"
             style={styles.icon}
           />
         </TouchableOpacity>
@@ -96,10 +96,10 @@ const DoctorHomePage = () => {
               </View>
               <View style={styles.taskActions}>
                 <TouchableOpacity onPress={() => toggleTask(task.id)}>
-                  <Icon name={task.completed ? "checkmark-circle" : "ellipse-outline"} size={24} color={task.completed ? "#4CAF50" : "#000"} />
+                  <Icon name={task.completed ? "checkmark-circle" : "ellipse-outline"} size={24} color={task.completed ? "#2196F3" : "#000"} />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => deleteTask(task.id)}>
-                  <Icon name="close-circle-outline" size={24} color="#FF0000" />
+                  <Icon name="close-circle-outline" size={24} color="#FF5722" />
                 </TouchableOpacity>
               </View>
             </View>
@@ -137,7 +137,7 @@ const DoctorHomePage = () => {
                 <Icon
                   name={bookmarked[blog.id] ? "bookmark" : "bookmark-outline"}
                   size={24}
-                  color={bookmarked[blog.id] ? "#FFCC00" : "#000"}
+                  color={bookmarked[blog.id] ? "#FFC107" : "#000"}
                 />
               </TouchableOpacity>
             </TouchableOpacity>
@@ -151,14 +151,14 @@ const DoctorHomePage = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FAFAD2", // Light beige background
+    backgroundColor: "#E3F2FD", // Light blue background
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 30,
-    backgroundColor: "#8FBC8F", // Dark olive green background for header
+    padding: 20,
+    backgroundColor: "#2196F3", // Primary blue
     elevation: 4, // Adding elevation for shadow effect
   },
   profileContainer: {
@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   profileText: {
-    color: "#fff", // Light beige for profile text
+    color: "#FFF", // White profile text
     fontSize: 20,
     fontWeight: "bold",
     marginLeft: 10,
@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   todoContainer: {
-    backgroundColor: "#8FBC8F", // Cornsilk background for to-do container
+    backgroundColor: "#E3F2FD", // Light blue for to-do container
     margin: 16,
     padding: 16,
     borderRadius: 12,
@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#556B2F", // Dark olive green for section title
+    color: "#1E88E5", // Darker blue for section title
     marginBottom: 12,
   },
   taskCard: {
@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 12,
     marginBottom: 12,
-    backgroundColor: "#FFF8DC", // Cornsilk for task cards
+    backgroundColor: "#FFF", // White for task cards
     borderRadius: 10,
     elevation: 2,
   },
@@ -208,10 +208,10 @@ const styles = StyleSheet.create({
   taskTitle: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#556B2F", // Dark olive green for task title
+    color: "#1E88E5", // Darker blue for task title
   },
   taskCompleted: {
-    color: "#8FBC8F", // Soft green for completed task title
+    color: "#4CAF50", // Green for completed task title
     textDecorationLine: "line-through",
   },
   taskDescription: {
@@ -230,19 +230,19 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     borderWidth: 1,
-    borderColor: "#EEE8AA", // Pale goldenrod for input border
+    borderColor: "#B3E5FC", // Pale blue for input border
     borderRadius: 5,
     padding: 10,
     marginRight: 8,
-    backgroundColor: "#FFF8DC", // Cornsilk for input background
+    backgroundColor: "#FFF", // White for input background
   },
   addButton: {
-    backgroundColor: "#556B2F", // Dark olive green for add button
+    backgroundColor: "#1E88E5", // Blue for add button
     borderRadius: 5,
     padding: 10,
   },
   blogContainer: {
-    backgroundColor: "#FFF8DC", // Cornsilk for blog container
+    backgroundColor: "#E3F2FD", // Light blue for blog container
     margin: 16,
     padding: 16,
     borderRadius: 12,
@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#8FBC8F", // Pale goldenrod for border
+    borderBottomColor: "#B3E5FC", // Pale blue for border
   },
   blogContent: {
     flex: 1,
@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
   blogTitle: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#556B2F", // Dark olive green for blog title
+    color: "#1E88E5", // Darker blue for blog title
   },
   blogInfo: {
     flexDirection: "row",

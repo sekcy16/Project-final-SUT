@@ -17,7 +17,7 @@ const PatientListScreen = ({ navigation }) => {
         <Text style={styles.patientName}>{item.name}</Text>
         <Text style={styles.patientDetails}>อายุ {item.age} | เบาหวานระดับ {item.level}</Text>
       </View>
-      <Ionicons name="chevron-forward" size={24} color="#8FBC8F" />
+      <Ionicons name="chevron-forward" size={24} color="#2196F3" />
     </TouchableOpacity>
   );
 
@@ -27,7 +27,7 @@ const PatientListScreen = ({ navigation }) => {
         <Text style={styles.headerTitle}>Patient List</Text>
       </View>
       <View style={styles.searchContainer}>
-        <Ionicons name="search" size={24} color="#8FBC8F" />
+        <Ionicons name="search" size={24} color="#2196F3" />
         <TextInput 
           style={styles.searchInput}
           placeholder="ค้นหาคนไข้"
@@ -47,11 +47,11 @@ const PatientListScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FAFAD2",
+    backgroundColor: "#E3F2FD", // Light blue background
   },
   header: {
     paddingVertical: 30,
-    backgroundColor: '#8FBC8F',
+    backgroundColor: '#2196F3', // Blue background for header
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
     elevation: 4, // Adds shadow on Android
