@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Picker } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { getFirestore, collection, addDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { app } from "../config/firebase.config";
+import { launchImageLibrary } from 'react-native-image-picker';
 
 const CreateBlogScreen = ({ navigation }) => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [type, setType] = useState('articles');
+  const [category, setCategory] = useState('health');
+  const [photo, setPhoto] = useState(null);
 
   const db = getFirestore(app);
   const auth = getAuth(app);
@@ -19,20 +21,31 @@ const CreateBlogScreen = ({ navigation }) => {
         console.error('No user logged in');
         return;
       }
-      
-      await addDoc(collection(db, 'blogs'), {
+
+      const blogData = {
         title,
         content,
         author: user.displayName || user.email,
         userId: user.uid,
         createdAt: new Date(),
-        type,
-      });
-      
+        category,
+        photo: photo ? photo.uri : null, // Save the photo URI
+      };
+
+      const docRef = await addDoc(collection(db, 'blogs'), blogData);
+
       navigation.goBack(); // Return to the blog list after creating
     } catch (error) {
       console.error('Error creating blog:', error);
     }
+  };
+
+  const handleChoosePhoto = () => {
+    launchImageLibrary({ mediaType: 'photo' }, (response) => {
+      if (!response.didCancel && !response.error && response.assets) {
+        setPhoto(response.assets[0]);
+      }
+    });
   };
 
   return (
@@ -51,14 +64,25 @@ const CreateBlogScreen = ({ navigation }) => {
         onChangeText={setContent}
         multiline
       />
-      <Picker
-        selectedValue={type}
-        style={styles.picker}
-        onValueChange={(itemValue) => setType(itemValue)}
-      >
-        <Picker.Item label="Article" value="articles" />
-        <Picker.Item label="Recipe" value="recipes" />
-      </Picker>
+      <Text style={styles.label}>Category:</Text>
+      <View style={styles.categoryContainer}>
+        <TouchableOpacity
+          style={category === 'health' ? styles.selectedCategory : styles.category}
+          onPress={() => setCategory('health')}
+        >
+          <Text style={styles.categoryText}>Health</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={category === 'recipe' ? styles.selectedCategory : styles.category}
+          onPress={() => setCategory('recipe')}
+        >
+          <Text style={styles.categoryText}>Recipe</Text>
+        </TouchableOpacity>
+      </View>
+      <TouchableOpacity style={styles.photoButton} onPress={handleChoosePhoto}>
+        <Text style={styles.photoButtonText}>Choose Photo</Text>
+      </TouchableOpacity>
+      {photo && <Image source={{ uri: photo.uri }} style={styles.photoPreview} />}
       <TouchableOpacity style={styles.button} onPress={handleCreateBlog}>
         <Text style={styles.buttonText}>Create Blog</Text>
       </TouchableOpacity>
@@ -88,8 +112,46 @@ const styles = StyleSheet.create({
     height: 150,
     textAlignVertical: 'top',
   },
-  picker: {
+  label: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: '#556B2F',
+  },
+  categoryContainer: {
+    flexDirection: 'row',
+    marginBottom: 15,
+  },
+  category: {
     backgroundColor: '#FFF8DC',
+    padding: 10,
+    borderRadius: 5,
+    marginRight: 10,
+  },
+  selectedCategory: {
+    backgroundColor: '#8FBC8F',
+    padding: 10,
+    borderRadius: 5,
+    marginRight: 10,
+  },
+  categoryText: {
+    color: '#556B2F',
+    fontWeight: 'bold',
+  },
+  photoButton: {
+    backgroundColor: '#8FBC8F',
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  photoButtonText: {
+    color: '#FFF',
+    fontWeight: 'bold',
+  },
+  photoPreview: {
+    width: 100,
+    height: 100,
     marginBottom: 15,
   },
   button: {

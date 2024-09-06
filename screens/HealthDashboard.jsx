@@ -10,6 +10,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ProgressBar } from 'react-native-paper';
+import { firebaseAuth, firebaseDB } from "../config/firebase.config";
+import { doc, getDoc } from "firebase/firestore";
 
 const HealthDashboard = ({ navigation }) => {
   const [latestBloodSugar, setLatestBloodSugar] = useState(null);
@@ -18,9 +20,9 @@ const HealthDashboard = ({ navigation }) => {
   const [exerciseMinutes, setExerciseMinutes] = useState(null);
   const [waterIntake, setWaterIntake] = useState(null);
   const [averageBloodSugar, setAverageBloodSugar] = useState(null);
-  
+
   // New state variables for calorie and macronutrient tracking
-  const [caloriesAllowed, setCaloriesAllowed] = useState(2000);
+  const [caloriesAllowed, setCaloriesAllowed] = useState(0);
   const [caloriesConsumed, setCaloriesConsumed] = useState(0);
   const [proteinConsumed, setProteinConsumed] = useState(0);
   const [carbsConsumed, setCarbsConsumed] = useState(0);
@@ -40,48 +42,60 @@ const HealthDashboard = ({ navigation }) => {
 
   const loadLatestData = async () => {
     try {
-      // ... (existing data loading logic)
+      // Load the calorie and macronutrient data from Firebase
+      const user = firebaseAuth.currentUser;
+      if (user) {
+        const docRef = doc(firebaseDB, "users", user.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setCaloriesAllowed(data.tdee);
+          setCaloriesConsumed(0); // You might want to fetch actual consumed data instead of setting it to 0
+          setProteinConsumed(data.macronutrients.protein);
+          setCarbsConsumed(data.macronutrients.carbs);
+          setFatConsumed(data.macronutrients.fat);
+        } else {
+          console.log("No such document!");
+        }
+      }
 
-      // Load calorie and macronutrient data
-      // This is placeholder logic. Replace with actual data loading from AsyncStorage or API
       // Load latest blood sugar
       const savedBloodSugarHistory = await AsyncStorage.getItem('bloodSugarHistory');
       if (savedBloodSugarHistory) {
-          const bloodSugarHistory = JSON.parse(savedBloodSugarHistory);
-          if (bloodSugarHistory.length > 0) {
-              setLatestBloodSugar(bloodSugarHistory[0].level);
-          } else {
-              setLatestBloodSugar(null);
-          }
-      } else {
+        const bloodSugarHistory = JSON.parse(savedBloodSugarHistory);
+        if (bloodSugarHistory.length > 0) {
+          setLatestBloodSugar(bloodSugarHistory[0].level);
+        } else {
           setLatestBloodSugar(null);
+        }
+      } else {
+        setLatestBloodSugar(null);
       }
 
       // Load average blood sugar
       const savedAverageBloodSugar = await AsyncStorage.getItem('averageBloodSugarToday');
       if (savedAverageBloodSugar) {
-          setAverageBloodSugar(parseFloat(savedAverageBloodSugar));
+        setAverageBloodSugar(parseFloat(savedAverageBloodSugar));
       } else {
-          setAverageBloodSugar(null);
+        setAverageBloodSugar(null);
       }
 
       // Load latest weight
       const savedWeightHistory = await AsyncStorage.getItem('weightHistory');
       if (savedWeightHistory) {
-          const weightHistory = JSON.parse(savedWeightHistory);
-          if (weightHistory.length > 0) {
-              setLatestWeight(weightHistory[0].weight);
-          } else {
-              setLatestWeight(null);
-          }
-      } else {
+        const weightHistory = JSON.parse(savedWeightHistory);
+        if (weightHistory.length > 0) {
+          setLatestWeight(weightHistory[0].weight);
+        } else {
           setLatestWeight(null);
+        }
+      } else {
+        setLatestWeight(null);
       }
 
-      setCaloriesConsumed(0);
-      setProteinConsumed(150);
-      setCarbsConsumed(250);
-      setFatConsumed(50);
+      // Placeholder for setting carbs, protein, and fat consumed (these should come from actual consumption data)
+
+
     } catch (error) {
       console.error('Error loading latest data:', error);
     }
@@ -89,15 +103,15 @@ const HealthDashboard = ({ navigation }) => {
 
   const CalorieInfo = () => {
     // Calculate the remaining amounts and percentages
-    const caloriesLeft = Math.max(caloriesAllowed - caloriesConsumed, 0);
-    const proteinLeft = 150 - proteinConsumed; // Replace 150 with your protein goal
-    const carbsLeft = 250 - carbsConsumed; // Replace 250 with your carbs goal
-    const fatLeft = 70 - fatConsumed; // Replace 70 with your fat goal
+    const caloriesLeft = Math.max(caloriesAllowed - 0);
+    const proteinLeft = proteinConsumed - proteinConsumed; // Replace 150 with your protein goal
+    const carbsLeft = carbsConsumed - carbsConsumed; // Replace 250 with your carbs goal
+    const fatLeft = fatConsumed - fatConsumed; // Replace 70 with your fat goal
 
-    const caloriesPercentage = caloriesConsumed / caloriesAllowed;
-    const proteinPercentage = proteinConsumed / 150; // Adjust according to your protein goal
-    const carbsPercentage = carbsConsumed / 250; // Adjust according to your carbs goal
-    const fatPercentage = fatConsumed / 70; // Adjust according to your fat goal
+    const caloriesPercentage = 0.2;
+    const proteinPercentage = 0.4; // Assuming 150g is your protein goal
+    const carbsPercentage = 0.2; // Assuming 250g is your carbs goal
+    const fatPercentage = 0.5; // Assuming 70g is your fat goal
 
     return (
       <View style={styles.calorieInfoContainer}>
@@ -107,15 +121,15 @@ const HealthDashboard = ({ navigation }) => {
         <ProgressBar progress={caloriesPercentage} color="#FF6347" style={styles.progressBar} />
         <Text style={styles.calorieInfoTextSmall}>{caloriesLeft} kcal left</Text>
 
-        <Text style={styles.calorieInfoText}>Protein: {proteinConsumed}g</Text>
+        <Text style={styles.calorieInfoText}>Protein: {proteinConsumed} / {proteinConsumed} g</Text>
         <ProgressBar progress={proteinPercentage} color="#1E90FF" style={styles.progressBar} />
         <Text style={styles.calorieInfoTextSmall}>{proteinLeft}g left</Text>
 
-        <Text style={styles.calorieInfoText}>Carbs: {carbsConsumed}g</Text>
+        <Text style={styles.calorieInfoText}>Carbs: {carbsConsumed} / {carbsConsumed} g</Text>
         <ProgressBar progress={carbsPercentage} color="#32CD32" style={styles.progressBar} />
         <Text style={styles.calorieInfoTextSmall}>{carbsLeft}g left</Text>
 
-        <Text style={styles.calorieInfoText}>Fat: {fatConsumed}g</Text>
+        <Text style={styles.calorieInfoText}>Fat: {fatConsumed} / {fatConsumed} g</Text>
         <ProgressBar progress={fatPercentage} color="#FFD700" style={styles.progressBar} />
         <Text style={styles.calorieInfoTextSmall}>{fatLeft}g left</Text>
       </View>
@@ -205,23 +219,29 @@ const styles = StyleSheet.create({
     backgroundColor: '#F7F7F7',
   },
   scrollView: {
-    flexGrow: 1,
+    paddingVertical: 20,
+    paddingHorizontal: 15,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#FFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    marginBottom: 20,
   },
   headerText: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: 'bold',
+    color: '#333',
   },
   notificationIcon: {
-    padding: 5,
+    padding: 8,
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
+    elevation: 2,
   },
   cardContainer: {
     padding: 15,
@@ -250,25 +270,24 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 16,
+    fontWeight: 'bold',
     color: '#333',
+    marginBottom: 5,
   },
   cardValue: {
     fontSize: 18,
     fontWeight: 'bold',
   },
   calorieInfoContainer: {
+    marginBottom: 20,
     backgroundColor: '#FFF',
+    borderRadius: 8,
     padding: 15,
-    margin: 15,
-    borderRadius: 10,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowRadius: 3,
+    elevation: 3,
   },
   calorieInfoTitle: {
     fontSize: 18,
@@ -277,11 +296,12 @@ const styles = StyleSheet.create({
   },
   calorieInfoText: {
     fontSize: 16,
+    color: '#333',
     marginBottom: 5,
   },
   calorieInfoTextSmall: {
     fontSize: 14,
-    color: '#888',
+    color: '#666',
     marginBottom: 10,
   },
   progressBar: {

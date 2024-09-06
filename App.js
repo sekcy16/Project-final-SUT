@@ -35,7 +35,6 @@ import TotalCalories from './screens/TotalCalories';
 import ExerciseEntry from './screens/ExerciseEntry';
 import WeightProgress from './screens/WeightProgress';
 import BlogDetail from './screens/BlogDetail';
-import CreateBlogOrRecipe from './screens/CreateBlogOrRecipe';
 import CreateBlogScreen from './screens/CreateBlogScreen';
 
 
@@ -220,9 +219,7 @@ const RootNavigator = () => {
       <Stack.Screen name='EditProfilePage' component={EditProfilePage} />
       <Stack.Screen name='BlogList' component={BlogList} />
       <Stack.Screen name='BlogDetail' component={BlogDetail} />
-      <Stack.Screen name='CreateBlogScreen' component={CreateBlogOrRecipe} />
-
-      <Stack.Screen name='CreateBlogOrRecipe' component={CreateBlogOrRecipe} />
+      <Stack.Screen name='CreateBlogScreen' component={CreateBlogScreen} />
 
     </Stack.Navigator>
   );

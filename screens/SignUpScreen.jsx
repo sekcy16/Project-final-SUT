@@ -21,7 +21,6 @@ import { createUserWithEmailAndPassword } from "firebase/auth";
 import { firebaseAuth, firebaseDB } from "../config/firebase.config";
 import { doc, setDoc, collection, getDocs } from "firebase/firestore";
 import { signOut } from "firebase/auth";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage"; 
 import { useFocusEffect } from "@react-navigation/native";
 import { BackHandler } from "react-native";
 
@@ -86,6 +85,92 @@ const SignUpScreen = () => {
     return emailPattern.test(email) && validDomains.includes(domain);
   };
 
+  
+
+  const calculateTDEE = (weight, height, age, activityLevel, gender, diabetesType) => {
+    // Harris-Benedict equation to calculate BMR
+    let BMR;
+    if (gender === "Male") {
+      BMR = 88.362 + (13.397 * weight) + (4.799 * height) - (5.677 * age);
+    } else if (gender === "Female") {
+      BMR = 447.593 + (9.247 * weight) + (3.098 * height) - (4.330 * age);
+    } else {
+      // For "Other" gender, use an average of male and female equations
+      BMR = (88.362 + 447.593) / 2 + (11.322 * weight) + (3.9485 * height) - (5.0035 * age);
+    }
+
+    // Multiply BMR by activity level to get TDEE
+    let activityMultiplier;
+    switch (activityLevel) {
+      case "Sedentary": activityMultiplier = 1.2; break;
+      case "Lightly Active": activityMultiplier = 1.375; break;
+      case "Moderately Active": activityMultiplier = 1.55; break;
+      case "Very Active": activityMultiplier = 1.725; break;
+      default: activityMultiplier = 1.2;
+    }
+
+    let TDEE = BMR * activityMultiplier;
+
+    // Adjust TDEE based on diabetes type
+    switch (diabetesType) {
+      case "Type 1":
+        TDEE *= 1.1; // Increase by 10% to account for higher energy expenditure
+        break;
+      case "Type 2":
+        TDEE *= 0.95; // Decrease by 5% to promote weight management
+        break;
+      case "Gestational":
+        TDEE *= 1.05; // Slight increase for gestational diabetes
+        break;
+      default:
+        // No adjustment for "Other" type
+    }
+
+    return Math.round(TDEE);
+  };
+
+  const calculateMacros = (TDEE, diabetesType, goal) => {
+    let carbPercentage, proteinPercentage, fatPercentage;
+
+    switch (diabetesType) {
+      case "Type 1":
+        carbPercentage = 0.40;
+        proteinPercentage = 0.30;
+        fatPercentage = 0.30;
+        break;
+      case "Type 2":
+        carbPercentage = 0.35;
+        proteinPercentage = 0.30;
+        fatPercentage = 0.35;
+        break;
+      case "Gestational":
+        carbPercentage = 0.45;
+        proteinPercentage = 0.25;
+        fatPercentage = 0.30;
+        break;
+      default:
+        carbPercentage = 0.45;
+        proteinPercentage = 0.25;
+        fatPercentage = 0.30;
+    }
+
+    // Adjust macros based on goal
+    if (goal === "Lose Weight") {
+      carbPercentage -= 0.05;
+      proteinPercentage += 0.05;
+    } else if (goal === "Gain Weight") {
+      carbPercentage += 0.05;
+      proteinPercentage += 0.05;
+      fatPercentage -= 0.10;
+    }
+
+    const carbs = Math.round((TDEE * carbPercentage) / 4);
+    const protein = Math.round((TDEE * proteinPercentage) / 4);
+    const fat = Math.round((TDEE * fatPercentage) / 9);
+
+    return { carbs, protein, fat };
+  };
+
   const handleSignUp = async () => {
     if (validateEmail(email) && email !== "" && getEmailValidationStatus) {
       try {
@@ -95,18 +180,30 @@ const SignUpScreen = () => {
           password
         );
         console.log("User Credential:", userCred);
-  
-        // Query Firestore to get the total count of users
-        const usersCollectionRef = collection(firebaseDB, "users"); // Get a reference to the "users" collection
-        const usersSnapshot = await getDocs(usersCollectionRef); // Fetch all documents in the "users" collection
-        const userCount = usersSnapshot.size; // Get the number of users
-  
-        const uidnum = userCount + 1; // Increment by 1 for the new user
-        const currentTime = new Date().toISOString(); // Get current timestamp
-  
+
+        const usersCollectionRef = collection(firebaseDB, "users");
+        const usersSnapshot = await getDocs(usersCollectionRef);
+        const userCount = usersSnapshot.size;
+
+        const uidnum = userCount + 1;
+        const currentTime = new Date().toISOString();
+
         // Calculate BMI
         const calculatedBMI = calculateBMI(parseFloat(weight), parseFloat(height));
-  
+
+        // Calculate TDEE
+        const calculatedTDEE = calculateTDEE(
+          parseFloat(weight),
+          parseFloat(height),
+          parseInt(age),
+          activityLevel,
+          gender,
+          diabetesType
+        );
+
+        // Calculate Macronutrients
+        const calculatedMacros = calculateMacros(calculatedTDEE, diabetesType, goal);
+
         const data = {
           _id: userCred?.user.uid,
           fullName: name,
@@ -115,7 +212,7 @@ const SignUpScreen = () => {
             ...userCred.user.providerData[0],
             email: userCred.user.email,
             uid: userCred.user.uid,
-            uidnum: uidnum, // Add uidnum here
+            uidnum: uidnum,
           },
           role: "User",
           diabetesType,
@@ -125,19 +222,18 @@ const SignUpScreen = () => {
           activityLevel,
           goal,
           gender,
-          bmi: calculatedBMI.bmiValue, // Save calculated BMI value
-          bmiStatus: calculatedBMI.bmiStatus, // Save calculated BMI status
-          lastActive: currentTime, // Store the current timestamp
+          bmi: calculatedBMI.bmiValue,
+          bmiStatus: calculatedBMI.bmiStatus,
+          tdee: calculatedTDEE,
+          macronutrients: calculatedMacros,
+          lastActive: currentTime,
         };
-  
-        // Save data to Firestore
+
         await setDoc(doc(firebaseDB, "users", userCred?.user.uid), data);
         console.log("Document successfully written!");
-  
-        // Sign out the user immediately after successful signup
+
         await signOut(firebaseAuth);
-  
-        // Navigate to the login screen
+
         Alert.alert("Success", "Account created successfully!", [
           {
             text: "OK",
@@ -146,7 +242,7 @@ const SignUpScreen = () => {
         ]);
       } catch (error) {
         console.error("Error signing up:", error);
-  
+
         if (error.code === "auth/email-already-in-use") {
           Alert.alert(
             "Email Already in Use",
@@ -163,8 +259,6 @@ const SignUpScreen = () => {
       );
     }
   };
-  
-  
   
 
   // Updated calculateBMI function to return values

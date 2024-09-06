@@ -1,18 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { getFirestore, collection, query, orderBy, onSnapshot } from 'firebase/firestore';
-import { app } from "../config/firebase.config";  // Import the Firebase app instance
+import { app } from "../config/firebase.config";
 
 const BlogList = () => {
   const navigation = useNavigation();
-  const [selectedTab, setSelectedTab] = useState('articles');
-  const [bookmarked, setBookmarked] = useState({});
+  const [selectedTab, setSelectedTab] = useState('health');
   const [blogs, setBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const db = getFirestore(app);  // Initialize Firestore trd
+  const db = getFirestore(app);
 
   useEffect(() => {
     const q = query(collection(db, 'blogs'), orderBy('createdAt', 'desc'));
@@ -28,42 +27,24 @@ const BlogList = () => {
       console.error("Error fetching blogs: ", error);
       setLoading(false);
     });
-  
+
     return () => unsubscribe();
   }, []);
-  
-  const toggleBookmark = (id) => {
-    setBookmarked(prevState => ({
-      ...prevState,
-      [id]: !prevState[id],
-    }));
-    // You could also update the bookmark status in Firebase here
-  };
-
-  const handleBlogPress = (id) => {
-    navigation.navigate('BlogDetail', { blogId: id });
-  };
 
   const renderBlogItem = (item) => (
     <TouchableOpacity
       key={item.id}
       style={styles.blogItem}
-      onPress={() => handleBlogPress(item.id)}
+      onPress={() => navigation.navigate('BlogDetail', { blogId: item.id })}
     >
+      {item.photo && <Image source={{ uri: item.photo }} style={styles.blogImage} />}
       <View style={styles.blogContent}>
         <Text style={styles.blogTitle}>{item.title}</Text>
         <View style={styles.blogInfo}>
-          <View style={[styles.authorIndicator, { backgroundColor: item.color || '#8FBC8F' }]} />
-          <Text style={styles.blogAuthor}>{item.author}</Text>
+          <Text style={styles.blogAuthor}>By {item.author}</Text>
+          <Text style={styles.blogCategory}>{item.category}</Text>
         </View>
       </View>
-      <TouchableOpacity onPress={() => toggleBookmark(item.id)}>
-        <Icon
-          name={bookmarked[item.id] ? "bookmark" : "bookmark-outline"}
-          size={24}
-          color={bookmarked[item.id] ? "#FFCC00" : "#556B2F"}
-        />
-      </TouchableOpacity>
     </TouchableOpacity>
   );
 
@@ -78,16 +59,16 @@ const BlogList = () => {
 
       <View style={styles.tabContainer}>
         <TouchableOpacity
-          style={selectedTab === 'articles' ? styles.activeTab : styles.inactiveTab}
-          onPress={() => setSelectedTab('articles')}
+          style={selectedTab === 'health' ? styles.activeTab : styles.inactiveTab}
+          onPress={() => setSelectedTab('health')}
         >
-          <Text style={selectedTab === 'articles' ? styles.tabTextActive : styles.tabTextInactive}>บทความ</Text>
+          <Text style={selectedTab === 'health' ? styles.tabTextActive : styles.tabTextInactive}>Health</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={selectedTab === 'recipes' ? styles.activeTab : styles.inactiveTab}
-          onPress={() => setSelectedTab('recipes')}
+          style={selectedTab === 'recipe' ? styles.activeTab : styles.inactiveTab}
+          onPress={() => setSelectedTab('recipe')}
         >
-          <Text style={selectedTab === 'recipes' ? styles.tabTextActive : styles.tabTextInactive}>สูตรอาหาร</Text>
+          <Text style={selectedTab === 'recipe' ? styles.tabTextActive : styles.tabTextInactive}>Recipe</Text>
         </TouchableOpacity>
       </View>
 
@@ -95,7 +76,9 @@ const BlogList = () => {
         <ActivityIndicator size="large" color="#8FBC8F" style={styles.loader} />
       ) : (
         <ScrollView style={styles.blogList}>
-          {blogs.filter(blog => blog.type === selectedTab).map(renderBlogItem)}
+          {blogs
+            .filter(blog => blog.category === selectedTab)
+            .map(renderBlogItem)}
         </ScrollView>
       )}
 
@@ -167,7 +150,6 @@ const styles = StyleSheet.create({
   },
   blogItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: '#FFF8DC',
     padding: 16,
@@ -180,6 +162,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
+  blogImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 10,
+    marginRight: 16,
+  },
   blogContent: {
     flex: 1,
   },
@@ -190,18 +178,17 @@ const styles = StyleSheet.create({
   },
   blogInfo: {
     flexDirection: 'row',
-    alignItems: 'center',
+    justifyContent: 'space-between',
     marginTop: 8,
-  },
-  authorIndicator: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 8,
   },
   blogAuthor: {
     fontSize: 14,
     color: '#666',
+  },
+  blogCategory: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#8FBC8F',
   },
   loader: {
     flex: 1,
