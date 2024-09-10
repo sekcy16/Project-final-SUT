@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
-import { getFirestore, collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { getFirestore, collection, query, orderBy, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 import { app } from "../config/firebase.config";
 
 const BlogList = () => {
@@ -10,7 +11,7 @@ const BlogList = () => {
   const [selectedTab, setSelectedTab] = useState('health');
   const [blogs, setBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
-
+  const auth = getAuth(app);
   const db = getFirestore(app);
 
   useEffect(() => {
@@ -31,22 +32,64 @@ const BlogList = () => {
     return () => unsubscribe();
   }, []);
 
-  const renderBlogItem = (item) => (
-    <TouchableOpacity
-      key={item.id}
-      style={styles.blogItem}
-      onPress={() => navigation.navigate('BlogDetail', { blogId: item.id })}
-    >
-      {item.photo && <Image source={{ uri: item.photo }} style={styles.blogImage} />}
-      <View style={styles.blogContent}>
-        <Text style={styles.blogTitle}>{item.title}</Text>
-        <View style={styles.blogInfo}>
-          <Text style={styles.blogAuthor}>By {item.author}</Text>
-          <Text style={styles.blogCategory}>{item.category}</Text>
+  const handleDeleteBlog = async (blogId) => {
+    Alert.alert(
+      "Delete Blog",
+      "Are you sure you want to delete this blog?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        { 
+          text: "OK", 
+          onPress: async () => {
+            try {
+              await deleteDoc(doc(db, 'blogs', blogId));
+              console.log("Blog deleted successfully");
+            } catch (error) {
+              console.error("Error deleting blog: ", error);
+              Alert.alert("Error", "Failed to delete the blog. Please try again.");
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const renderBlogItem = (item) => {
+    // Check if the current user is the author
+    const isCurrentUserAuthor = auth.currentUser && auth.currentUser.uid === item.userId;
+  
+    console.log('Rendering Blog Item:', item);
+    console.log('Is Current User Author:', isCurrentUserAuthor);
+  
+    return (
+      <TouchableOpacity
+        key={item.id}
+        style={styles.blogItem}
+        onPress={() => navigation.navigate('BlogDetail', { blogId: item.id })}
+      >
+        {item.photo && <Image source={{ uri: item.photo }} style={styles.blogImage} />}
+        <View style={styles.blogContent}>
+          <Text style={styles.blogTitle}>{item.title}</Text>
+          <View style={styles.blogInfo}>
+            <Text style={styles.blogAuthor}>By {item.author}</Text>
+            <Text style={styles.blogCategory}>{item.category}</Text>
+          </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
+        {isCurrentUserAuthor && (
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={() => handleDeleteBlog(item.id)}
+          >
+            <Icon name="trash-outline" size={24} color="#FF6347" />
+          </TouchableOpacity>
+        )}
+      </TouchableOpacity>
+    );
+  };
+  
 
   return (
     <View style={styles.container}>
@@ -211,6 +254,12 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontWeight: 'bold',
     marginLeft: 10,
+  },
+  deleteButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    padding: 5,
   },
 });
 

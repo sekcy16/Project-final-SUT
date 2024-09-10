@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native';
 import { getFirestore, collection, addDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { app } from "../config/firebase.config";
-import { launchImageLibrary } from 'react-native-image-picker';
+import * as ImagePicker from 'expo-image-picker';
 
 const CreateBlogScreen = ({ navigation }) => {
   const [title, setTitle] = useState('');
@@ -15,37 +15,55 @@ const CreateBlogScreen = ({ navigation }) => {
   const auth = getAuth(app);
 
   const handleCreateBlog = async () => {
+    if (!title.trim() || !content.trim()) {
+      Alert.alert('Error', 'Please fill in both title and content');
+      return;
+    }
+
     try {
       const user = auth.currentUser;
       if (!user) {
-        console.error('No user logged in');
+        Alert.alert('Error', 'No user logged in');
         return;
       }
 
       const blogData = {
-        title,
-        content,
+        title: title.trim(),
+        content: content.trim(),
         author: user.displayName || user.email,
         userId: user.uid,
         createdAt: new Date(),
         category,
-        photo: photo ? photo.uri : null, // Save the photo URI
+        photo: photo ? photo.uri : null,
       };
 
-      const docRef = await addDoc(collection(db, 'blogs'), blogData);
-
-      navigation.goBack(); // Return to the blog list after creating
+      await addDoc(collection(db, 'blogs'), blogData);
+      Alert.alert('Success', 'Blog created successfully');
+      navigation.goBack();
     } catch (error) {
       console.error('Error creating blog:', error);
+      Alert.alert('Error', 'Failed to create blog. Please try again.');
     }
   };
 
-  const handleChoosePhoto = () => {
-    launchImageLibrary({ mediaType: 'photo' }, (response) => {
-      if (!response.didCancel && !response.error && response.assets) {
-        setPhoto(response.assets[0]);
-      }
+  const handleChoosePhoto = async () => {
+    // Request permission to access the media library
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission required', 'Sorry, we need camera roll permissions to make this work!');
+      return;
+    }
+
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.7,
     });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setPhoto(result.assets[0]);
+    }
   };
 
   return (
@@ -56,6 +74,7 @@ const CreateBlogScreen = ({ navigation }) => {
         placeholder="Blog Title"
         value={title}
         onChangeText={setTitle}
+        maxLength={100}
       />
       <TextInput
         style={[styles.input, styles.contentInput]}
@@ -66,18 +85,15 @@ const CreateBlogScreen = ({ navigation }) => {
       />
       <Text style={styles.label}>Category:</Text>
       <View style={styles.categoryContainer}>
-        <TouchableOpacity
-          style={category === 'health' ? styles.selectedCategory : styles.category}
-          onPress={() => setCategory('health')}
-        >
-          <Text style={styles.categoryText}>Health</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={category === 'recipe' ? styles.selectedCategory : styles.category}
-          onPress={() => setCategory('recipe')}
-        >
-          <Text style={styles.categoryText}>Recipe</Text>
-        </TouchableOpacity>
+        {['health', 'recipe'].map((cat) => (
+          <TouchableOpacity
+            key={cat}
+            style={[styles.category, category === cat && styles.selectedCategory]}
+            onPress={() => setCategory(cat)}
+          >
+            <Text style={styles.categoryText}>{cat.charAt(0).toUpperCase() + cat.slice(1)}</Text>
+          </TouchableOpacity>
+        ))}
       </View>
       <TouchableOpacity style={styles.photoButton} onPress={handleChoosePhoto}>
         <Text style={styles.photoButtonText}>Choose Photo</Text>

@@ -130,7 +130,7 @@ const DoctorTabNavigator = () => (
     <Tab.Screen
       name="BlogList"
       component={BlogList}
-      options={{ tabBarLabel: "Blogs" }}
+      options={{ tabBarLabel: "Blog" }}
     />
     <Tab.Screen
       name="ProfilePage"
@@ -206,7 +206,7 @@ const MainTabNavigator = () => (
     />
     <Tab.Screen
       name="Blog"
-      component={MealEntry}
+      component={BlogList}
       options={{
         tabBarIcon: ({ focused, color, size }) => (
           <Icon
