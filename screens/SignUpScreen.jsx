@@ -216,9 +216,9 @@ const SignUpScreen = () => {
           },
           role: "User",
           diabetesType,
-          weight: parseFloat(weight),
-          height: parseFloat(height),
-          age: parseInt(age),
+          weight: parseFloat(weight), // เก็บ Weight
+          height: parseFloat(height), // เก็บ Height
+          age: parseInt(age), // เก็บ Age
           activityLevel,
           goal,
           gender,

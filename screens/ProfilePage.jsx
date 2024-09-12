@@ -74,7 +74,6 @@ const ProfilePage = () => {
           <Icon name="arrow-back" size={24} color="#FFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Profile</Text>
-   
       </View>
 
       <View style={styles.profileSection}>
@@ -120,18 +119,22 @@ const ProfilePage = () => {
           label="Personal Information"
           onPress={() => navigation.navigate("EditProfilePage")}
         />
-        <MenuItem icon="bar-chart-outline" label="Goals" />
-        <MenuItem icon="calendar-outline" label="History" />
-        <MenuItem icon="heart-outline" label="Health" />
-        <MenuItem
-          icon="notifications-outline"
-          label="Notifications"
-          onPress={() => navigation.navigate("NotificationListScreen")}
-        />
         <MenuItem
           icon="water-outline"
           label="Blood Sugar"
           onPress={() => navigation.navigate("BloodSugar")}
+        />
+        <MenuItem icon="bar-chart-outline" label="Goals" />
+        <MenuItem icon="calendar-outline" label="History" />
+        <MenuItem
+          icon="body-outline"
+          label="Weight"
+          onPress={() => navigation.navigate("WeightProgress")}
+        />
+        <MenuItem
+          icon="notifications-outline"
+          label="Notifications"
+          onPress={() => navigation.navigate("NotificationListScreen")}
         />
       </View>
     </ScrollView>
