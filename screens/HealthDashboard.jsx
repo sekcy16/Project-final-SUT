@@ -11,7 +11,8 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ProgressBar } from 'react-native-paper';
 import { firebaseAuth, firebaseDB } from "../config/firebase.config";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, onSnapshot } from "firebase/firestore";
+
 
 const HealthDashboard = ({ navigation }) => {
   const [latestBloodSugar, setLatestBloodSugar] = useState(null);
@@ -20,6 +21,7 @@ const HealthDashboard = ({ navigation }) => {
   const [exerciseMinutes, setExerciseMinutes] = useState(null);
   const [waterIntake, setWaterIntake] = useState(null);
   const [averageBloodSugar, setAverageBloodSugar] = useState(null);
+  const [isNotificationListModalVisible, setIsNotificationListModalVisible] = useState(false);
 
   // New state variables for calorie and macronutrient tracking
   const [caloriesAllowed, setCaloriesAllowed] = useState(0);
@@ -27,18 +29,28 @@ const HealthDashboard = ({ navigation }) => {
   const [proteinConsumed, setProteinConsumed] = useState(0);
   const [carbsConsumed, setCarbsConsumed] = useState(0);
   const [fatConsumed, setFatConsumed] = useState(0);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   useEffect(() => {
+    // Fetch unread notifications
+    const unsubscribe = onSnapshot(
+      query(collection(firebaseDB, 'Notidetails'), where('userId', '==', firebaseAuth.currentUser?.uid), where('read', '==', false)),
+      (querySnapshot) => {
+        setUnreadNotifications(querySnapshot.size);
+      }
+    );
+  
+    // Load latest data when the screen is focused
     const focusListener = navigation.addListener('focus', () => {
       loadLatestData();
     });
-
-    loadLatestData();
-
+  
+    // Cleanup functions
     return () => {
+      unsubscribe();
       navigation.removeListener('focus', focusListener);
     };
-  }, [navigation]);
+  }, []);
 
   const loadLatestData = async () => {
     try {
@@ -140,11 +152,21 @@ const HealthDashboard = ({ navigation }) => {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollView}>
         <View style={styles.header}>
-          <Text style={styles.headerText}>สวัสดี, คุณสมชาย</Text>
+          <Text style={styles.headerText}>สวัสดี,
+            คุณสมชาย</Text>
           <TouchableOpacity
-            style={styles.notificationIcon}
-            onPress={() => navigation.navigate('NotificationListScreen')}>
+            style={[
+              styles.notificationIcon,
+              unreadNotifications > 0 ? styles.notificationIconWithBadge : null,
+            ]}
+            onPress={() => navigation.navigate('NotificationListScreen')}
+          >
             <Icon name="bell" size={24} color="#333" />
+            {unreadNotifications > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>{unreadNotifications}</Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -242,6 +264,21 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 1,
     elevation: 2,
+  },
+  notificationIconWithBadge: {
+    position: 'relative', // Added for badge positioning
+  },
+  notificationBadge: {
+    position: 'absolute', // Positioned absolutely on top of the notification icon
+    top: -5, // Adjust positioning as needed
+    right: -5,
+    backgroundColor: 'red', // Change color as desired
+    borderRadius: 10, // Round corners for the badge
+    padding: 5,
+  },
+  notificationBadgeText: {
+    color: '#fff', // White text for better contrast
+    fontSize: 12,
   },
   cardContainer: {
     padding: 15,
