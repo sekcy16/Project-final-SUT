@@ -1,21 +1,49 @@
-import React from 'react';
-import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons'; // Assuming you're using Expo for icons
+import React, { useEffect, useState } from 'react';
+import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { firebaseDB } from "../../config/firebase.config"; // Import firebaseDB from your config
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 const PatientListScreen = ({ navigation }) => {
-  const patients = [
-    { id: '1', name: 'Johny', age: 40, level: 2 },
-    { id: '2', name: 'Jackky', age: 37, level: 1 },
-  ];
+  const [patients, setPatients] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchText, setSearchText] = useState('');
+
+  // Function to fetch users with the role 'User'
+
+  const fetchPatients = async () => {
+    try {
+      const usersCollection = collection(firebaseDB, 'users');
+      const q = query(usersCollection, where('role', '==', 'User'));
+      const snapshot = await getDocs(q);
+      const fetchedPatients = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setPatients(fetchedPatients);
+    } catch (error) {
+      console.error("Error fetching patients:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPatients();
+  }, []);
+
+  const filteredPatients = patients.filter(patient =>
+    patient.fullName ? patient.fullName.toLowerCase().includes(searchText.toLowerCase()) : false
+  );
 
   const renderPatientItem = ({ item }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.patientItem}
       onPress={() => navigation.navigate('PatientDetailScreen', { patientId: item.id })}
     >
       <View>
-        <Text style={styles.patientName}>{item.name}</Text>
-        <Text style={styles.patientDetails}>อายุ {item.age} | เบาหวานระดับ {item.level}</Text>
+        <Text style={styles.patientName}>{item.fullName || 'No Name'}</Text>
+        <Text style={styles.patientDetails}>อายุ {item.age || 'N/A'} | เบาหวานระดับ {item.diabetesType || 'N/A'}</Text>
       </View>
       <Ionicons name="chevron-forward" size={24} color="#2196F3" />
     </TouchableOpacity>
@@ -28,18 +56,26 @@ const PatientListScreen = ({ navigation }) => {
       </View>
       <View style={styles.searchContainer}>
         <Ionicons name="search" size={24} color="#2196F3" />
-        <TextInput 
+        <TextInput
           style={styles.searchInput}
           placeholder="ค้นหาคนไข้"
           placeholderTextColor="#888"
+          value={searchText}
+          onChangeText={setSearchText}
         />
       </View>
-      <FlatList
-        data={patients}
-        renderItem={renderPatientItem}
-        keyExtractor={item => item.id}
-        contentContainerStyle={styles.listContainer} // Add container style for FlatList
-      />
+      {loading ? (
+        <ActivityIndicator size="large" color="#2196F3" style={{ marginTop: 20 }} />
+      ) : filteredPatients.length === 0 ? (
+        <Text style={{ textAlign: 'center', marginTop: 20 }}>ไม่พบคนไข้</Text>
+      ) : (
+        <FlatList
+          data={filteredPatients}
+          renderItem={renderPatientItem}
+          keyExtractor={item => item.id}
+          contentContainerStyle={styles.listContainer}
+        />
+      )}
     </View>
   );
 };
@@ -47,20 +83,16 @@ const PatientListScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#E3F2FD", // Light blue background
+    backgroundColor: "#E3F2FD",
   },
   header: {
     paddingVertical: 30,
-    backgroundColor: '#2196F3', // Blue background for header
+    backgroundColor: '#2196F3',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
-    elevation: 4, // Adds shadow on Android
-    shadowColor: '#000', // Shadow color for iOS
-    shadowOffset: { width: 0, height: 2 }, // Shadow offset for iOS
-    shadowOpacity: 0.1, // Shadow opacity for iOS
-    shadowRadius: 4, // Shadow blur radius for iOS
-    justifyContent: 'center', // Center content vertically
-    alignItems: 'center', // Center content horizontally
+    elevation: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 20,
@@ -74,13 +106,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     marginHorizontal: 16,
     borderRadius: 5,
-    elevation: 2, // Adds shadow on Android
-    shadowColor: '#000', // Shadow color for iOS
-    shadowOffset: { width: 0, height: 2 }, // Shadow offset for iOS
-    shadowOpacity: 0.1, // Shadow opacity for iOS
-    shadowRadius: 4, // Shadow blur radius for iOS
-    marginTop: 10, // Space between header and search bar
-    marginBottom: 15, // Space between search bar and list
+    elevation: 2,
+    marginTop: 10,
+    marginBottom: 15,
   },
   searchInput: {
     flex: 1,
@@ -93,15 +121,11 @@ const styles = StyleSheet.create({
     padding: 15,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
-    backgroundColor: 'white', // Add background color to ensure shadow is visible
-    marginHorizontal: 16, // Margin to add spacing between items
-    marginBottom: 10, // Add margin bottom to space out each patient item
-    borderRadius: 5, // Rounded corners
-    elevation: 2, // Adds shadow on Android
-    shadowColor: '#000', // Shadow color for iOS
-    shadowOffset: { width: 0, height: 2 }, // Shadow offset for iOS
-    shadowOpacity: 0.1, // Shadow opacity for iOS
-    shadowRadius: 4, // Shadow blur radius for iOS
+    backgroundColor: 'white',
+    marginHorizontal: 16,
+    marginBottom: 10,
+    borderRadius: 5,
+    elevation: 2,
   },
   patientName: {
     fontSize: 16,
@@ -112,8 +136,8 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   listContainer: {
-    paddingBottom: 20, // Optional: Adds padding to the bottom of the list
-  }
+    paddingBottom: 20,
+  },
 });
 
 export default PatientListScreen;

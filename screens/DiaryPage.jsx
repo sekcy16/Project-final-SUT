@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,24 +7,134 @@ import {
   ScrollView,
   SafeAreaView,
   StatusBar,
-  Platform
+  Platform,
+  Alert
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
+import { app } from '../config/firebase.config';
 
 const DiaryPage = () => {
   const navigation = useNavigation();
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [meals, setMeals] = useState({
+    'มื้อเช้า': { items: [], calories: 0, carbs: 0 },
+    'มื้อเที่ยง': { items: [], calories: 0, carbs: 0 },
+    'มื้อเย็น': { items: [], calories: 0, carbs: 0 },
+  });
+  const [exercises, setExercises] = useState([]);
+  const [totalFoodCalories, setTotalFoodCalories] = useState(0);
+  const [totalExerciseCalories, setTotalExerciseCalories] = useState(0);
+  const [totalCarbs, setTotalCarbs] = useState(0);
+  const [tdee, setTdee] = useState(2700);
+
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+
+  const fetchDiaryData = useCallback(async () => {
+    try {
+      const userId = auth.currentUser.uid;
+
+      // Fetch diary data
+      const diaryRef = doc(db, 'diaries', userId, 'entries', formatDate(currentDate));
+      const diarySnap = await getDoc(diaryRef);
+
+      if (diarySnap.exists()) {
+        const data = diarySnap.data();
+        const fetchedMeals = data.meals || {};
+        const fetchedExercises = data.exercises || [];
+
+        // Ensure all meal types exist
+        const updatedMeals = {
+          'มื้อเช้า': fetchedMeals['มื้อเช้า'] || { items: [], calories: 0, carbs: 0 },
+          'มื้อเที่ยง': fetchedMeals['มื้อเที่ยง'] || { items: [], calories: 0, carbs: 0 },
+          'มื้อเย็น': fetchedMeals['มื้อเย็น'] || { items: [], calories: 0, carbs: 0 },
+        };
+
+        setMeals(updatedMeals);
+        setExercises(fetchedExercises);
+        calculateTotals(updatedMeals, fetchedExercises);
+      } else {
+        resetDiaryData();
+      }
+
+      // Fetch user data, including TDEE
+      const userRef = doc(db, 'users', userId);
+      const userSnap = await getDoc(userRef);
+
+      if (userSnap.exists()) {
+        const userData = userSnap.data();
+        setTdee(userData.tdee || 2700);
+      } else {
+        console.log('No user data found');
+      }
+    } catch (error) {
+      console.error("Error fetching diary data:", error);
+      Alert.alert('Error', 'Failed to fetch diary data. Please try again.');
+    }
+  }, [currentDate]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchDiaryData();
+    }, [fetchDiaryData])
+  );
+
+  useEffect(() => {
+    fetchDiaryData();
+  }, [fetchDiaryData]);
+
+  const resetDiaryData = () => {
+    setMeals({
+      'มื้อเช้า': { items: [], calories: 0, carbs: 0 },
+      'มื้อเที่ยง': { items: [], calories: 0, carbs: 0 },
+      'มื้อเย็น': { items: [], calories: 0, carbs: 0 },
+    });
+    setExercises([]);
+    setTotalFoodCalories(0);
+    setTotalExerciseCalories(0);
+    setTotalCarbs(0);
+  };
+
+  const calculateTotals = (mealsData, exercisesData) => {
+    let totalFoodCal = 0;
+    let totalCarb = 0;
+
+    Object.values(mealsData).forEach(meal => {
+      totalFoodCal += meal.calories || 0;
+      totalCarb += meal.carbs || 0;
+    });
+
+    const totalExerciseCal = (exercisesData || []).reduce((sum, exercise) => sum + (exercise.calories || 0), 0);
+
+    setTotalFoodCalories(totalFoodCal);
+    setTotalExerciseCalories(totalExerciseCal);
+    setTotalCarbs(totalCarb);
+  };
 
   const navigateToMealEntry = (mealType) => {
-    navigation.navigate('MealEntry', { mealType });
+    navigation.navigate('MealEntry', {
+      mealType,
+      date: currentDate.toISOString()
+    });
   };
 
   const navigateToExerciseEntry = () => {
-    navigation.navigate('ExerciseEntry');
+    navigation.navigate('ExerciseEntry', {
+      date: currentDate.toISOString()
+    });
   };
 
-  const navigateToTotalCalories = () => {
-    navigation.navigate('TotalCalories');
+  const changeDate = (direction) => {
+    const newDate = new Date(currentDate);
+    newDate.setDate(currentDate.getDate() + direction);
+    setCurrentDate(newDate);
+  };
+
+  const formatDate = (date) => {
+    return date.toISOString().split('T')[0];
   };
 
   return (
@@ -32,57 +142,38 @@ const DiaryPage = () => {
       <View style={styles.container}>
         <View style={styles.header}>
           <View style={styles.dateNavigation}>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => changeDate(-1)}>
               <Icon name="chevron-back" size={24} color="#000" />
             </TouchableOpacity>
-            <Text style={styles.dateText}>23/7/2024</Text>
-            <TouchableOpacity>
+            <Text style={styles.dateText}>{formatDate(currentDate)}</Text>
+            <TouchableOpacity onPress={() => changeDate(1)}>
               <Icon name="chevron-forward" size={24} color="#000" />
             </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            style={styles.totalCaloriesButton}
-            onPress={navigateToTotalCalories}>
-            <Text style={styles.totalCaloriesButtonText}>Total Calories</Text>
-          </TouchableOpacity>
         </View>
-
         <View style={styles.caloriesSummary}>
           <Text style={styles.summaryText}>เป้าหมาย</Text>
-          <Text style={styles.summaryText}>รับประทานไป</Text>
+          <Text style={styles.summaryText}>อาหาร</Text>
           <Text style={styles.summaryText}>คงเหลือ</Text>
-          <Text style={styles.caloriesText}>2,700 Calories -</Text>
-          <Text style={styles.caloriesText}>700 Calories =</Text>
-          <Text style={styles.caloriesText}>2,000 Calories</Text>
+          <Text style={styles.caloriesText}>{tdee} Calories</Text>
+          <Text style={styles.caloriesText}>{totalFoodCalories} Calories</Text>
+          <Text style={styles.caloriesText}>{tdee - totalFoodCalories} Calories</Text>
         </View>
 
         <ScrollView style={styles.scrollView}>
-          <MealSection
-            title="มื้อเช้า"
-            calories={700}
-            carbRecommendation={45}
-            items={[
-              { name: 'ไข่ไก่', amount: '3 eggs', calories: 273, carbs: 0 },
-              { name: 'ไก่ย่าง', amount: '100 g', calories: 273, carbs: 0 },
-              { name: 'ข้าวกล้อง', amount: '100 g', calories: 92, carbs: 20 },
-            ]}
-            onAddPress={() => navigateToMealEntry('มื้อเช้า')}
-          />
-          <MealSection
-            title="มื้อเที่ยง"
-            calories={0}
-            carbRecommendation={60}
-            onAddPress={() => navigateToMealEntry('มื้อเที่ยง')}
-          />
-          <MealSection
-            title="มื้อเย็น"
-            calories={0}
-            carbRecommendation={45}
-            onAddPress={() => navigateToMealEntry('มื้อเย็น')}
-          />
+          {Object.entries(meals).map(([mealType, mealData]) => (
+            <MealSection
+              key={mealType}
+              title={mealType}
+              calories={mealData.calories}
+              carbRecommendation={45}
+              items={mealData.items}
+              onAddPress={() => navigateToMealEntry(mealType)}
+            />
+          ))}
           <ExerciseSection
-            calories={150}
-            items={[{ name: 'วิ่ง', duration: 30, calories: 150 }]}
+            calories={totalExerciseCalories}
+            items={exercises}
             onAddPress={navigateToExerciseEntry}
           />
         </ScrollView>
@@ -103,8 +194,8 @@ const MealSection = ({ title, calories, carbRecommendation, items = [], onAddPre
               title === 'มื้อเช้า'
                 ? 'cafe'
                 : title === 'มื้อเที่ยง'
-                ? 'restaurant'
-                : 'moon'
+                  ? 'restaurant'
+                  : 'moon'
             }
             size={24}
             color="#fff"
@@ -149,6 +240,7 @@ const MealSection = ({ title, calories, carbRecommendation, items = [], onAddPre
     </View>
   );
 };
+
 const ExerciseSection = ({ calories, items = [], onAddPress }) => (
   <View style={styles.mealSection}>
     <TouchableOpacity

@@ -18,3 +18,4 @@ export { default as NotificationDetailScreen} from './NotificationDetailScreen';
 export { default as PatientDetailScreen} from './DoctorScreen/PatientDetailScreen';
 export { default as AdvicePage} from './DoctorScreen/AdvicePage';
 export { default as EditProfilePage} from './EditProfilePage';
+export { default as FoodDetail } from './FoodDetail'

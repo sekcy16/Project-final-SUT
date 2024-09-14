@@ -6,6 +6,7 @@ import {
   Image,
   TouchableOpacity,
   ScrollView,
+  RefreshControl,
   Alert,
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
@@ -17,6 +18,7 @@ import { onAuthStateChanged } from "firebase/auth";
 const ProfilePage = () => {
   const navigation = useNavigation();
   const [userData, setUserData] = useState(null);
+  const [refreshing, setRefreshing] = useState(false); // State to handle refreshing
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(firebaseAuth, (user) => {
@@ -57,15 +59,26 @@ const ProfilePage = () => {
       });
   };
 
-  const handleRefresh = () => {
+  const onRefresh = async () => {
+    setRefreshing(true);
     const user = firebaseAuth.currentUser;
     if (user) {
-      fetchUserData(user.uid); // Refresh the user data
+      await fetchUserData(user.uid); // Re-fetch user data
     }
+    setRefreshing(false);
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={['#1E88E5']} // Color of the refresh spinner
+        />
+      }
+    >
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
@@ -77,9 +90,6 @@ const ProfilePage = () => {
       </View>
 
       <View style={styles.profileSection}>
-        <TouchableOpacity style={styles.refreshButton} onPress={handleRefresh}>
-          <Icon name="refresh-outline" size={28} color="#004d00" />
-        </TouchableOpacity>
         <Image
           source={{
             uri: userData?.profilePic || "https://via.placeholder.com/100",
@@ -197,12 +207,6 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     borderWidth: 2,
     borderColor: "#004d00",
-  },
-  refreshButton: {
-    position: "absolute",
-    top: 10,
-    right: 10,
-    padding: 10,
   },
   userName: {
     fontSize: 20,

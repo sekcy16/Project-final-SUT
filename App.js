@@ -27,6 +27,7 @@ import {
   PatientDetailScreen,
   AdvicePage,
   EditProfilePage,
+  FoodDetail,
 } from "./screens";
 import FoodResult from "./components/FoodResult";
 import Nutrition from "./components/Nutrition";
@@ -275,6 +276,7 @@ const RootNavigator = () => {
       <Stack.Screen name="BlogList" component={BlogList} />
       <Stack.Screen name="BlogDetail" component={BlogDetail} />
       <Stack.Screen name="CreateBlogScreen" component={CreateBlogScreen} />
+      <Stack.Screen name="FoodDetail" component={FoodDetail} />
     </Stack.Navigator>
   );
 };

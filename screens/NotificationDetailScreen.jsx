@@ -1,84 +1,108 @@
-// NotificationDetailScreen.js
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Image, TouchableOpacity, Alert } from 'react-native';
+import { deleteDoc, doc } from 'firebase/firestore'; // For Firestore delete functionality
+import { firebaseDB } from '../config/firebase.config'; // Ensure correct path to config
 
 export default function NotificationDetailScreen({ route, navigation }) {
   const { item } = route.params;
 
+  const handleDelete = async () => {
+    try {
+      await deleteDoc(doc(firebaseDB, 'Notidetails', item.id)); // Delete the document by its ID
+      Alert.alert("Notification Deleted", "This notification has been deleted.");
+      navigation.goBack(); // Navigate back to the list screen after deletion
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+      Alert.alert("Error", "Failed to delete the notification.");
+    }
+  };
+
+  const formatDateTime = (timestamp) => {
+    if (!timestamp) return 'Unknown date';
+    const date = new Date(timestamp);
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
+    });
+  };
+
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container}>
+      {/* Notification Header */}
       <View style={styles.header}>
-        <Image 
-          source={{ uri: 'https://via.placeholder.com/50' }} 
-          style={styles.avatar}
-        />
-        <View style={styles.headerText}>
+        <Image source={{ uri: 'https://via.placeholder.com/50' }} style={styles.avatar} />
+        <View style={styles.headerContent}>
           <Text style={styles.title}>{item.title}</Text>
-          <Text style={styles.date}>{item.date}</Text>
+          <Text style={styles.date}>{formatDateTime(item.date)}</Text>
         </View>
-        <TouchableOpacity onPress={() => {/* Handle delete */}}>
-          <Text style={styles.deleteIcon}>🗑️</Text>
+        <TouchableOpacity onPress={handleDelete} style={styles.deleteButton}>
+          <Text style={styles.deleteIcon}>❌</Text>
         </TouchableOpacity>
       </View>
-      <ScrollView style={styles.content}>
-        <Text style={styles.message}>
-          Dear Johny,
 
-          Love isn't always a ray of sunshine. That's what the older girls kept
-          telling her when she said she had found the perfect man. She had
-          thought this was simply bitter talk on their part since they had been
-          unable to find true love like hers. But now she had to face the fact that
-          they may have been right. Love may not always be a ray of sunshine.
-          That is unless they were referring to how the sun can burn.
-
-          There was something in the tree. It was difficult to tell from the ground,
-          but Rachel could see movement. She squinted her eyes and peered in
-          the direction of the movement, trying to decipher exactly what she had
-          spied. The more she peered, however, the more she thought it might be
-          a figment of her imagination. Nothing seemed to move until the
-          moment she began to take her eyes off the tree. Then in the corner of
-          her eye, she would see the movement again and begin the process of
-          staring again.
-        </Text>
-      </ScrollView>
-    </View>
+      {/* Notification Message */}
+      <View style={styles.content}>
+        <Text style={styles.message}>{item.message}</Text>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F6FFF5',
+    backgroundColor: '#F7F7F7',
   },
   header: {
     flexDirection: 'row',
     padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    marginHorizontal: 0,
+    marginTop: 0,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 0, // No rounding at the top-left corner
+    borderTopRightRadius: 0, // No rounding at the top-right corner
+    borderBottomLeftRadius: 10, // Rounded bottom-left corner
+    borderBottomRightRadius: 10, // Rounded bottom-right corner
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
     alignItems: 'center',
   },
   avatar: {
     width: 50,
     height: 50,
     borderRadius: 25,
-    marginRight: 10,
+    marginRight: 15,
   },
-  headerText: {
+  headerContent: {
     flex: 1,
   },
   title: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
+    color: '#333',
   },
   date: {
     fontSize: 14,
     color: '#999',
+    marginTop: 4,
+  },
+  deleteButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#FDECEA',
+    borderRadius: 50,
   },
   deleteIcon: {
-    fontSize: 24,
+    fontSize: 18,
+    color: '#FF3B30',
   },
   content: {
-    flex: 1,
     padding: 20,
   },
   message: {

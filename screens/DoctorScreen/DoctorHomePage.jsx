@@ -1,75 +1,116 @@
-import React, { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  TextInput,
-} from "react-native";
-import Icon from "react-native-vector-icons/Ionicons";
-import { useNavigation } from "@react-navigation/native";
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, RefreshControl } from 'react-native';
+import Icon from 'react-native-vector-icons/Ionicons';
+import { useNavigation } from '@react-navigation/native';
+import { getFirestore, collection, query, orderBy, onSnapshot, doc, getDoc, getDocs } from 'firebase/firestore';
+import { app, firebaseAuth } from "../../config/firebase.config";
+import { onAuthStateChanged } from 'firebase/auth';
 
 const DoctorHomePage = () => {
   const navigation = useNavigation();
+  const [selectedTab, setSelectedTab] = useState('health');
   const [tasks, setTasks] = useState([
     { id: 1, time: '9:00', title: 'Johny', description: 'ตรวจวัดระดับน้ำตาลในเลือด', completed: true },
     { id: 2, time: '10:00', title: 'Jackky', description: 'ตรวจอาการทั่วไปและการออกกำลังกาย', completed: true },
     { id: 3, time: '12:00', title: 'พักผ่อน', description: 'พัก', completed: true },
   ]);
-  const [newTask, setNewTask] = useState('');
   const [blogs, setBlogs] = useState([]);
-  const [bookmarked, setBookmarked] = useState({});
+  const [displayedBlogs, setDisplayedBlogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [userData, setUserData] = useState(null);
+  const [refreshing, setRefreshing] = useState(false); // State to handle refreshing
+
+  const db = getFirestore(app);
 
   useEffect(() => {
-    const initialBlogs = [
-      { id: 1, title: 'แนวทางการออกกำลังกายสำหรับผู้ป่วยเบาหวาน', author: 'Dr.K', color: 'red', bookmarked: false },
-      { id: 2, title: 'วิธีจัดการความเครียด จากการออกกำลังกาย', author: 'Dr.C', color: 'green', bookmarked: true },
-      { id: 3, title: 'ไฟเบอร์คืออะไร? ทำไมทุกคนควรกินไฟเบอร์?', author: 'Dr.A', color: 'blue', bookmarked: false },
-    ];
-    setBlogs(initialBlogs);
-    const initialBookmarkState = initialBlogs.reduce((acc, blog) => {
-      acc[blog.id] = blog.bookmarked;
-      return acc;
-    }, {});
-    setBookmarked(initialBookmarkState);
+    const unsubscribeAuth = onAuthStateChanged(firebaseAuth, (user) => {
+      if (user) {
+        fetchUserData(user.uid);
+      } else {
+        setUserData(null); // Clear the data if no user is logged in
+      }
+    });
+
+    return () => unsubscribeAuth(); // Clean up the listener on component unmount
   }, []);
 
-  const addTask = () => {
-    if (newTask.trim() !== '') {
-      setTasks([...tasks, { id: Date.now(), time: '12:00', title: newTask, description: '', completed: false }]);
-      setNewTask('');
+  useEffect(() => {
+    fetchBlogs(); // Fetch blogs on component mount
+  }, []);
+
+  useEffect(() => {
+    const q = query(collection(db, 'blogs'), orderBy('createdAt', 'desc'));
+
+    const unsubscribeBlogs = onSnapshot(q, (snapshot) => {
+      const blogData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setBlogs(blogData);
+      setLoading(false);
+      // Update the displayed blogs
+      updateDisplayedBlogs(blogData);
+    }, (error) => {
+      console.error("Error fetching blogs: ", error);
+      setLoading(false);
+    });
+
+    return () => unsubscribeBlogs(); // Clean up the listener on component unmount
+  }, []);
+
+  const fetchUserData = async (userId) => {
+    try {
+      const userDoc = await getDoc(doc(db, 'users', userId));
+      setUserData(userDoc.data());
+    } catch (error) {
+      console.error("Error fetching user data: ", error);
     }
   };
 
-  const toggleTask = (id) => {
-    setTasks(tasks.map(task => task.id === id ? { ...task, completed: !task.completed } : task));
+  const fetchBlogs = async () => {
+    try {
+      const q = query(collection(db, 'blogs'), orderBy('createdAt', 'desc'));
+      const snapshot = await getDocs(q);
+      const blogData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setBlogs(blogData);
+      updateDisplayedBlogs(blogData);
+    } catch (error) {
+      console.error("Error fetching blogs: ", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const deleteTask = (id) => {
-    setTasks(tasks.filter(task => task.id !== id));
+  const updateDisplayedBlogs = (blogList) => {
+    // Shuffle the array and take the first 3 items
+    const shuffledBlogs = blogList.sort(() => 0.5 - Math.random());
+    setDisplayedBlogs(shuffledBlogs.slice(0, 3));
   };
 
-  const toggleBookmark = (id) => {
-    setBookmarked((prevState) => ({
-      ...prevState,
-      [id]: !prevState[id],
-    }));
+  const handleBlogPress = (blogId) => {
+    navigation.navigate('BlogDetail', { blogId });
   };
 
-  const handleBlogPress = (id) => {
-    // Navigate to blog detail page or any other action
-    console.log('Blog ID:', id);
-    // Example navigation:
-    // navigation.navigate('BlogDetail', { blogId: id });
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchBlogs(); // Re-fetch blogs
+    setRefreshing(false);
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.profileContainer}>
-          <Icon name="person-circle-outline" size={40} color="#FFF" />
-          <Text style={styles.profileText}>Dr.KK</Text>
+          <Image
+            source={{
+              uri: userData?.profilePic || "https://via.placeholder.com/100",
+            }}
+            style={styles.profileImage}
+          />
+          <Text style={styles.userName}>{userData?.fullName || "Username"}</Text>
         </View>
         <TouchableOpacity
           style={styles.notificationIcon}
@@ -84,69 +125,59 @@ const DoctorHomePage = () => {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content}>
+      <ScrollView
+        style={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#1E88E5']} // Color of the refresh spinner
+          />
+        }
+      >
         <View style={styles.todoContainer}>
           <Text style={styles.sectionTitle}>ตารางวันนี้</Text>
           {tasks.map((task) => (
             <View key={task.id} style={styles.taskCard}>
               <Text style={styles.taskTime}>{task.time}</Text>
               <View style={styles.taskContent}>
-                <Text style={[styles.taskTitle, task.completed && styles.taskCompleted]}>{task.title}</Text>
-                <Text style={styles.taskDescription}>{task.description}</Text>
-              </View>
-              <View style={styles.taskActions}>
-                <TouchableOpacity onPress={() => toggleTask(task.id)}>
-                  <Icon name={task.completed ? "checkmark-circle" : "ellipse-outline"} size={24} color={task.completed ? "#2196F3" : "#000"} />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => deleteTask(task.id)}>
-                  <Icon name="close-circle-outline" size={24} color="#FF5722" />
-                </TouchableOpacity>
+                <Text style={styles.taskTitle}>{task.title}</Text>
+                <Text style={[styles.taskDescription, task.completed && styles.taskCompleted]}>
+                  {task.description}
+                </Text>
               </View>
             </View>
           ))}
-          <View style={styles.addTaskContainer}>
-            <TextInput
-              style={styles.input}
-              value={newTask}
-              onChangeText={setNewTask}
-              placeholder="เพิ่มงานใหม่"
-              placeholderTextColor="#888"
-            />
-            <TouchableOpacity style={styles.addButton} onPress={addTask}>
-              <Icon name="add" size={24} color="#FFF" />
-            </TouchableOpacity>
-          </View>
         </View>
 
         <View style={styles.blogContainer}>
           <Text style={styles.sectionTitle}>บทความ</Text>
-          {blogs.map((blog) => (
-            <TouchableOpacity
-              key={blog.id}
-              style={styles.blogItem}
-              onPress={() => handleBlogPress(blog.id)}
-            >
-              <View style={styles.blogContent}>
-                <Text style={styles.blogTitle}>{blog.title}</Text>
-                <View style={styles.blogInfo}>
-                  <View style={[styles.authorIndicator, { backgroundColor: blog.color }]} />
-                  <Text style={styles.blogAuthor}>{blog.author}</Text>
+          {loading ? (
+            <ActivityIndicator size="large" color="#1E88E5" style={styles.loader} />
+          ) : (
+            displayedBlogs.map((blog) => (
+              <TouchableOpacity
+                key={blog.id}
+                style={styles.blogItem}
+                onPress={() => handleBlogPress(blog.id)}
+              >
+                {blog.photo && <Image source={{ uri: blog.photo }} style={styles.blogImage} />}
+                <View style={styles.blogContent}>
+                  <Text style={styles.blogTitle}>{blog.title}</Text>
+                  <View style={styles.blogInfo}>
+                    <View style={[styles.authorIndicator, { backgroundColor: 'blue' }]} /> 
+                    <Text style={styles.blogAuthor}>{blog.author}</Text>
+                  </View>
                 </View>
-              </View>
-              <TouchableOpacity onPress={() => toggleBookmark(blog.id)}>
-                <Icon
-                  name={bookmarked[blog.id] ? "bookmark" : "bookmark-outline"}
-                  size={24}
-                  color={bookmarked[blog.id] ? "#FFC107" : "#000"}
-                />
               </TouchableOpacity>
-            </TouchableOpacity>
-          ))}
+            ))
+          )}
         </View>
       </ScrollView>
     </View>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: {
@@ -165,11 +196,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
-  profileText: {
-    color: "#FFF", // White profile text
+  profileImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 50,
+    marginRight: 10,
+  },
+  userName: {
     fontSize: 20,
     fontWeight: "bold",
-    marginLeft: 10,
+    color: "#FFF", // White user name text
   },
   content: {
     flex: 1,
@@ -218,29 +254,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#666",
   },
-  taskActions: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  addTaskContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 16,
-  },
-  input: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#B3E5FC", // Pale blue for input border
-    borderRadius: 5,
-    padding: 10,
-    marginRight: 8,
-    backgroundColor: "#FFF", // White for input background
-  },
-  addButton: {
-    backgroundColor: "#1E88E5", // Blue for add button
-    borderRadius: 5,
-    padding: 10,
-  },
   blogContainer: {
     backgroundColor: "#E3F2FD", // Light blue for blog container
     margin: 16,
@@ -255,6 +268,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#B3E5FC", // Pale blue for border
+  },
+  blogImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 10,
+    marginRight: 16,
   },
   blogContent: {
     flex: 1,
@@ -285,6 +304,11 @@ const styles = StyleSheet.create({
   icon: {
     width: 24,
     height: 24,
+  },
+  loader: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 
