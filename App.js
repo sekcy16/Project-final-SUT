@@ -82,6 +82,6 @@ const App = () => {
       </Provider>
     </NavigationContainer>
   );
-};
+};//ss
 
 export default App;
