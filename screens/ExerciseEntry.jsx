@@ -1,26 +1,94 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Modal } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { useNavigation } from '@react-navigation/native';
+import { useRoute, useNavigation } from '@react-navigation/native';
+import { getFirestore, collection, getDocs, doc, getDoc, setDoc } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
+import { app } from '../config/firebase.config';
 
 const ExerciseEntry = () => {
+  const [exerciseList, setExerciseList] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [userWeight, setUserWeight] = useState(null);
+  const route = useRoute();
   const navigation = useNavigation();
-  const [modalVisible, setModalVisible] = useState(false);
-  const [selectedExercise, setSelectedExercise] = useState(null);
-  const [minutes, setMinutes] = useState('');
-  const [caloriesBurned, setCaloriesBurned] = useState(null);
+  const { date } = route.params;
+  const db = getFirestore(app);
+  const auth = getAuth(app);
 
-  const handleAddPress = (exercise) => {
-    setSelectedExercise(exercise);
-    setModalVisible(true);
-  };
+  useEffect(() => {
+    const fetchExerciseList = async () => {
+      try {
+        const exerciseCollection = await getDocs(collection(db, 'exerciselist'));
+        const exerciseData = exerciseCollection.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setExerciseList(exerciseData);
+      } catch (error) {
+        console.error('Error fetching exercise list:', error);
+        Alert.alert('Error', 'Failed to fetch exercise list. Please try again.');
+      }
+    };
 
-  const handleCalculate = () => {
-    if (selectedExercise && minutes) {
-      const calories = (selectedExercise.met * 3.5 * 70 * minutes) / 200; // Simplified formula for calories burned
-      setCaloriesBurned(calories.toFixed(2));
+    const fetchUserWeight = async () => {
+      try {
+        const userId = auth.currentUser.uid;
+        const userDoc = await getDoc(doc(db, 'users', userId));
+        if (userDoc.exists()) {
+          setUserWeight(userDoc.data().weight);
+        }
+      } catch (error) {
+        console.error('Error fetching user weight:', error);
+      }
+    };
+
+    fetchExerciseList();
+    fetchUserWeight();
+  }, []);
+
+  const addToDiary = async (exercise, duration) => {
+    try {
+      const userId = auth.currentUser.uid;
+      const diaryRef = doc(db, 'diaries', userId, 'entries', date.split('T')[0]);
+      
+      const docSnap = await getDoc(diaryRef);
+      let currentExercises = docSnap.exists() ? (docSnap.data().exercises || []) : [];
+      let currentMeals = docSnap.exists() ? (docSnap.data().meals || {}) : {};
+      
+      const caloriesBurned = calculateCaloriesBurned(exercise.met, userWeight, duration);
+      
+      const newExercise = {
+        name: exercise.name,
+        duration: duration,
+        calories: caloriesBurned
+      };
+
+      currentExercises.push(newExercise);
+
+      await setDoc(diaryRef, { 
+        exercises: currentExercises,
+        meals: currentMeals,
+        date: date
+      }, { merge: true });
+      
+      Alert.alert('Success', `Added ${exercise.name} to your diary`);
+      navigation.goBack();
+    } catch (error) {
+      console.error('Error adding exercise to diary:', error);
+      Alert.alert('Error', 'Failed to add exercise to diary. Please try again.');
     }
   };
+
+  const calculateCaloriesBurned = (met, weight, duration) => {
+    // MET * 3.5 * weight (kg) / 200 = calories burned per minute
+    const caloriesPerMinute = (met * 3.5 * weight) / 200;
+    return Math.round(caloriesPerMinute * duration);
+  };
+
+  const filteredExerciseList = exerciseList.filter(exercise => 
+    exercise.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <View style={styles.container}>
@@ -28,225 +96,132 @@ const ExerciseEntry = () => {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Icon name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
+        <Text style={styles.headerTitle}>Add Exercise</Text>
       </View>
 
       <View style={styles.searchBar}>
         <Icon name="search" size={20} color="#999" />
         <TextInput 
           style={styles.searchInput}
-          placeholder="ค้นหา"
+          placeholder="Search exercises"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
         />
-        <Icon name="mic" size={20} color="#999" />
       </View>
 
       <ScrollView style={styles.exerciseList}>
-        <Text style={styles.sectionTitle}>การออกกำลังกาย</Text>
-        <ExerciseItem 
-          name="เล่นเวท/ยกน้ำหนัก" 
-          description="Weight Training" 
-          met={6} 
-          onAddPress={() => handleAddPress({ name: 'เล่นเวท/ยกน้ำหนัก', met: 6 })} 
-        />
-        <ExerciseItem 
-          name="วิ่งจ๊อกกิ้ง" 
-          description="Jogging" 
-          met={7} 
-          onAddPress={() => handleAddPress({ name: 'วิ่งจ๊อกกิ้ง', met: 7 })} 
-        />
-        <ExerciseItem 
-          name="กระโดดเชือก" 
-          description="Jump rope" 
-          met={12} 
-          onAddPress={() => handleAddPress({ name: 'กระโดดเชือก', met: 12 })} 
-        />
-        <ExerciseItem 
-          name="ว่ายน้ำ" 
-          description="Swimming" 
-          met={8} 
-          onAddPress={() => handleAddPress({ name: 'ว่ายน้ำ', met: 8 })} 
-        />
+        {filteredExerciseList.map((exercise) => (
+          <ExerciseItem 
+            key={exercise.id}
+            exercise={exercise}
+            onAdd={(duration) => addToDiary(exercise, duration)}
+          />
+        ))}
       </ScrollView>
-
-      <Modal
-        visible={modalVisible}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>{selectedExercise?.name}</Text>
-            <View style={styles.inputRow}>
-              <Text>ออกกำลังกายไป</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="นาที"
-                keyboardType="numeric"
-                value={minutes}
-                onChangeText={setMinutes}
-              />
-            </View>
-            <TouchableOpacity style={styles.calculateButton} onPress={handleCalculate}>
-              <Text style={styles.calculateButtonText}>คำนวณ</Text>
-            </TouchableOpacity>
-            {caloriesBurned && (
-              <Text style={styles.caloriesText}>
-                เผาผลาญไปทั้งหมด {caloriesBurned} แคลอรี่
-              </Text>
-            )}
-            <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.confirmButton} onPress={() => setModalVisible(false)}>
-                <Text style={styles.confirmButtonText}>ตกลง</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)}>
-                <Text style={styles.cancelButtonText}>ยกเลิก</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 };
 
-const ExerciseItem = ({ name, description, onAddPress }) => (
-  <View style={styles.exerciseItem}>
-    <View>
-      <Text style={styles.exerciseName}>{name}</Text>
-      <Text style={styles.exerciseDescription}>{description}</Text>
+const ExerciseItem = ({ exercise, onAdd }) => {
+  const [duration, setDuration] = useState('');
+
+  const handleAdd = () => {
+    if (duration && !isNaN(duration)) {
+      onAdd(parseFloat(duration));
+    } else {
+      Alert.alert('Invalid Input', 'Please enter a valid duration in minutes.');
+    }
+  };
+
+  return (
+    <View style={styles.exerciseItemContainer}>
+      <View style={styles.exerciseItem}>
+        <Text style={styles.exerciseName}>{exercise.name}</Text>
+        <Text style={styles.exerciseMet}>MET: {exercise.met}</Text>
+      </View>
+      <View style={styles.durationInputContainer}>
+        <TextInput
+          style={styles.durationInput}
+          placeholder="Min"
+          keyboardType="numeric"
+          value={duration}
+          onChangeText={setDuration}
+        />
+        <TouchableOpacity style={styles.addButton} onPress={handleAdd}>
+          <Icon name="add-circle-outline" size={24} color="#000" />
+        </TouchableOpacity>
+      </View>
     </View>
-    <TouchableOpacity style={styles.addItemButton} onPress={onAddPress}>
-      <Icon name="add" size={20} color="#4CAF50" />
-    </TouchableOpacity>
-  </View>
-);
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F6FFF5',
+    backgroundColor: '#FFF',
+    padding: 16,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    marginBottom: 16,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginLeft: 16,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF',
-    borderRadius: 20,
-    margin: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginBottom: 16,
   },
   searchInput: {
     flex: 1,
+    fontSize: 16,
     marginLeft: 8,
   },
   exerciseList: {
     flex: 1,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 16,
-    marginTop: 16,
+  exerciseItemContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEE',
   },
   exerciseItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#FFF',
-    padding: 16,
-    marginHorizontal: 16,
-    marginVertical: 8,
-    borderRadius: 10,
+    flex: 1,
   },
   exerciseName: {
-    fontWeight: 'bold',
+    fontSize: 16,
+    color: '#000',
   },
-  exerciseDescription: {
+  exerciseMet: {
+    fontSize: 14,
     color: '#999',
   },
-  addItemButton: {
-    backgroundColor: '#E8F5E9',
-    borderRadius: 15,
-    padding: 4,
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  modalContent: {
-    backgroundColor: '#FFF',
-    borderRadius: 10,
-    padding: 20,
-    width: 300,
-    alignItems: 'center',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
-  },
-  inputRow: {
+  durationInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
   },
-  input: {
+  durationInput: {
+    width: 50,
     borderWidth: 1,
-    borderColor: '#CCC',
-    borderRadius: 5,
-    marginLeft: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    width: 100,
-  },
-  calculateButton: {
-    backgroundColor: '#4CAF50',
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 16,
-  },
-  calculateButtonText: {
-    color: '#FFF',
-    fontWeight: 'bold',
-  },
-  caloriesText: {
-    marginBottom: 16,
-    fontWeight: 'bold',
-  },
-  modalActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  confirmButton: {
-    backgroundColor: '#4CAF50',
-    padding: 10,
-    borderRadius: 5,
-    flex: 1,
-    alignItems: 'center',
+    borderColor: '#DDD',
+    borderRadius: 4,
+    padding: 4,
     marginRight: 8,
+    textAlign: 'center',
   },
-  confirmButtonText: {
-    color: '#FFF',
-    fontWeight: 'bold',
-  },
-  cancelButton: {
-    backgroundColor: '#FF5252',
-    padding: 10,
-    borderRadius: 5,
-    flex: 1,
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    color: '#FFF',
-    fontWeight: 'bold',
+  addButton: {
+    padding: 4,
   },
 });
 

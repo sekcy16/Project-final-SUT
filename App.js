@@ -36,6 +36,7 @@ import ExerciseEntry from "./screens/ExerciseEntry";
 import WeightProgress from "./screens/WeightProgress";
 import BlogDetail from "./screens/BlogDetail";
 import CreateBlogScreen from "./screens/CreateBlogScreen";
+import FoodDetail from "./screens/FoodDetail";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -249,6 +250,7 @@ const RootNavigator = () => {
       <Stack.Screen name="SignUpScreen" component={SignUpScreen} />
       <Stack.Screen name="Main" component={NavigatorComponent} />
       <Stack.Screen name="MealEntry" component={MealEntry} />
+      <Stack.Screen name="FoodDetail" component={FoodDetail} />
 
       <Stack.Screen name="FoodARPage" component={FoodARPage} />
       <Stack.Screen name="TotalCalories" component={TotalCalories} />

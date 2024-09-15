@@ -6,10 +6,12 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
+  ActivityIndicator,
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
 import { useNavigation } from "@react-navigation/native";
-
+import { getFirestore, collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { app } from "../../config/firebase.config";
 const DoctorHomePage = () => {
   const navigation = useNavigation();
   const [tasks, setTasks] = useState([
@@ -20,19 +22,44 @@ const DoctorHomePage = () => {
   const [newTask, setNewTask] = useState('');
   const [blogs, setBlogs] = useState([]);
   const [bookmarked, setBookmarked] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [showAllBlogs, setShowAllBlogs] = useState(false);
+  const [totalBlogCount, setTotalBlogCount] = useState(0);
+
+  const db = getFirestore(app);
 
   useEffect(() => {
-    const initialBlogs = [
-      { id: 1, title: 'แนวทางการออกกำลังกายสำหรับผู้ป่วยเบาหวาน', author: 'Dr.K', color: 'red', bookmarked: false },
-      { id: 2, title: 'วิธีจัดการความเครียด จากการออกกำลังกาย', author: 'Dr.C', color: 'green', bookmarked: true },
-      { id: 3, title: 'ไฟเบอร์คืออะไร? ทำไมทุกคนควรกินไฟเบอร์?', author: 'Dr.A', color: 'blue', bookmarked: false },
-    ];
-    setBlogs(initialBlogs);
-    const initialBookmarkState = initialBlogs.reduce((acc, blog) => {
-      acc[blog.id] = blog.bookmarked;
-      return acc;
-    }, {});
-    setBookmarked(initialBookmarkState);
+    const q = query(collection(db, 'blogs'), orderBy('createdAt', 'desc'), limit(3));
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const blogData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setBlogs(blogData);
+      setLoading(false);
+
+      // Initialize bookmarked state
+      const initialBookmarkState = blogData.reduce((acc, blog) => {
+        acc[blog.id] = blog.bookmarked || false;
+        return acc;
+      }, {});
+      setBookmarked(initialBookmarkState);
+    }, (error) => {
+      console.error("Error fetching blogs: ", error);
+      setLoading(false);
+    });//kkk
+
+    // Get total blog count
+    const countQuery = query(collection(db, 'blogs'));
+    const countUnsubscribe = onSnapshot(countQuery, (snapshot) => {
+      setTotalBlogCount(snapshot.size);
+    });
+
+    return () => {
+      unsubscribe();
+      countUnsubscribe();
+    };
   }, []);
 
   const addTask = () => {
@@ -58,10 +85,60 @@ const DoctorHomePage = () => {
   };
 
   const handleBlogPress = (id) => {
-    // Navigate to blog detail page or any other action
-    console.log('Blog ID:', id);
-    // Example navigation:
-    // navigation.navigate('BlogDetail', { blogId: id });
+    navigation.navigate('BlogDetail', { blogId: id });
+  };
+
+  const handleSeeMore = () => {
+    setShowAllBlogs(true);
+    // Fetch all blogs when "See More" is clicked
+    const allBlogsQuery = query(collection(db, 'blogs'), orderBy('createdAt', 'desc'));
+    onSnapshot(allBlogsQuery, (snapshot) => {
+      const allBlogData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setBlogs(allBlogData);
+    }, (error) => {
+      console.error("Error fetching all blogs: ", error);
+    });
+  };
+
+
+  const renderBlogs = () => {
+    const displayedBlogs = showAllBlogs ? blogs : blogs.slice(0, 3);
+    return (
+      <>
+        {displayedBlogs.map((blog) => (
+          <TouchableOpacity
+            key={blog.id}
+            style={styles.blogItem}
+            onPress={() => handleBlogPress(blog.id)}
+          >
+            <View style={styles.blogContent}>
+              <Text style={styles.blogTitle}>{blog.title}</Text>
+              <View style={styles.blogInfo}>
+                <View style={[styles.authorIndicator, { backgroundColor: blog.category === 'health' ? 'green' : 'orange' }]} />
+                <Text style={styles.blogAuthor}>By {blog.author}</Text>
+                <Text style={styles.blogCategory}>{blog.category}</Text>
+              </View>
+            </View>
+            <TouchableOpacity onPress={() => toggleBookmark(blog.id)}>
+              <Icon
+                name={bookmarked[blog.id] ? "bookmark" : "bookmark-outline"}
+                size={24}
+                color={bookmarked[blog.id] ? "#FFC107" : "#000"}
+              />
+            </TouchableOpacity>
+          </TouchableOpacity>
+        ))}
+        {!showAllBlogs && totalBlogCount > 3 && (
+          <TouchableOpacity style={styles.seeMoreButton} onPress={handleSeeMore}>
+            <Text style={styles.seeMoreText}>See More</Text>
+            <Icon name="chevron-down-outline" size={20} color="#2196F3" />
+          </TouchableOpacity>
+        )}
+      </>
+    );
   };
 
   return (
@@ -120,28 +197,11 @@ const DoctorHomePage = () => {
 
         <View style={styles.blogContainer}>
           <Text style={styles.sectionTitle}>บทความ</Text>
-          {blogs.map((blog) => (
-            <TouchableOpacity
-              key={blog.id}
-              style={styles.blogItem}
-              onPress={() => handleBlogPress(blog.id)}
-            >
-              <View style={styles.blogContent}>
-                <Text style={styles.blogTitle}>{blog.title}</Text>
-                <View style={styles.blogInfo}>
-                  <View style={[styles.authorIndicator, { backgroundColor: blog.color }]} />
-                  <Text style={styles.blogAuthor}>{blog.author}</Text>
-                </View>
-              </View>
-              <TouchableOpacity onPress={() => toggleBookmark(blog.id)}>
-                <Icon
-                  name={bookmarked[blog.id] ? "bookmark" : "bookmark-outline"}
-                  size={24}
-                  color={bookmarked[blog.id] ? "#FFC107" : "#000"}
-                />
-              </TouchableOpacity>
-            </TouchableOpacity>
-          ))}
+          {loading ? (
+            <ActivityIndicator size="large" color="#2196F3" style={styles.loader} />
+          ) : (
+            renderBlogs()
+          )}
         </View>
       </ScrollView>
     </View>
@@ -285,6 +345,28 @@ const styles = StyleSheet.create({
   icon: {
     width: 24,
     height: 24,
+  },
+  loader: {
+    marginTop: 20,
+  },
+  blogCategory: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#8FBC8F',
+    marginLeft: 8,
+  },
+  seeMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 10,
+    marginTop: 10,
+  },
+  seeMoreText: {
+    color: '#2196F3',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginRight: 5,
   },
 });
 
