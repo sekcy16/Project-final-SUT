@@ -1,8 +1,15 @@
 export { default as LoginScreen } from './LoginScreen';
 export { default as SignUpScreen } from './SignUpScreen';
-export { default as SpiashScreen } from './SpiashScreen';
+export { default as SplashScreen } from './SplashScreen';
 export { default as HealthDashboard } from './HealthDashboard';
 export { default as MealEntry } from './MealEntry';
 export { default as BloodSugar } from './BloodSugar';
 export { default as ProfilePage } from './ProfilePage';
 export { default as DiaryPage } from './DiaryPage';
+export { default as FoodARPage } from './FoodARPage';
+export { default as FoodResultPage } from './FoodResultPage';
+export { default as FoodResult } from '../components/FoodResult';
+export { default as Nutrition } from '../components/Nutrition';
+export { default as DoctorHomePage } from './DoctorHomePage';
+export { default as BlogList } from './BlogList';
+export { default as PatientListScreen } from './PatientListScreen';

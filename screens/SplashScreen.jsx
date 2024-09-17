@@ -23,19 +23,21 @@ const SplashScreen = () => {
           if (docSnap.exists()) {
             console.log("User Data :", docSnap.data());
             dispatch(SET_USER(docSnap.data()));
+  
+            setTimeout(() => {
+              console.log('Navigating to Main'); // Ensure this is being logged
+              navigation.navigate("Main");
+            }, 2000);
           }
-          setTimeout(() => {
-            /// อันเก่าที่ Error navigation.replace("HealthDashboard");
-            navigation.replace("Main", { screen: "HealthDashboard" });
-          }, 2000);
         } catch (error) {
           console.error("Error fetching user data: ", error);
         }
       } else {
-        navigation.replace("LoginScreen");
+        navigation.navigate("LoginScreen");
       }
     });
   };
+  
 
   return (
     <View className="flex-1 items-center space-y-24 justify-center">

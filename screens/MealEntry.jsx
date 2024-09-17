@@ -1,14 +1,21 @@
 import React from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { useNavigation } from '@react-navigation/native';
 
 const MealEntry = () => {
+  const navigation = useNavigation();
+
+  const handleFoodRecognition = () => {
+    navigation.navigate('FoodARPage');
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Icon name="arrow-back" size={24} color="#000" />
+        <Icon name="arrow-back" size={24} color="#FFF" />
         <Text style={styles.headerTitle}>มื้อเช้า</Text>
-        <Icon name="person-circle-outline" size={24} color="#000" />
+        <Icon name="person-circle-outline" size={24} color="#FFF" />
       </View>
 
       <View style={styles.searchBar}>
@@ -20,10 +27,10 @@ const MealEntry = () => {
         <Icon name="mic" size={20} color="#999" />
       </View>
 
-      <View style={styles.scanButton}>
-        <Icon name="barcode-outline" size={24} color="#000" />
-        <Text style={styles.scanButtonText}>แสกนบาร์โค้ดอาหาร</Text>
-      </View>
+      <TouchableOpacity style={styles.scanButton} onPress={handleFoodRecognition}>
+        <Icon name="fast-food-outline" size={24} color="#FFF" />
+        <Text style={styles.scanButtonText}>Food Recognition</Text>
+      </TouchableOpacity>
 
       <View style={styles.mealTypeSelector}>
         <Text style={styles.mealTypeActive}>อาหารแนะนำ</Text>
@@ -39,8 +46,6 @@ const MealEntry = () => {
         <FoodItem name="แซนวิช(ปุ้ม) ดี" amount="100 กรัม" calories="127 cals" />
         <FoodItem name="แซนวิช(ปุ้ม) ดี" amount="100 กรัม" calories="127 cals" />
       </ScrollView>
-
-   
     </View>
   );
 };
@@ -69,11 +74,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    padding: 20,
+    backgroundColor: '#4CAF50',
+    elevation: 2, // Add shadow for header
+    borderBottomWidth: 1, // Divider line at the bottom of the header
+    borderBottomColor: '#E0E0E0',
+    borderBottomLeftRadius: 20, // Rounded bottom-left corner
+    borderBottomRightRadius: 20, // Rounded bottom-right corner
+    // Shadow properties for iOS
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    // Elevation property for Android
+    elevation: 4,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
+    color: '#FFF', // White text
   },
   searchBar: {
     flexDirection: 'row',
@@ -92,13 +111,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFF',
-    borderRadius: 10,
+    backgroundColor: '#4CAF50', // Green background
+    borderRadius: 25,
     margin: 16,
-    padding: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    elevation: 5, // Shadow for Android
+    shadowColor: '#000', // Shadow for iOS
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
   },
   scanButtonText: {
+    color: '#FFF',
     marginLeft: 8,
+    fontWeight: 'bold',
+    fontSize: 16,
   },
   mealTypeSelector: {
     flexDirection: 'row',
@@ -130,6 +158,11 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginVertical: 8,
     borderRadius: 10,
+    elevation: 3, // Shadow for Android
+    shadowColor: '#000', // Shadow for iOS
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   foodName: {
     fontWeight: 'bold',
