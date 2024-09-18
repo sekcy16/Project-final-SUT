@@ -53,13 +53,15 @@ const PatientDetailScreen = ({ route, navigation }) => {
         ...doc.data(),
       }));
 
-      // ทำอะไรกับข้อมูล weightHistoryData เช่น นำไปแสดงผลใน component
       console.log("weightHistoryData:", weightHistoryData);
-      // ...
+
+      return weightHistoryData;
     } catch (error) {
       console.error("Error fetching weight history:", error);
+      return [];
     }
   };
+
 
   const fetchBloodSugarHistory = async () => {
     try {
@@ -85,11 +87,13 @@ const PatientDetailScreen = ({ route, navigation }) => {
 
   useEffect(() => {
     fetchPatientData();
-    fetchBloodSugarHistory(); // เรียกใช้เมื่อโหลดหน้าจอ
+    fetchBloodSugarHistory();
+
     fetchWeightHistory(patientId).then((data) => {
       setWeightHistory(data);
     });
   }, [patientId]);
+
 
   if (loading) {
     return (
@@ -163,48 +167,52 @@ const PatientDetailScreen = ({ route, navigation }) => {
             )}
           </View>
         );
-        case "weight":
-          return (
-            <View>
-              <Text style={styles.statsText}>น้ำหนัก</Text>
-              {weightHistory && weightHistory.length > 0 ? (
-                <LineChart
+      case "weight":
+        return (
+          <View>
+            <Text style={styles.statsText}>น้ำหนัก</Text>
+            {weightHistory && weightHistory.length > 0 ? (
+              <LineChart
                 data={{
                   labels: weightHistory.map((entry) => entry.date),
                   datasets: [
                     {
                       data: weightHistory.map((entry) => entry.weight),
                       color: (opacity = 1) => `rgba(0, 0, 255, ${opacity})`,
-                      strokeWidth: 2, // เพิ่มความหนาของเส้นกราฟ
+                      strokeWidth: 2,
                     },
                   ],
                 }}
                 width={350}
-                height={220} // ปรับขนาดให้ใหญ่ขึ้นเล็กน้อย
+                height={220}
                 chartConfig={{
                   backgroundColor: "#fff",
                   backgroundGradientFrom: "#fff",
                   backgroundGradientTo: "#fff",
                   decimalPlaces: 1,
-                  color: (opacity = 1) => `rgba(0, 123, 255, ${opacity})`, // Blue color
+                  color: (opacity = 1) => `rgba(0, 123, 255, ${opacity})`,
                 }}
                 bezier
                 style={styles.chart}
-                />
-              ) : (
-                <Text style={styles.noDataText}>ไม่มีข้อมูลน้ำหนัก</Text>
-              )}
+              />
+            ) : (
+              <Text style={styles.noDataText}>ไม่มีข้อมูลน้ำหนัก</Text>
+            )}
+
             <Text style={styles.historyTitle}>ประวัติ</Text>
-            {patientData.weightHistory ? (
-              patientData.weightHistory.map((entry, index) => (
+            {weightHistory && weightHistory.length > 0 ? (
+              weightHistory.map((entry, index) => (
                 <View key={index} style={styles.historyItem}>
                   <Text style={styles.historyDate}>{entry.date}</Text>
                   <Text style={styles.historyValue}>{entry.weight} kg</Text>
+                  <Text style={styles.historyTime}>เวลาวัด: {entry.time}</Text>
                 </View>
               ))
             ) : (
               <Text style={styles.noDataText}>ไม่มีประวัติน้ำหนัก</Text>
             )}
+
+
           </View>
         );
       default:
