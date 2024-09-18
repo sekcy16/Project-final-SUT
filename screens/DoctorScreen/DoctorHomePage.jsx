@@ -14,6 +14,7 @@ const DoctorHomePage = () => {
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [userId, setUserId] = useState(null);
 
   const db = getFirestore(app);
 
@@ -21,16 +22,18 @@ const DoctorHomePage = () => {
     const unsubscribeAuth = onAuthStateChanged(firebaseAuth, (user) => {
       if (user) {
         console.log('User authenticated:', user.uid);
+        setUserId(user.uid);
         fetchUserData(user.uid);
         fetchTasks(user.uid);
         fetchBlogs();
       } else {
         console.log('No user authenticated');
         setUserData(null);
+        setUserId(null);
       }
     });
-
-    return () => unsubscribeAuth(); 
+  
+    return () => unsubscribeAuth();
   }, []);
 
   const fetchUserData = async (userId) => {
@@ -59,24 +62,23 @@ const DoctorHomePage = () => {
       }));
       console.log('Tasks fetched:', tasksData);
       setTasks(tasksData);
-      setLoading(false);
     } catch (error) {
       console.error("Error fetching tasks: ", error);
-    } finally {
-      setLoading(false);
+      // More detailed error logging
+      console.error("Error code:", error.code);
+      console.error("Error message:", error.message);
+      if (error.details) console.error("Error details:", error.details);
     }
   };
 
   const fetchBlogs = async () => {
     try {
-      console.log('Fetching blogs...');
       const q = query(collection(db, 'blogs'), orderBy('createdAt', 'desc'));
       const snapshot = await getDocs(q);
       const blogData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
       }));
-      console.log('Blogs fetched:', blogData);
       setBlogs(blogData);
       updateDisplayedBlogs(blogData);
     } catch (error) {
@@ -94,8 +96,12 @@ const DoctorHomePage = () => {
   const onRefresh = async () => {
     setRefreshing(true);
     console.log('Refreshing data...');
-    await fetchTasks(userData?.id);
-    await fetchBlogs();
+    if (userId) {
+      await fetchTasks(userId);
+      await fetchBlogs();
+    } else {
+      console.error('No user ID available for refresh');
+    }
     setRefreshing(false);
   };
 
