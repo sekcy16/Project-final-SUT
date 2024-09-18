@@ -2,79 +2,81 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, RefreshControl } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
-import { getFirestore, collection, query, orderBy, onSnapshot, doc, getDoc, getDocs } from 'firebase/firestore';
+import { getFirestore, collection, query, orderBy, onSnapshot, doc, getDoc, getDocs, addDoc, deleteDoc } from 'firebase/firestore';
 import { app, firebaseAuth } from "../../config/firebase.config";
 import { onAuthStateChanged } from 'firebase/auth';
 
 const DoctorHomePage = () => {
   const navigation = useNavigation();
-  const [selectedTab, setSelectedTab] = useState('health');
-  const [tasks, setTasks] = useState([
-    { id: 1, time: '9:00', title: 'Johny', description: 'ตรวจวัดระดับน้ำตาลในเลือด', completed: true },
-    { id: 2, time: '10:00', title: 'Jackky', description: 'ตรวจอาการทั่วไปและการออกกำลังกาย', completed: true },
-    { id: 3, time: '12:00', title: 'พักผ่อน', description: 'พัก', completed: true },
-  ]);
+  const [tasks, setTasks] = useState([]);
   const [blogs, setBlogs] = useState([]);
   const [displayedBlogs, setDisplayedBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState(null);
-  const [refreshing, setRefreshing] = useState(false); // State to handle refreshing
+  const [refreshing, setRefreshing] = useState(false);
 
   const db = getFirestore(app);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(firebaseAuth, (user) => {
       if (user) {
+        console.log('User authenticated:', user.uid);
         fetchUserData(user.uid);
+        fetchTasks(user.uid);
+        fetchBlogs();
       } else {
-        setUserData(null); // Clear the data if no user is logged in
+        console.log('No user authenticated');
+        setUserData(null);
       }
     });
 
-    return () => unsubscribeAuth(); // Clean up the listener on component unmount
-  }, []);
-
-  useEffect(() => {
-    fetchBlogs(); // Fetch blogs on component mount
-  }, []);
-
-  useEffect(() => {
-    const q = query(collection(db, 'blogs'), orderBy('createdAt', 'desc'));
-
-    const unsubscribeBlogs = onSnapshot(q, (snapshot) => {
-      const blogData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setBlogs(blogData);
-      setLoading(false);
-      // Update the displayed blogs
-      updateDisplayedBlogs(blogData);
-    }, (error) => {
-      console.error("Error fetching blogs: ", error);
-      setLoading(false);
-    });
-
-    return () => unsubscribeBlogs(); // Clean up the listener on component unmount
+    return () => unsubscribeAuth(); 
   }, []);
 
   const fetchUserData = async (userId) => {
     try {
+      console.log('Fetching user data for:', userId);
       const userDoc = await getDoc(doc(db, 'users', userId));
-      setUserData(userDoc.data());
+      if (userDoc.exists()) {
+        console.log('User data found:', userDoc.data());
+        setUserData(userDoc.data());
+      } else {
+        console.log('No user data found for:', userId);
+      }
     } catch (error) {
       console.error("Error fetching user data: ", error);
     }
   };
 
+  const fetchTasks = async (userId) => {
+    try {
+      console.log('Fetching tasks for user:', userId);
+      const q = query(collection(db, `users/${userId}/tasks`), orderBy('time', 'asc'));
+      const snapshot = await getDocs(q);
+      const tasksData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      console.log('Tasks fetched:', tasksData);
+      setTasks(tasksData);
+      setLoading(false);
+    } catch (error) {
+      console.error("Error fetching tasks: ", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchBlogs = async () => {
     try {
+      console.log('Fetching blogs...');
       const q = query(collection(db, 'blogs'), orderBy('createdAt', 'desc'));
       const snapshot = await getDocs(q);
       const blogData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
       }));
+      console.log('Blogs fetched:', blogData);
       setBlogs(blogData);
       updateDisplayedBlogs(blogData);
     } catch (error) {
@@ -85,19 +87,34 @@ const DoctorHomePage = () => {
   };
 
   const updateDisplayedBlogs = (blogList) => {
-    // Shuffle the array and take the first 3 items
     const shuffledBlogs = blogList.sort(() => 0.5 - Math.random());
     setDisplayedBlogs(shuffledBlogs.slice(0, 3));
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    console.log('Refreshing data...');
+    await fetchTasks(userData?.id);
+    await fetchBlogs();
+    setRefreshing(false);
+  };
+
+  const handleAddTask = () => {
+    navigation.navigate('AddTaskScreen');
   };
 
   const handleBlogPress = (blogId) => {
     navigation.navigate('BlogDetail', { blogId });
   };
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await fetchBlogs(); // Re-fetch blogs
-    setRefreshing(false);
+  const handleDeleteTask = async (taskId) => {
+    try {
+      console.log('Deleting task:', taskId);
+      await deleteDoc(doc(db, `users/${userData.id}/tasks`, taskId));
+      fetchTasks(userData.id);
+    } catch (error) {
+      console.error("Error deleting task: ", error);
+    }
   };
 
   return (
@@ -113,15 +130,10 @@ const DoctorHomePage = () => {
           <Text style={styles.userName}>{userData?.fullName || "Username"}</Text>
         </View>
         <TouchableOpacity
-          style={styles.notificationIcon}
-          onPress={() => navigation.navigate("NotificationListScreen")}
+          style={styles.addIcon} 
+          onPress={handleAddTask}
         >
-          <Icon
-            name="notifications-outline"
-            size={24}
-            color="#FFF"
-            style={styles.icon}
-          />
+          <Icon name="add-outline" size={28} color="#FFF" />
         </TouchableOpacity>
       </View>
 
@@ -131,29 +143,38 @@ const DoctorHomePage = () => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#1E88E5']} // Color of the refresh spinner
+            colors={['#1E88E5']}
           />
         }
       >
+        {/* Task Section */}
         <View style={styles.todoContainer}>
           <Text style={styles.sectionTitle}>ตารางวันนี้</Text>
-          {tasks.map((task) => (
-            <View key={task.id} style={styles.taskCard}>
-              <Text style={styles.taskTime}>{task.time}</Text>
-              <View style={styles.taskContent}>
-                <Text style={styles.taskTitle}>{task.title}</Text>
-                <Text style={[styles.taskDescription, task.completed && styles.taskCompleted]}>
-                  {task.description}
-                </Text>
+          {loading ? (
+            <ActivityIndicator size="large" color="#1E88E5" />
+          ) : (
+            tasks.map((task) => (
+              <View key={task.id} style={styles.taskCard}>
+                <Text style={styles.taskTime}>{task.time}</Text>
+                <View style={styles.taskContent}>
+                  <Text style={styles.taskTitle}>{task.title}</Text>
+                  <Text style={[styles.taskDescription, task.completed && styles.taskCompleted]}>
+                    {task.description}
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={() => handleDeleteTask(task.id)}>
+                  <Icon name="trash-outline" size={20} color="red" />
+                </TouchableOpacity>
               </View>
-            </View>
-          ))}
+            ))
+          )}
         </View>
 
+        {/* Blog Section */}
         <View style={styles.blogContainer}>
           <Text style={styles.sectionTitle}>บทความ</Text>
           {loading ? (
-            <ActivityIndicator size="large" color="#1E88E5" style={styles.loader} />
+            <ActivityIndicator size="large" color="#1E88E5" />
           ) : (
             displayedBlogs.map((blog) => (
               <TouchableOpacity
@@ -165,7 +186,7 @@ const DoctorHomePage = () => {
                 <View style={styles.blogContent}>
                   <Text style={styles.blogTitle}>{blog.title}</Text>
                   <View style={styles.blogInfo}>
-                    <View style={[styles.authorIndicator, { backgroundColor: 'blue' }]} /> 
+                    <View style={[styles.authorIndicator, { backgroundColor: 'blue' }]} />
                     <Text style={styles.blogAuthor}>{blog.author}</Text>
                   </View>
                 </View>
@@ -178,19 +199,18 @@ const DoctorHomePage = () => {
   );
 };
 
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#E3F2FD", // Light blue background
+    backgroundColor: "#E3F2FD",
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     padding: 20,
-    backgroundColor: "#2196F3", // Primary blue
-    elevation: 4, // Adding elevation for shadow effect
+    backgroundColor: "#2196F3",
+    elevation: 4,
   },
   profileContainer: {
     flexDirection: "row",
@@ -205,22 +225,22 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#FFF", // White user name text
+    color: "#FFF",
   },
   content: {
     flex: 1,
   },
   todoContainer: {
-    backgroundColor: "#E3F2FD", // Light blue for to-do container
+    backgroundColor: "#E3F2FD",
     margin: 16,
     padding: 16,
     borderRadius: 12,
-    elevation: 4, // Adding elevation for shadow effect
+    elevation: 4,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#1E88E5", // Darker blue for section title
+    color: "#1E88E5",
     marginBottom: 12,
   },
   taskCard: {
@@ -228,7 +248,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 12,
     marginBottom: 12,
-    backgroundColor: "#FFF", // White for task cards
+    backgroundColor: "#FFF",
     borderRadius: 10,
     elevation: 2,
   },
@@ -244,10 +264,10 @@ const styles = StyleSheet.create({
   taskTitle: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#1E88E5", // Darker blue for task title
+    color: "#1E88E5",
   },
   taskCompleted: {
-    color: "#4CAF50", // Green for completed task title
+    color: "#4CAF50",
     textDecorationLine: "line-through",
   },
   taskDescription: {
@@ -255,11 +275,11 @@ const styles = StyleSheet.create({
     color: "#666",
   },
   blogContainer: {
-    backgroundColor: "#E3F2FD", // Light blue for blog container
+    backgroundColor: "#E3F2FD",
     margin: 16,
     padding: 16,
     borderRadius: 12,
-    elevation: 4, // Adding elevation for shadow effect
+    elevation: 4,
   },
   blogItem: {
     flexDirection: "row",
@@ -267,7 +287,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#B3E5FC", // Pale blue for border
+    borderBottomColor: "#B3E5FC",
   },
   blogImage: {
     width: 100,
@@ -279,36 +299,27 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   blogTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "bold",
-    color: "#1E88E5", // Darker blue for blog title
+    color: "#1E88E5",
   },
   blogInfo: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 4,
+    marginTop: 8,
   },
   authorIndicator: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     marginRight: 8,
   },
   blogAuthor: {
     fontSize: 14,
-    color: "#999",
+    color: "#757575",
   },
-  notificationIcon: {
-    marginRight: 16, // Add margin to the right for spacing
-  },
-  icon: {
-    width: 24,
-    height: 24,
-  },
-  loader: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  addIcon: {
+    marginRight: 16,
   },
 });
 

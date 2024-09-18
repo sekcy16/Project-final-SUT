@@ -12,6 +12,7 @@ import { LineChart } from "react-native-chart-kit"; // For the graph
 import { firebaseDB } from "../../config/firebase.config"; // Import firebaseDB from your config
 import { doc, getDoc } from "firebase/firestore"; // Import Firestore functions
 import { collection, query, where, getDocs } from "firebase/firestore";
+
 const PatientDetailScreen = ({ route, navigation }) => {
   const { patientId } = route.params; // Get patient ID from route parameters
   const [patientData, setPatientData] = useState(null); // State to store patient data
@@ -62,7 +63,6 @@ const PatientDetailScreen = ({ route, navigation }) => {
     }
   };
 
-
   const fetchBloodSugarHistory = async () => {
     try {
       const q = query(
@@ -93,7 +93,6 @@ const PatientDetailScreen = ({ route, navigation }) => {
       setWeightHistory(data);
     });
   }, [patientId]);
-
 
   if (loading) {
     return (
@@ -140,6 +139,8 @@ const PatientDetailScreen = ({ route, navigation }) => {
                   backgroundGradientFrom: "#fff",
                   backgroundGradientTo: "#fff",
                   decimalPlaces: 0,
+                  alignSelf: "center", // Center the graph horizontally
+                  marginVertical: 20,
                   color: (opacity = 1) => `rgba(0, 123, 255, ${opacity})`, // สีของกราฟ
                 }}
                 bezier
@@ -190,6 +191,8 @@ const PatientDetailScreen = ({ route, navigation }) => {
                   backgroundGradientFrom: "#fff",
                   backgroundGradientTo: "#fff",
                   decimalPlaces: 1,
+                  alignSelf: "center", // Center the graph horizontally
+                  marginVertical: 20,
                   color: (opacity = 1) => `rgba(0, 123, 255, ${opacity})`,
                 }}
                 bezier
@@ -211,8 +214,6 @@ const PatientDetailScreen = ({ route, navigation }) => {
             ) : (
               <Text style={styles.noDataText}>ไม่มีประวัติน้ำหนัก</Text>
             )}
-
-
           </View>
         );
       default:
@@ -329,6 +330,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   buttonText: { color: "white", fontSize: 18, fontWeight: "bold" },
+  chart: {
+    borderRadius: 12,
+    marginVertical: 20,
+    marginHorizontal: 10,
+    alignSelf: "center", // Center the chart horizontally
+    shadowColor: "#000", // Shadow color for iOS
+    shadowOpacity: 0.2, // Opacity of the shadow
+    shadowOffset: { width: 0, height: 4 }, // Offset for the shadow
+    shadowRadius: 6, // Blur radius for the shadow
+    elevation: 8, // Elevation for Android
+  },
 });
 
 export default PatientDetailScreen;

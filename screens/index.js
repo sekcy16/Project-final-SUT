@@ -19,3 +19,4 @@ export { default as PatientDetailScreen} from './DoctorScreen/PatientDetailScree
 export { default as AdvicePage} from './DoctorScreen/AdvicePage';
 export { default as EditProfilePage} from './EditProfilePage';
 export { default as FoodDetail } from './FoodDetail'
+export { default as AddTaskScreen } from './DoctorScreen/AddTaskScreen'
