@@ -17,8 +17,10 @@ import {
   query,
   orderBy,
   deleteDoc,
+  doc,
+  updateDoc,
 } from "firebase/firestore";
-import { firebaseDB, firebaseAuth } from "../config/firebase.config"; // นำเข้า firebaseConfig ของคุณ
+import { firebaseDB, firebaseAuth } from "../config/firebase.config";
 
 const WeightProgress = ({ navigation }) => {
   const [weight, setWeight] = useState("");
@@ -34,17 +36,8 @@ const WeightProgress = ({ navigation }) => {
 
     if (user) {
       try {
-        const weightHistoryRef = collection(
-          firebaseDB,
-          "users",
-          user.uid,
-          "weightHistory"
-        );
-        const q = query(
-          weightHistoryRef,
-          orderBy("date", "desc"),
-          orderBy("time", "desc")
-        );
+        const weightHistoryRef = collection(firebaseDB, "users", user.uid, "weightHistory");
+        const q = query(weightHistoryRef, orderBy("date", "desc"), orderBy("time", "desc"));
         const querySnapshot = await getDocs(q);
 
         const fetchedHistory = [];
@@ -90,8 +83,11 @@ const WeightProgress = ({ navigation }) => {
 
       if (user) {
         try {
-          const userDocRef = collection(firebaseDB, "users", user.uid, "weightHistory");
-          await addDoc(userDocRef, newEntry);
+          const weightHistoryRef = collection(firebaseDB, "users", user.uid, "weightHistory");
+          await addDoc(weightHistoryRef, newEntry);
+
+          // Update the profile with the new weight
+          await updateProfile(weightValue);
 
           const updatedHistory = [newEntry, ...history];
           setHistory(updatedHistory);
@@ -117,13 +113,7 @@ const WeightProgress = ({ navigation }) => {
           console.error("Document ID is undefined or null");
           return;
         }
-        const docRef = collection(
-          firebaseDB,
-          "users",
-          user.uid,
-          "weightHistory",
-          docId
-        );
+        const docRef = doc(firebaseDB, "users", user.uid, "weightHistory", docId);
         await deleteDoc(docRef);
 
         const updatedHistory = history.filter((_, i) => i !== index);
@@ -131,6 +121,24 @@ const WeightProgress = ({ navigation }) => {
         updateChartData(updatedHistory);
       } catch (error) {
         console.error("Error deleting from Firestore:", error);
+      }
+    } else {
+      console.error("No user is logged in");
+    }
+  };
+
+  const updateProfile = async (weight) => {
+    const user = firebaseAuth.currentUser;
+
+    if (user) {
+      try {
+        const userProfileRef = doc(firebaseDB, "users", user.uid);
+        await updateDoc(userProfileRef, {
+          weight: weight,
+          lastActive: new Date().toISOString()
+        });
+      } catch (error) {
+        console.error("Error updating profile in Firestore:", error);
       }
     } else {
       console.error("No user is logged in");
@@ -167,16 +175,16 @@ const WeightProgress = ({ navigation }) => {
             datasets: [{ data: chartData }],
           }}
           width={Dimensions.get("window").width - 40}
-          height={200}
+          height={220}
           chartConfig={{
             backgroundGradientFrom: "#F6FFF5",
             backgroundGradientTo: "#F6FFF5",
-            color: (opacity = 1) => `rgba(255, 107, 107, ${opacity})`,
+            color: (opacity = 1) => `rgba(0, 204, 255, ${opacity})`,
             labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
             propsForDots: {
               r: "6",
               strokeWidth: "2",
-              stroke: "#ffa726",
+              stroke: "#00bcd4",
             },
           }}
           bezier
@@ -186,19 +194,16 @@ const WeightProgress = ({ navigation }) => {
 
       <View style={styles.history}>
         <Text style={styles.historyTitle}>ประวัติ</Text>
-        {history.map((item) => (
+        {history.map((item, index) => (
           <View key={item.id} style={styles.historyItem}>
-            <Text style={styles.historyDate}>{item.date}</Text>
-            <Text style={styles.historyTime}>{item.time}</Text>
-            <Text style={styles.historyLevel}>{item.weight} kg</Text>
+            <View style={styles.historyDetails}>
+              <Text style={styles.historyDate}>{item.date}</Text>
+              <Text style={styles.historyTime}>{item.time}</Text>
+              <Text style={styles.historyLevel}>{item.weight} kg</Text>
+            </View>
             <TouchableOpacity
               style={styles.deleteButton}
-              onPress={() =>
-                deleteEntry(
-                  history.findIndex((entry) => entry.id === item.id),
-                  item.id
-                )
-              }
+              onPress={() => deleteEntry(index, item.id)}
             >
               <Text style={styles.deleteButtonText}>ลบ</Text>
             </TouchableOpacity>
@@ -216,14 +221,15 @@ const styles = StyleSheet.create({
     backgroundColor: "#F6FFF5",
   },
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
     marginBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#ddd",
+    paddingBottom: 10,
   },
   headerText: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: "bold",
+    color: "#4CAF50",
   },
   inputContainer: {
     flexDirection: "row",
@@ -231,34 +237,40 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    height: 40,
-    borderColor: "gray",
-    borderWidth: 1,
-    borderRadius: 5,
-    paddingHorizontal: 10,
-    marginRight: 10,
+    height: 50,
+    borderColor: "#4CAF50",
+    borderWidth: 2,
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    fontSize: 18,
+    backgroundColor: "#fff",
   },
   addButton: {
     backgroundColor: "#4CAF50",
-    padding: 10,
-    borderRadius: 5,
+    padding: 15,
+    borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
+    elevation: 2,
   },
   addButtonText: {
     color: "white",
     fontWeight: "bold",
+    fontSize: 18,
   },
   today: {
     marginBottom: 20,
+    alignItems: "center",
   },
   todayText: {
-    fontSize: 18,
+    fontSize: 20,
     marginBottom: 5,
+    fontWeight: "bold",
   },
   todayValue: {
-    fontSize: 24,
+    fontSize: 36,
     fontWeight: "bold",
+    color: "#4CAF50",
   },
   chart: {
     marginVertical: 20,
@@ -268,36 +280,50 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   historyTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "bold",
     marginBottom: 10,
+    color: "#4CAF50",
   },
   historyItem: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 10,
-    backgroundColor: "#FFF",
+    padding: 15,
+    backgroundColor: "#fff",
     borderRadius: 10,
     marginBottom: 10,
+    elevation: 2,
+  },
+  historyDetails: {
+    flex: 1,
   },
   historyDate: {
     fontSize: 16,
+    color: "#333",
   },
   historyTime: {
-    fontSize: 16,
+    fontSize: 14,
+    color: "#666",
   },
   historyLevel: {
-    fontSize: 16,
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#4CAF50",
   },
   deleteButton: {
     backgroundColor: "#FF6347",
-    padding: 5,
-    borderRadius: 5,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 2,
   },
   deleteButtonText: {
     color: "white",
     fontWeight: "bold",
+    fontSize: 16,
   },
 });
 

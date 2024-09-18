@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
-  Button,
   Image,
 } from "react-native";
 import { firebaseDB, firebaseAuth } from "../config/firebase.config";
@@ -20,9 +19,8 @@ import {
 } from "firebase/auth";
 import { useNavigation } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
-import { avatars } from "../utils/supports"; // Import avatars
+import { avatars } from "../utils/supports";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { LinearGradient } from "expo-linear-gradient"; // Import LinearGradient
 
 const EditProfilePage = () => {
   const [email, setEmail] = useState("");
@@ -80,43 +78,47 @@ const EditProfilePage = () => {
       const user = firebaseAuth.currentUser;
       if (!user) return;
 
+      let calculatedBmi = "";
+      if (weight && height) {
+        const weightKg = parseFloat(weight);
+        const heightM = parseFloat(height) / 100; // Convert cm to meters
+        if (heightM > 0) {
+          calculatedBmi = (weightKg / (heightM * heightM)).toFixed(2);
+        }
+      }
+
+      let avatarUrl = avatar;
+      if (avatar && avatar.startsWith('http')) {
+        const imageUri = await handleImagePickAndUpload();
+        avatarUrl = imageUri;
+      }
+
       const userDocRef = doc(firebaseDB, "users", user.uid);
+
       await updateDoc(userDocRef, {
         fullName,
-        profilePic: avatar,
+        profilePic: avatarUrl,
         weight: parseFloat(weight) || 0,
         height: parseFloat(height) || 0,
-        bmi: parseFloat(bmi) || 0,
+        bmi: parseFloat(calculatedBmi) || 0,
       });
 
       if (email !== user.email) {
         if (!currentPassword) {
-          Alert.alert(
-            "Error",
-            "Please enter your current password to update the email."
-          );
+          Alert.alert("Error", "Please enter your current password to update the email.");
           return;
         }
-        const credential = EmailAuthProvider.credential(
-          user.email,
-          currentPassword
-        );
+        const credential = EmailAuthProvider.credential(user.email, currentPassword);
         await reauthenticateWithCredential(user, credential);
         await updateEmail(user, email);
       }
 
-      if (password && password !== "******") {
+      if (password) {
         if (!currentPassword) {
-          Alert.alert(
-            "Error",
-            "Please enter your current password to update your password."
-          );
+          Alert.alert("Error", "Please enter your current password to update your password.");
           return;
         }
-        const credential = EmailAuthProvider.credential(
-          user.email,
-          currentPassword
-        );
+        const credential = EmailAuthProvider.credential(user.email, currentPassword);
         await reauthenticateWithCredential(user, credential);
         await user.updatePassword(password);
       }
@@ -129,13 +131,51 @@ const EditProfilePage = () => {
     }
   };
 
+  const handleImagePickAndUpload = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        alert('Sorry, we need camera roll permissions to make this work!');
+        return null;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 1,
+      });
+
+      if (!result.canceled) {
+        const { uri } = result.assets[0];
+
+        const response = await fetch(uri);
+        const blob = await response.blob();
+        const filename = uri.split('/').pop();
+        const storage = getStorage();
+        const storageRef = ref(storage, `avatars/${filename}`);
+        await uploadBytes(storageRef, blob);
+
+        const downloadURL = await getDownloadURL(storageRef);
+
+        return downloadURL;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error picking or uploading image:', error);
+      return null;
+    }
+  };
+
+  const handleAvatarSelection = (item) => {
+    setAvatar(item?.image.asset.url);
+    setIsAvatarMenu(false);
+  };
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.iconButton}
-        >
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
           <Icon name="arrow-back" size={24} color="#FFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit Profile</Text>
@@ -158,21 +198,12 @@ const EditProfilePage = () => {
           <View style={styles.avatarMenu}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {avatars.map((item) => (
-                <TouchableOpacity
-                  key={item._id}
-                  onPress={() => handleAvatarSelection(item)}
-                >
-                  <Image
-                    source={{ uri: item?.image.asset.url }}
-                    style={styles.avatarOption}
-                  />
+                <TouchableOpacity key={item._id} onPress={() => handleAvatarSelection(item)}>
+                  <Image source={{ uri: item?.image.asset.url }} style={styles.avatarOption} />
                 </TouchableOpacity>
               ))}
             </ScrollView>
-            <TouchableOpacity
-              onPress={handleImagePickAndUpload}
-              style={styles.pickImageButton}
-            >
+            <TouchableOpacity onPress={handleImagePickAndUpload} style={styles.pickImageButton}>
               <Text style={styles.pickImageText}>Choose and Upload Image</Text>
             </TouchableOpacity>
           </View>
@@ -265,7 +296,7 @@ const styles = StyleSheet.create({
     color: "#004d00",
   },
   bmiLabel: {
-    fontSize: 24, // Larger font size for BMI
+    fontSize: 24,
     fontWeight: "bold",
     marginBottom: 16,
     color: "#004d00",
@@ -319,23 +350,23 @@ const styles = StyleSheet.create({
     color: "#FFF",
   },
   cartoonButton: {
-    backgroundColor: "#4CAF50", // A soft green color
+    backgroundColor: "#4CAF50",
     paddingVertical: 12,
     paddingHorizontal: 24,
-    borderRadius: 20, // Rounded corners
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 2,
-    borderColor: "#388E3C", // Slightly darker green border
-    elevation: 4, // For shadow effect on Android
-    shadowColor: "#000", // Shadow color for iOS
-    shadowOffset: { width: 0, height: 4 }, // Shadow offset
-    shadowOpacity: 0.3, // Shadow opacity
-    shadowRadius: 6, // Shadow blur radius
+    borderColor: "#388E3C",
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
   },
   cartoonButtonText: {
     fontSize: 18,
-    color: "#FFF", // White text color
+    color: "#FFF",
     fontWeight: "bold",
   },
   editIconContainer: {

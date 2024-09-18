@@ -125,6 +125,12 @@ const HealthDashboard = ({ navigation }) => {
     const carbsPercentage = 0.2; // Assuming 250g is your carbs goal
     const fatPercentage = 0.5; // Assuming 70g is your fat goal
 
+     const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchBlogs(); // Re-fetch blogs
+    setRefreshing(false);
+  };
+
     return (
       <View style={styles.calorieInfoContainer}>
         <Text style={styles.calorieInfoTitle}>Today's Nutrition</Text>
