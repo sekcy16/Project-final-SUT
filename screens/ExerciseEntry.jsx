@@ -50,7 +50,7 @@ const ExerciseEntry = () => {
   const addToDiary = async (exercise, duration) => {
     try {
       const userId = auth.currentUser.uid;
-      const diaryRef = doc(db, 'diaries', userId, 'entries', date.split('T')[0]);
+      const diaryRef = doc(db, 'users', userId, 'entries', date.split('T')[0]);
       
       const docSnap = await getDoc(diaryRef);
       let currentExercises = docSnap.exists() ? (docSnap.data().exercises || []) : [];

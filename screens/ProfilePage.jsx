@@ -146,6 +146,12 @@ const ProfilePage = () => {
           label="Notifications"
           onPress={() => navigation.navigate("NotificationListScreen")}
         />
+        <MenuItem
+          icon="bookmark-outline"
+          label="Bookmarks"
+          onPress={() => navigation.navigate("BookmarkListPage")}
+        />
+
       </View>
     </ScrollView>
   );

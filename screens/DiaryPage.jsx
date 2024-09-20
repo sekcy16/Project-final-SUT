@@ -33,12 +33,25 @@ const DiaryPage = () => {
   const db = getFirestore(app);
   const auth = getAuth(app);
 
+
+  const navigateToSummary = () => {
+    navigation.navigate('SummaryPage', {
+      date: currentDate.toISOString(),
+      meals,
+      exercises,
+      totalFoodCalories,
+      totalExerciseCalories,
+      totalCarbs,
+      tdee
+    });
+  };
+
   const fetchDiaryData = useCallback(async () => {
     try {
       const userId = auth.currentUser.uid;
 
       // Fetch diary data
-      const diaryRef = doc(db, 'diaries', userId, 'entries', formatDate(currentDate));
+      const diaryRef = doc(db, 'users', userId, 'entries', formatDate(currentDate));
       const diarySnap = await getDoc(diaryRef);
 
       if (diarySnap.exists()) {
@@ -137,6 +150,83 @@ const DiaryPage = () => {
     return date.toISOString().split('T')[0];
   };
 
+  const deleteFoodItem = async (mealType, index) => {
+    try {
+      const userId = auth.currentUser.uid;
+      const diaryRef = doc(db, 'users', userId, 'entries', formatDate(currentDate));
+  
+      // Get current diary data
+      const diarySnap = await getDoc(diaryRef);
+      if (!diarySnap.exists()) return;
+  
+      const data = diarySnap.data();
+      const currentMeals = data.meals || {};
+      const updatedMeals = { ...currentMeals };
+  
+      if (updatedMeals[mealType]) {
+        const itemToRemove = updatedMeals[mealType].items[index];
+        updatedMeals[mealType].items.splice(index, 1);
+  
+        // Update totals correctly
+        updatedMeals[mealType].calories -= itemToRemove.calories;
+        updatedMeals[mealType].carbs -= itemToRemove.carbs;
+        updatedMeals[mealType].fat -= itemToRemove.fat;
+        updatedMeals[mealType].protein -= itemToRemove.protein;
+  
+        // Make sure values don't go below zero
+        updatedMeals[mealType].calories = Math.max(0, updatedMeals[mealType].calories);
+        updatedMeals[mealType].carbs = Math.max(0, updatedMeals[mealType].carbs);
+        updatedMeals[mealType].fat = Math.max(0, updatedMeals[mealType].fat);
+        updatedMeals[mealType].protein = Math.max(0, updatedMeals[mealType].protein);
+  
+        await setDoc(diaryRef, {
+          meals: updatedMeals,
+          exercises: data.exercises || []
+        }, { merge: true });
+  
+        Alert.alert('Success', 'Food item deleted.');
+        fetchDiaryData(); // Refresh diary data after deletion
+      }
+    } catch (error) {
+      console.error('Error deleting food item:', error);
+      Alert.alert('Error', 'Failed to delete food item. Please try again.');
+    }
+  };
+
+  const deleteExerciseItem = async (index) => {
+    try {
+      const userId = auth.currentUser.uid;
+      const diaryRef = doc(db, 'users', userId, 'entries', formatDate(currentDate));
+  
+      // Get current diary data
+      const diarySnap = await getDoc(diaryRef);
+      if (!diarySnap.exists()) return;
+  
+      const data = diarySnap.data();
+      const currentExercises = data.exercises || [];
+      const updatedExercises = [...currentExercises];
+  
+      if (updatedExercises[index]) {
+        updatedExercises.splice(index, 1);
+  
+        await setDoc(diaryRef, {
+          meals: data.meals || {},
+          exercises: updatedExercises
+        }, { merge: true });
+  
+        Alert.alert('Success', 'Exercise item deleted.');
+        fetchDiaryData(); // Refresh diary data after deletion
+      }
+    } catch (error) {
+      console.error('Error deleting exercise item:', error);
+      Alert.alert('Error', 'Failed to delete exercise item. Please try again.');
+    }
+  
+  }
+  
+  
+  
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
@@ -150,6 +240,9 @@ const DiaryPage = () => {
               <Icon name="chevron-forward" size={24} color="#000" />
             </TouchableOpacity>
           </View>
+          <TouchableOpacity style={styles.summaryButton} onPress={navigateToSummary}>
+            <Icon name="bar-chart" size={24} color="#fff" />
+          </TouchableOpacity>
         </View>
         <View style={styles.caloriesSummary}>
           <Text style={styles.summaryText}>เป้าหมาย</Text>
@@ -159,7 +252,7 @@ const DiaryPage = () => {
           <Text style={styles.caloriesText}>{totalFoodCalories} Calories</Text>
           <Text style={styles.caloriesText}>{tdee - totalFoodCalories} Calories</Text>
         </View>
-
+  
         <ScrollView style={styles.scrollView}>
           {Object.entries(meals).map(([mealType, mealData]) => (
             <MealSection
@@ -169,21 +262,41 @@ const DiaryPage = () => {
               carbRecommendation={45}
               items={mealData.items}
               onAddPress={() => navigateToMealEntry(mealType)}
+              onDelete={(index) => deleteFoodItem(mealType, index)}
             />
           ))}
           <ExerciseSection
             calories={totalExerciseCalories}
             items={exercises}
             onAddPress={navigateToExerciseEntry}
+            onDelete={deleteExerciseItem}
           />
         </ScrollView>
       </View>
     </SafeAreaView>
   );
+  
 };
 
-const MealSection = ({ title, calories, carbRecommendation, items = [], onAddPress }) => {
+const MealSection = ({ title, calories, carbRecommendation, items = [], onAddPress, onDelete }) => {
   const totalCarbs = items.reduce((sum, item) => sum + (item.carbs || 0), 0);
+
+  const handleDelete = (index) => {
+    Alert.alert(
+      'Delete Item',
+      'Are you sure you want to delete this item?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Delete',
+          onPress: () => onDelete(index)
+        }
+      ]
+    );
+  };
 
   return (
     <View style={styles.mealSection}>
@@ -226,7 +339,7 @@ const MealSection = ({ title, calories, carbRecommendation, items = [], onAddPre
           <View style={styles.foodCaloriesContainer}>
             <Text style={styles.foodCalories}>{item.calories} cals</Text>
             <Text style={styles.foodCarbs}>{item.carbs || 0} g carbs</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => handleDelete(index)}>
               <Icon name="ellipsis-vertical" size={18} color="#999" />
             </TouchableOpacity>
           </View>
@@ -241,7 +354,8 @@ const MealSection = ({ title, calories, carbRecommendation, items = [], onAddPre
   );
 };
 
-const ExerciseSection = ({ calories, items = [], onAddPress }) => (
+
+const ExerciseSection = ({ calories, items = [], onAddPress, onDelete }) => (
   <View style={styles.mealSection}>
     <TouchableOpacity
       style={[styles.mealHeader, { backgroundColor: '#2196F3' }]}>
@@ -263,7 +377,22 @@ const ExerciseSection = ({ calories, items = [], onAddPress }) => (
         </View>
         <View style={styles.foodCaloriesContainer}>
           <Text style={styles.foodCalories}>{item.calories} cals</Text>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => {
+            Alert.alert(
+              'Delete Exercise',
+              'Are you sure you want to delete this exercise?',
+              [
+                {
+                  text: 'Cancel',
+                  style: 'cancel'
+                },
+                {
+                  text: 'Delete',
+                  onPress: () => onDelete(index)
+                }
+              ]
+            );
+          }}>
             <Icon name="ellipsis-vertical" size={18} color="#999" />
           </TouchableOpacity>
         </View>
@@ -316,6 +445,11 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  summaryButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#4caf50',
   },
   caloriesSummary: {
     flexDirection: 'row',

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
-import { getFirestore, collection, query, orderBy, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
+import { getFirestore, collection, query, orderBy, onSnapshot, deleteDoc, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { app } from "../config/firebase.config";
 
@@ -11,12 +11,13 @@ const BlogList = () => {
   const [selectedTab, setSelectedTab] = useState('health');
   const [blogs, setBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [bookmarkedBlogs, setBookmarkedBlogs] = useState([]); // To track bookmarked blogs
   const auth = getAuth(app);
   const db = getFirestore(app);
 
   useEffect(() => {
     const q = query(collection(db, 'blogs'), orderBy('createdAt', 'desc'));
-    
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const blogData = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -32,6 +33,23 @@ const BlogList = () => {
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    // Fetch user's bookmarked blogs
+    const fetchBookmarkedBlogs = async () => {
+      const user = auth.currentUser;
+      if (user) {
+        const userRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userRef);
+        if (userDoc.exists()) {
+          const bookmarks = userDoc.data().bookmarks || [];
+          setBookmarkedBlogs(bookmarks.map(bookmark => bookmark.blogId));
+        }
+      }
+    };
+
+    fetchBookmarkedBlogs();
+  }, []);
+
   const handleDeleteBlog = async (blogId) => {
     Alert.alert(
       "Delete Blog",
@@ -41,8 +59,8 @@ const BlogList = () => {
           text: "Cancel",
           style: "cancel"
         },
-        { 
-          text: "OK", 
+        {
+          text: "OK",
           onPress: async () => {
             try {
               await deleteDoc(doc(db, 'blogs', blogId));
@@ -57,13 +75,42 @@ const BlogList = () => {
     );
   };
 
+
+  const handleBookmark = async (blogId, blogData) => {
+    const user = auth.currentUser;
+
+    if (user) {
+      const userRef = doc(db, 'users', user.uid);
+
+      try {
+        const userDoc = await getDoc(userRef);
+        const bookmarks = userDoc.exists() ? userDoc.data().bookmarks || [] : [];
+
+        if (bookmarkedBlogs.includes(blogId)) {
+          // Unbookmark the blog if it is already bookmarked
+          const updatedBookmarks = bookmarks.filter(bookmark => bookmark.blogId !== blogId);
+          await updateDoc(userRef, { bookmarks: updatedBookmarks });
+          setBookmarkedBlogs(updatedBookmarks.map(bookmark => bookmark.blogId)); // Update local state
+          Alert.alert('Success', 'Blog unbookmarked successfully!');
+        } else {
+          // Bookmark the blog if it is not already bookmarked
+          const newBookmarks = [...bookmarks, { blogId, ...blogData }];
+          await updateDoc(userRef, { bookmarks: newBookmarks });
+          setBookmarkedBlogs([...bookmarkedBlogs, blogId]); // Add blog to local state
+          Alert.alert('Success', 'Blog bookmarked successfully!');
+        }
+      } catch (error) {
+        console.error('Error updating bookmarks:', error);
+        Alert.alert('Error', 'Failed to update bookmarks. Please try again.');
+      }
+    }
+  };
+
   const renderBlogItem = (item) => {
     // Check if the current user is the author
     const isCurrentUserAuthor = auth.currentUser && auth.currentUser.uid === item.userId;
-  
-    console.log('Rendering Blog Item:', item);
-    console.log('Is Current User Author:', isCurrentUserAuthor);
-  
+    const isBookmarked = bookmarkedBlogs.includes(item.id); // Check if the blog is bookmarked
+
     return (
       <TouchableOpacity
         key={item.id}
@@ -78,10 +125,23 @@ const BlogList = () => {
             <Text style={styles.blogCategory}>{item.category}</Text>
           </View>
         </View>
+
+        {/* Bookmark Button */}
+        <TouchableOpacity
+          style={styles.bookmarkButton}
+          onPress={() => handleBookmark(item.id, { title: item.title, author: item.author })}
+        >
+          <Icon
+            name={isBookmarked ? "bookmark" : "bookmark-outline"}
+            size={24}
+            color={isBookmarked ? "#FFD700" : "#FFD700"} // Change to full yellow if bookmarked
+          />        
+          </TouchableOpacity>
+
         {isCurrentUserAuthor && (
           <TouchableOpacity
             style={styles.deleteButton}
-            onPress={() => handleDeleteBlog(item.id)}
+            onPress={() => handleDeleteBlog(item.id)} // Handles blog deletion
           >
             <Icon name="trash-outline" size={24} color="#FF6347" />
           </TouchableOpacity>
@@ -89,7 +149,7 @@ const BlogList = () => {
       </TouchableOpacity>
     );
   };
-  
+
 
   return (
     <View style={styles.container}>
@@ -125,7 +185,7 @@ const BlogList = () => {
         </ScrollView>
       )}
 
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.createButton}
         onPress={() => navigation.navigate('CreateBlogScreen')}
       >
@@ -240,27 +300,36 @@ const styles = StyleSheet.create({
   },
   createButton: {
     position: 'absolute',
-    right: 20,
-    bottom: 20,
+    right: 16,
+    bottom: 16,
     backgroundColor: '#8FBC8F',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 30,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 25,
     elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   createButtonText: {
+    marginLeft: 8,
     color: '#FFF',
     fontWeight: 'bold',
-    marginLeft: 10,
   },
-  deleteButton: {
+  bookmarkButton: {
+    position: 'absolute',
+    right: 16,
+    top: 16,
+  }, deleteButton: {
     position: 'absolute',
     top: 10,
-    right: 10,
+    right: 40,  // Adjust the right value to position it beside the bookmark
     padding: 5,
   },
+
 });
 
 export default BlogList;

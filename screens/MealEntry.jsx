@@ -35,26 +35,30 @@ const MealEntry = () => {
   const addToDiary = async (food) => {
     try {
       const userId = auth.currentUser.uid;
-      const diaryRef = doc(db, 'diaries', userId, 'entries', date.split('T')[0]);
+      const diaryRef = doc(db, 'users', userId, 'entries', date.split('T')[0]);
       
       const docSnap = await getDoc(diaryRef);
       let currentMeals = docSnap.exists() ? (docSnap.data().meals || {}) : {};
       
       if (!currentMeals[mealType]) {
-        currentMeals[mealType] = { items: [], calories: 0, carbs: 0 };
+        currentMeals[mealType] = { items: [], calories: 0, carbs: 0, protein: 0, fat: 0 }; // Add protein and fat
       }
       
       const newItem = {
         name: food.name,
         amount: food.amount,
         calories: food.calories || 0,
-        carbs: food.carbs || 0
+        carbs: food.carbs || 0,
+        protein: food.protein || 0,  // Add protein field
+        fat: food.fat || 0           // Add fat field
       };
-
+  
       currentMeals[mealType].items.push(newItem);
       currentMeals[mealType].calories += newItem.calories;
       currentMeals[mealType].carbs += newItem.carbs;
-
+      currentMeals[mealType].protein += newItem.protein;  // Update protein
+      currentMeals[mealType].fat += newItem.fat;          // Update fat
+  
       await setDoc(diaryRef, { 
         meals: currentMeals, 
         date: date,
@@ -68,6 +72,7 @@ const MealEntry = () => {
       Alert.alert('Error', 'Failed to add food to diary. Please try again.');
     }
   };
+  
 
   const filteredFoodList = foodList.filter(food => 
     food.name.toLowerCase().includes(searchQuery.toLowerCase())
