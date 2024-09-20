@@ -13,7 +13,6 @@ import { ProgressBar } from 'react-native-paper';
 import { firebaseAuth, firebaseDB } from "../config/firebase.config";
 import { doc, getDoc, collection, query, where, onSnapshot } from "firebase/firestore";
 
-
 const HealthDashboard = ({ navigation }) => {
   const [latestBloodSugar, setLatestBloodSugar] = useState(null);
   const [latestWeight, setLatestWeight] = useState(null);
@@ -29,6 +28,9 @@ const HealthDashboard = ({ navigation }) => {
   const [proteinConsumed, setProteinConsumed] = useState(0);
   const [carbsConsumed, setCarbsConsumed] = useState(0);
   const [fatConsumed, setFatConsumed] = useState(0);
+  const [proteinGoal, setProteinGoal] = useState(0);
+  const [carbsGoal, setCarbsGoal] = useState(0);
+  const [fatGoal, setFatGoal] = useState(0);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   useEffect(() => {
@@ -50,7 +52,7 @@ const HealthDashboard = ({ navigation }) => {
       unsubscribe();
       navigation.removeListener('focus', focusListener);
     };
-  }, []);
+  }, [navigation]);
 
   const loadLatestData = async () => {
     try {
@@ -62,10 +64,9 @@ const HealthDashboard = ({ navigation }) => {
         if (docSnap.exists()) {
           const data = docSnap.data();
           setCaloriesAllowed(data.tdee);
-          setCaloriesConsumed(0); // You might want to fetch actual consumed data instead of setting it to 0
-          setProteinConsumed(data.macronutrients.protein);
-          setCarbsConsumed(data.macronutrients.carbs);
-          setFatConsumed(data.macronutrients.fat);
+          setProteinGoal(data.macronutrients?.protein || 50); // Default to 50 if not set
+        setCarbsGoal(data.macronutrients?.carbs || 300); // Default to 300 if not set
+        setFatGoal(data.macronutrients?.fat || 70); // Default to 70 if not set
         } else {
           console.log("No such document!");
         }
@@ -105,8 +106,32 @@ const HealthDashboard = ({ navigation }) => {
         setLatestWeight(null);
       }
 
-      // Placeholder for setting carbs, protein, and fat consumed (these should come from actual consumption data)
+      // Fetch diary entries
+      const diaryRef = doc(firebaseDB, 'users', user.uid, 'entries', new Date().toISOString().split('T')[0]);
+      const diarySnap = await getDoc(diaryRef);
+      if (diarySnap.exists()) {
+        const diaryData = diarySnap.data();
+        const meals = diaryData.meals || {};
 
+        let totalCalories = 0;
+        let totalProtein = 0;
+        let totalCarbs = 0;
+        let totalFat = 0;
+
+        Object.values(meals).forEach(meal => {
+          totalCalories += meal.calories || 0;
+          totalProtein += meal.protein || 0;
+          totalCarbs += meal.carbs || 0;
+          totalFat += meal.fat || 0;
+        });
+
+        setCaloriesConsumed(totalCalories);
+        setProteinConsumed(totalProtein);
+        setCarbsConsumed(totalCarbs);
+        setFatConsumed(totalFat);
+      } else {
+        console.log("No diary data found!");
+      }
 
     } catch (error) {
       console.error('Error loading latest data:', error);
@@ -114,45 +139,47 @@ const HealthDashboard = ({ navigation }) => {
   };
 
   const CalorieInfo = () => {
+    // Ensure values are numbers and provide default values if necessary
+    const caloriesAllowedNumber = Number(caloriesAllowed) || 0;
+    const caloriesConsumedNumber = Number(caloriesConsumed) || 0;
+    const proteinConsumedNumber = Number(proteinConsumed) || 0;
+    const carbsConsumedNumber = Number(carbsConsumed) || 0;
+    const fatConsumedNumber = Number(fatConsumed) || 0;
+  
     // Calculate the remaining amounts and percentages
-    const caloriesLeft = Math.max(caloriesAllowed - 0);
-    const proteinLeft = proteinConsumed - proteinConsumed; // Replace 150 with your protein goal
-    const carbsLeft = carbsConsumed - carbsConsumed; // Replace 250 with your carbs goal
-    const fatLeft = fatConsumed - fatConsumed; // Replace 70 with your fat goal
-
-    const caloriesPercentage = 0.2;
-    const proteinPercentage = 0.4; // Assuming 150g is your protein goal
-    const carbsPercentage = 0.2; // Assuming 250g is your carbs goal
-    const fatPercentage = 0.5; // Assuming 70g is your fat goal
-
-     const onRefresh = async () => {
-    setRefreshing(true);
-    await fetchBlogs(); // Re-fetch blogs
-    setRefreshing(false);
-  };
-
+    const caloriesLeft = Math.max(caloriesAllowedNumber - caloriesConsumedNumber, 0);
+    const proteinLeft = Math.max(proteinGoal - proteinConsumedNumber, 0);
+    const carbsLeft = Math.max(carbsGoal - carbsConsumedNumber, 0);
+    const fatLeft = Math.max(fatGoal - fatConsumedNumber, 0);
+  
+    const caloriesPercentage = caloriesAllowedNumber > 0 ? Math.min(caloriesConsumedNumber / caloriesAllowedNumber, 1) : 0;
+    const proteinPercentage = proteinGoal > 0 ? Math.min(proteinConsumedNumber / proteinGoal, 1) : 0;
+    const carbsPercentage = carbsGoal > 0 ? Math.min(carbsConsumedNumber / carbsGoal, 1) : 0;
+    const fatPercentage = fatGoal > 0 ? Math.min(fatConsumedNumber / fatGoal, 1) : 0;
+  
     return (
       <View style={styles.calorieInfoContainer}>
         <Text style={styles.calorieInfoTitle}>Today's Nutrition</Text>
-
-        <Text style={styles.calorieInfoText}>Calories: {caloriesConsumed} / {caloriesAllowed} kcal</Text>
+  
+        <Text style={styles.calorieInfoText}>Calories: {caloriesConsumedNumber} / {caloriesAllowedNumber} kcal</Text>
         <ProgressBar progress={caloriesPercentage} color="#FF6347" style={styles.progressBar} />
         <Text style={styles.calorieInfoTextSmall}>{caloriesLeft} kcal left</Text>
-
-        <Text style={styles.calorieInfoText}>Protein: {proteinConsumed} / {proteinConsumed} g</Text>
+  
+        <Text style={styles.calorieInfoText}>Protein: {proteinConsumedNumber} / {proteinGoal} g</Text>
         <ProgressBar progress={proteinPercentage} color="#1E90FF" style={styles.progressBar} />
         <Text style={styles.calorieInfoTextSmall}>{proteinLeft}g left</Text>
-
-        <Text style={styles.calorieInfoText}>Carbs: {carbsConsumed} / {carbsConsumed} g</Text>
+  
+        <Text style={styles.calorieInfoText}>Carbs: {carbsConsumedNumber} / {carbsGoal} g</Text>
         <ProgressBar progress={carbsPercentage} color="#32CD32" style={styles.progressBar} />
         <Text style={styles.calorieInfoTextSmall}>{carbsLeft}g left</Text>
-
-        <Text style={styles.calorieInfoText}>Fat: {fatConsumed} / {fatConsumed} g</Text>
+  
+        <Text style={styles.calorieInfoText}>Fat: {fatConsumedNumber} / {fatGoal} g</Text>
         <ProgressBar progress={fatPercentage} color="#FFD700" style={styles.progressBar} />
         <Text style={styles.calorieInfoTextSmall}>{fatLeft}g left</Text>
       </View>
     );
   };
+  
 
   return (
     <SafeAreaView style={styles.container}>

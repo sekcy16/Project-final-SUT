@@ -33,12 +33,13 @@ import {
 } from "./screens";
 import FoodResult from "./components/FoodResult";
 import Nutrition from "./components/Nutrition";
-
 import TotalCalories from "./screens/TotalCalories";
 import ExerciseEntry from "./screens/ExerciseEntry";
 import WeightProgress from "./screens/WeightProgress";
 import BlogDetail from "./screens/BlogDetail";
 import CreateBlogScreen from "./screens/CreateBlogScreen";
+import BookmarkListPage from "./screens/BookmarkListPage";
+import SummaryPage from "./screens/SummaryPage";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -281,6 +282,8 @@ const RootNavigator = () => {
       <Stack.Screen name="FoodDetail" component={FoodDetail} />
       <Stack.Screen name="AddTaskScreen" component={AddTaskScreen} />
       <Stack.Screen name="ProfileDoctor" component={ProfileDoctor} />
+      <Stack.Screen name="BookmarkListPage" component={BookmarkListPage} />
+      <Stack.Screen name="SummaryPage" component={SummaryPage} />
     </Stack.Navigator>
   );
 };

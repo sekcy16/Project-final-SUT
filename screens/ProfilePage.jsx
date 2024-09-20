@@ -14,8 +14,6 @@ import { useNavigation } from "@react-navigation/native";
 import { firebaseAuth, firebaseDB } from "../config/firebase.config";
 import { doc, getDoc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import * as ImagePicker from 'expo-image-picker';
 
 const ProfilePage = () => {
   const navigation = useNavigation();
@@ -40,8 +38,7 @@ const ProfilePage = () => {
       const userDoc = await getDoc(userDocRef);
 
       if (userDoc.exists()) {
-        const userData = userDoc.data();
-        setUserData(userData);
+        setUserData(userDoc.data());
       } else {
         console.error("No such document!");
       }
@@ -62,7 +59,6 @@ const ProfilePage = () => {
       });
   };
 
-  // Call fetchUserData when refreshing
   const onRefresh = async () => {
     setRefreshing(true);
     const user = firebaseAuth.currentUser;
@@ -79,7 +75,7 @@ const ProfilePage = () => {
         <RefreshControl
           refreshing={refreshing}
           onRefresh={onRefresh}
-          colors={["#1E88E5"]} // Color of the refresh spinner
+          colors={['#1E88E5']} // Color of the refresh spinner
         />
       }
     >
@@ -150,6 +146,12 @@ const ProfilePage = () => {
           label="Notifications"
           onPress={() => navigation.navigate("NotificationListScreen")}
         />
+        <MenuItem
+          icon="bookmark-outline"
+          label="Bookmarks"
+          onPress={() => navigation.navigate("BookmarkListPage")}
+        />
+
       </View>
     </ScrollView>
   );
