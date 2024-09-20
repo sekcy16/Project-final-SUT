@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, RefreshControl } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
-import { getFirestore, collection, query, orderBy, onSnapshot, doc, getDoc, getDocs, addDoc, deleteDoc } from 'firebase/firestore';
+import { getFirestore, collection, query, orderBy, getDocs, where, deleteDoc, doc, getDoc } from 'firebase/firestore';
 import { app, firebaseAuth } from "../../config/firebase.config";
 import { onAuthStateChanged } from 'firebase/auth';
+import moment from 'moment';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const DoctorHomePage = () => {
   const navigation = useNavigation();
@@ -14,6 +16,7 @@ const DoctorHomePage = () => {
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [userId, setUserId] = useState(null);
 
   const db = getFirestore(app);
 
@@ -21,16 +24,18 @@ const DoctorHomePage = () => {
     const unsubscribeAuth = onAuthStateChanged(firebaseAuth, (user) => {
       if (user) {
         console.log('User authenticated:', user.uid);
+        setUserId(user.uid);
         fetchUserData(user.uid);
         fetchTasks(user.uid);
         fetchBlogs();
       } else {
         console.log('No user authenticated');
         setUserData(null);
+        setUserId(null);
       }
     });
-
-    return () => unsubscribeAuth(); 
+  
+    return () => unsubscribeAuth();
   }, []);
 
   const fetchUserData = async (userId) => {
@@ -50,8 +55,11 @@ const DoctorHomePage = () => {
 
   const fetchTasks = async (userId) => {
     try {
-      console.log('Fetching tasks for user:', userId);
-      const q = query(collection(db, `users/${userId}/tasks`), orderBy('time', 'asc'));
+      const currentDate = new Date().toISOString().slice(0, 10);
+      const q = query(
+        collection(db, `users/${userId}/TasksByDate/${currentDate}/tasks`),
+        orderBy('time', 'asc')
+      );
       const snapshot = await getDocs(q);
       const tasksData = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -59,24 +67,19 @@ const DoctorHomePage = () => {
       }));
       console.log('Tasks fetched:', tasksData);
       setTasks(tasksData);
-      setLoading(false);
     } catch (error) {
       console.error("Error fetching tasks: ", error);
-    } finally {
-      setLoading(false);
     }
   };
 
   const fetchBlogs = async () => {
     try {
-      console.log('Fetching blogs...');
       const q = query(collection(db, 'blogs'), orderBy('createdAt', 'desc'));
       const snapshot = await getDocs(q);
       const blogData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
       }));
-      console.log('Blogs fetched:', blogData);
       setBlogs(blogData);
       updateDisplayedBlogs(blogData);
     } catch (error) {
@@ -94,8 +97,12 @@ const DoctorHomePage = () => {
   const onRefresh = async () => {
     setRefreshing(true);
     console.log('Refreshing data...');
-    await fetchTasks(userData?.id);
-    await fetchBlogs();
+    if (userId) {
+      await fetchTasks(userId);
+      await fetchBlogs();
+    } else {
+      console.error('No user ID available for refresh');
+    }
     setRefreshing(false);
   };
 
@@ -109,17 +116,22 @@ const DoctorHomePage = () => {
 
   const handleDeleteTask = async (taskId) => {
     try {
+      const currentDate = new Date().toISOString().slice(0, 10); // กำหนด currentDate
       console.log('Deleting task:', taskId);
-      await deleteDoc(doc(db, `users/${userData.id}/tasks`, taskId));
-      fetchTasks(userData.id);
+      await deleteDoc(doc(db, `users/${userId}/TasksByDate/${currentDate}/tasks`, taskId)); // ใช้ currentDate ที่กำหนด
+      fetchTasks(userId);
     } catch (error) {
       console.error("Error deleting task: ", error);
     }
   };
+  
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <LinearGradient
+        colors={['#2196F3', '#1E88E5']}
+        style={styles.header}
+      >
         <View style={styles.profileContainer}>
           <Image
             source={{
@@ -135,7 +147,7 @@ const DoctorHomePage = () => {
         >
           <Icon name="add-outline" size={28} color="#FFF" />
         </TouchableOpacity>
-      </View>
+      </LinearGradient>
 
       <ScrollView
         style={styles.content}
@@ -152,21 +164,23 @@ const DoctorHomePage = () => {
           <Text style={styles.sectionTitle}>ตารางวันนี้</Text>
           {loading ? (
             <ActivityIndicator size="large" color="#1E88E5" />
-          ) : (
+          ) : tasks.length > 0 ? (
             tasks.map((task) => (
               <View key={task.id} style={styles.taskCard}>
-                <Text style={styles.taskTime}>{task.time}</Text>
+                <Text style={styles.taskTime}>{moment(task.time, 'HH:mm:ss').format('HH:mm')}</Text>
                 <View style={styles.taskContent}>
-                  <Text style={styles.taskTitle}>{task.title}</Text>
+                  <Text style={styles.taskTitle}>{task.task}</Text>
                   <Text style={[styles.taskDescription, task.completed && styles.taskCompleted]}>
-                    {task.description}
+                    {task.description || "No description provided"} 
                   </Text>
                 </View>
-                <TouchableOpacity onPress={() => handleDeleteTask(task.id)}>
-                  <Icon name="trash-outline" size={20} color="red" />
+                <TouchableOpacity onPress={() => handleDeleteTask(task.id)} style={styles.deleteButton}>
+                  <Icon name="trash-outline" size={20} color="#FF5252" />
                 </TouchableOpacity>
               </View>
             ))
+          ) : (
+            <Text style={styles.noTaskText}>คุณไม่มีงานสำหรับวันนี้</Text>
           )}
         </View>
 
@@ -186,7 +200,7 @@ const DoctorHomePage = () => {
                 <View style={styles.blogContent}>
                   <Text style={styles.blogTitle}>{blog.title}</Text>
                   <View style={styles.blogInfo}>
-                    <View style={[styles.authorIndicator, { backgroundColor: 'blue' }]} />
+                    <View style={[styles.authorIndicator, { backgroundColor: '#1E88E5' }]} />
                     <Text style={styles.blogAuthor}>{blog.author}</Text>
                   </View>
                 </View>
@@ -202,14 +216,14 @@ const DoctorHomePage = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#E3F2FD",
+    backgroundColor: "#F5F5F5",
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     padding: 20,
-    backgroundColor: "#2196F3",
+    paddingTop: 40,
     elevation: 4,
   },
   profileContainer: {
@@ -219,8 +233,10 @@ const styles = StyleSheet.create({
   profileImage: {
     width: 50,
     height: 50,
-    borderRadius: 50,
+    borderRadius: 25,
     marginRight: 10,
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
   },
   userName: {
     fontSize: 20,
@@ -231,82 +247,101 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   todoContainer: {
-    backgroundColor: "#E3F2FD",
+    backgroundColor: "#FFFFFF",
     margin: 16,
     padding: 16,
     borderRadius: 12,
     elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "bold",
     color: "#1E88E5",
-    marginBottom: 12,
+    marginBottom: 16,
   },
   taskCard: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 12,
+    padding: 16,
     marginBottom: 12,
-    backgroundColor: "#FFF",
+    backgroundColor: "#F5F5F5",
     borderRadius: 10,
     elevation: 2,
   },
   taskTime: {
     width: 50,
     fontSize: 14,
-    color: "#555",
+    fontWeight: "bold",
+    color: "#1E88E5",
   },
   taskContent: {
     flex: 1,
-    marginLeft: 8,
+    marginLeft: 12,
   },
   taskTitle: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#1E88E5",
-  },
-  taskCompleted: {
-    color: "#4CAF50",
-    textDecorationLine: "line-through",
+    color: "#333",
+    marginBottom: 4,
   },
   taskDescription: {
     fontSize: 14,
-    color: "#666",
+    color: "#757575",
+  },
+  taskCompleted: {
+    textDecorationLine: "line-through",
+    color: "#BDBDBD",
+  },
+  noTaskText: {
+    fontSize: 16,
+    color: '#757575',
+    textAlign: 'center',
+    marginTop: 20,
+    fontStyle: 'italic',
+  },
+  addIcon: {
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    padding: 10,
+    borderRadius: 25,
   },
   blogContainer: {
-    backgroundColor: "#E3F2FD",
     margin: 16,
-    padding: 16,
-    borderRadius: 12,
-    elevation: 4,
   },
   blogItem: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#B3E5FC",
+    marginBottom: 16,
+    borderRadius: 12,
+    elevation: 3,
+    backgroundColor: "#FFF",
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
   blogImage: {
     width: 100,
     height: 100,
-    borderRadius: 10,
-    marginRight: 16,
+    borderTopLeftRadius: 12,
+    borderBottomLeftRadius: 12,
   },
   blogContent: {
     flex: 1,
+    padding: 12,
   },
   blogTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "bold",
-    color: "#1E88E5",
+    color: "#333",
+    marginBottom: 8,
   },
   blogInfo: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 8,
   },
   authorIndicator: {
     width: 8,
@@ -318,8 +353,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#757575",
   },
-  addIcon: {
-    marginRight: 16,
+  deleteButton: {
+    padding: 8,
   },
 });
 

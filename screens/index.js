@@ -20,3 +20,4 @@ export { default as AdvicePage} from './DoctorScreen/AdvicePage';
 export { default as EditProfilePage} from './EditProfilePage';
 export { default as FoodDetail } from './FoodDetail'
 export { default as AddTaskScreen } from './DoctorScreen/AddTaskScreen'
+export { default as ProfileDoctor } from './DoctorScreen/ProfileDoctor'
