@@ -1,33 +1,38 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { firebaseDB, auth } from "../../config/firebase.config"; // Import firebaseDB and auth from your config
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { firebaseDB, firebaseAuth as auth } from "../../config/firebase.config";
+import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
 
 const PatientListScreen = ({ navigation }) => {
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState('');
-  const [error, setError] = useState(null);  // Added error state
+  const [error, setError] = useState(null);
   
-  const fetchPatients = async () => {
+  const fetchPatients = async (user) => {
     try {
-      // Check if auth is defined
-      if (!auth) {
-        throw new Error("Firebase auth is not initialized");
-      }
-
-      // Check if the current user is a doctor
-      const currentUser = auth.currentUser;
-      if (!currentUser) {
+      if (!user) {
         throw new Error("User not authenticated");
       }
 
-      const userDoc = await getDocs(query(collection(firebaseDB, 'users'), where('uid', '==', currentUser.uid)));
-      if (userDoc.empty || userDoc.docs[0].data().role !== 'Doctor') {
-        throw new Error("Only doctors can access this screen");
+      console.log("Attempting to fetch user document for UID:", user.uid);
+      const userDocRef = doc(firebaseDB, 'users', user.uid);
+      const userDocSnap = await getDoc(userDocRef);
+
+      if (!userDocSnap.exists()) {
+        throw new Error("User document not found");
       }
 
+      const userData = userDocSnap.data();
+      console.log("User data:", userData);
+
+      if (userData.role !== 'Doctor') {
+        throw new Error(`User role is ${userData.role}, not Doctor`);
+      }
+
+      console.log("User is confirmed as a Doctor. Fetching patients...");
       const usersCollection = collection(firebaseDB, 'users');
       const q = query(usersCollection, where('role', '==', 'User'));
       const snapshot = await getDocs(q);
@@ -35,10 +40,11 @@ const PatientListScreen = ({ navigation }) => {
         id: doc.id,
         ...doc.data(),
       }));
+      console.log("Fetched patients:", fetchedPatients.length);
       setPatients(fetchedPatients);
       setError(null);
     } catch (error) {
-      console.error("Error fetching patients:", error);
+      console.error("Error in fetchPatients:", error);
       setError(error.message);
       setPatients([]);
     } finally {
@@ -47,8 +53,20 @@ const PatientListScreen = ({ navigation }) => {
   };
   
   useEffect(() => {
-    fetchPatients();
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        console.log("Auth state changed. User is signed in:", user.uid);
+        fetchPatients(user);
+      } else {
+        console.log("Auth state changed. No user signed in.");
+        setError("User not authenticated");
+        setLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
+  
 
   const filteredPatients = patients.filter(patient =>
     patient.fullName ? patient.fullName.toLowerCase().includes(searchText.toLowerCase()) : false

@@ -154,14 +154,14 @@ const MainTabNavigator = () => (
           case "HealthDashboard":
             iconName = focused ? "home" : "home-outline";
             break;
-          case "MealEntry":
-            iconName = focused ? "restaurant" : "chatbubbles-outline";
+          case "DiaryPage":
+            iconName = focused ? "book" : "book-outline";
             break;
           case "ProfilePage":
             iconName = focused ? "person" : "person-outline";
             break;
-          case "DiaryPage":
-            iconName = focused ? "book" : "book-outline";
+          case "Blog":
+            iconName = focused ? "chatbubbles" : "chatbubbles-outline";
             break;
           default:
             iconName = "alert";
@@ -170,12 +170,18 @@ const MainTabNavigator = () => (
       },
       tabBarActiveTintColor: "#4CAF50",
       tabBarInactiveTintColor: "gray",
-      tabBarStyle: {
-        backgroundColor: "#ffffff",
-        borderTopWidth: 1,
-        borderTopColor: "#e0e0e0",
-        height: 60,
-        paddingBottom: 5,
+      tabBarStyle: (route) => {
+        const routeName = getFocusedRouteNameFromRoute(route) ?? "";
+        if (routeName === 'FoodARPage') {
+          return { display: 'none' };
+        }
+        return {
+          backgroundColor: "#ffffff",
+          borderTopWidth: 1,
+          borderTopColor: "#e0e0e0",
+          height: 60,
+          paddingBottom: 5,
+        };
       },
       tabBarItemStyle: {
         marginTop: 5,
@@ -211,18 +217,8 @@ const MainTabNavigator = () => (
     <Tab.Screen
       name="Blog"
       component={BlogList}
-      options={{
-        tabBarIcon: ({ focused, color, size }) => (
-          <Icon
-            name={focused ? "chatbubbles" : "chatbubbles-outline"}
-            size={size}
-            color={color}
-          />
-        ),
-        tabBarLabel: "Blog",
-      }}
+      options={{ tabBarLabel: "Blog" }}
     />
-
     <Tab.Screen
       name="ProfilePage"
       component={ProfilePage}
