@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList } from 'react-native';
+import { View, Text, StyleSheet, FlatList, SafeAreaView, ScrollView } from 'react-native';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
+import { LinearGradient } from 'expo-linear-gradient';
+import Icon from 'react-native-vector-icons/Ionicons';
 
 const SummaryPage = ({ route }) => {
-  const { date } = route.params; // Get the date passed from DiaryPage
+  const { date } = route.params;
   const [diary, setDiary] = useState({
     totalCalories: 0,
     totalProtein: 0,
@@ -113,72 +115,202 @@ const SummaryPage = ({ route }) => {
   }, [firestore, user?.uid, date]); // Add date to the dependency array
 
   if (!diary || !goals) {
-    return <Text style={styles.loadingText}>Loading...</Text>;
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
   }
 
   const renderExerciseItem = ({ item }) => (
     <View style={styles.exerciseItem}>
-      <Text style={styles.exerciseName}>{item.name}</Text>
-      <Text style={styles.text}>Calories Burned: {item.calories} kcal</Text>
-      <Text style={styles.text}>Duration: {item.duration} minutes</Text>
+      <Icon name="fitness-outline" size={24} color="#4caf50" style={styles.exerciseIcon} />
+      <View style={styles.exerciseDetails}>
+        <Text style={styles.exerciseName}>{item.name}</Text>
+        <Text style={styles.exerciseText}>Calories Burned: {item.calories} kcal</Text>
+        <Text style={styles.exerciseText}>Duration: {item.duration} minutes</Text>
+      </View>
+    </View>
+  );
+
+  const MacroProgressBar = ({ title, current, goal, color }) => (
+    <View style={styles.macroProgressContainer}>
+      <Text style={styles.macroTitle}>{title}</Text>
+      <View style={styles.progressBarContainer}>
+        <View style={[styles.progressBar, { width: `${Math.min((current / goal) * 100, 100)}%`, backgroundColor: color }]} />
+      </View>
+      <Text style={styles.macroText}>{current}g / {goal}g</Text>
     </View>
   );
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>Summary for {new Date(date).toLocaleDateString()}</Text>
-      <Text style={styles.header}>Nutrition Summary</Text>
-      <Text style={styles.text}>Calories: {diary.totalCalories} / {goals.tdee || 0}</Text>
-      <Text style={styles.text}>Carbs: {diary.totalCarbs}g / {goals.carbs || 0}g</Text>
-      <Text style={styles.text}>Protein: {diary.totalProtein}g / {goals.protein || 0}g</Text>
-      <Text style={styles.text}>Fat: {diary.totalFat}g / {goals.fat || 0}g</Text>
+    <SafeAreaView style={styles.container}>
+      <ScrollView>
+        <LinearGradient colors={['#4caf50', '#45a049']} style={styles.header}>
+          <Text style={styles.headerText}>Summary for {new Date(date).toLocaleDateString()}</Text>
+        </LinearGradient>
 
-      <Text style={styles.header}>Exercise Summary</Text>
-      <Text style={styles.text}>Total Calories Burned: {diary.exercises.totalCaloriesBurned} kcal</Text>
-      <Text style={styles.text}>Total Duration: {diary.exercises.totalDuration} minutes</Text>
-      <FlatList
-        data={diary.exercises.list}
-        keyExtractor={(item, index) => index.toString()}
-        renderItem={renderExerciseItem}
-        ListEmptyComponent={<Text style={styles.text}>No exercises recorded for this day.</Text>}
-      />
-    </View>
+        <View style={styles.card}>
+          <Text style={styles.cardHeader}>Nutrition Summary</Text>
+          <View style={styles.caloriesSummary}>
+            <Text style={styles.caloriesText}>{diary.totalCalories}</Text>
+            <Text style={styles.caloriesLabel}>calories consumed</Text>
+          </View>
+          <Text style={styles.goalText}>Goal: {goals.tdee || 0} calories</Text>
+
+          <MacroProgressBar title="Carbs" current={diary.totalCarbs} goal={goals.carbs || 0} color="#FFB300" />
+          <MacroProgressBar title="Protein" current={diary.totalProtein} goal={goals.protein || 0} color="#2196F3" />
+          <MacroProgressBar title="Fat" current={diary.totalFat} goal={goals.fat || 0} color="#FF5722" />
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardHeader}>Exercise Summary</Text>
+          <View style={styles.exerciseSummary}>
+            <View style={styles.exerciseSummaryItem}>
+              <Icon name="flame-outline" size={24} color="#4caf50" />
+              <Text style={styles.exerciseSummaryText}>{diary.exercises.totalCaloriesBurned} kcal burned</Text>
+            </View>
+            <View style={styles.exerciseSummaryItem}>
+              <Icon name="time-outline" size={24} color="#4caf50" />
+              <Text style={styles.exerciseSummaryText}>{diary.exercises.totalDuration} minutes</Text>
+            </View>
+          </View>
+          <FlatList
+            data={diary.exercises.list}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={renderExerciseItem}
+            ListEmptyComponent={<Text style={styles.emptyListText}>No exercises recorded for this day.</Text>}
+          />
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: '#f5f5f5',
   },
   header: {
+    padding: 20,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+  },
+  headerText: {
     fontSize: 22,
     fontWeight: 'bold',
-    marginBottom: 20,
-    color: '#4caf50', // Main color
+    color: '#fff',
   },
-  text: {
-    fontSize: 18,
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    margin: 10,
+    padding: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  cardHeader: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#4caf50',
+    marginBottom: 15,
+  },
+  caloriesSummary: {
+    alignItems: 'center',
     marginBottom: 10,
   },
-  loadingText: {
-    fontSize: 18,
-    color: '#4caf50', // Main color
+  caloriesText: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: '#4caf50',
+  },
+  caloriesLabel: {
+    fontSize: 16,
+    color: '#666',
+  },
+  goalText: {
+    fontSize: 16,
+    color: '#666',
     textAlign: 'center',
-    marginTop: 20,
+    marginBottom: 20,
+  },
+  macroProgressContainer: {
+    marginBottom: 15,
+  },
+  macroTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  progressBarContainer: {
+    height: 10,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 5,
+    overflow: 'hidden',
+  },
+  progressBar: {
+    height: '100%',
+  },
+  macroText: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 5,
+  },
+  exerciseSummary: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 15,
+  },
+  exerciseSummaryItem: {
+    alignItems: 'center',
+  },
+  exerciseSummaryText: {
+    fontSize: 16,
+    color: '#4caf50',
+    marginTop: 5,
   },
   exerciseItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 15,
     padding: 10,
+    backgroundColor: '#f9f9f9',
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#4caf50', // Border color to match main color
+  },
+  exerciseIcon: {
+    marginRight: 10,
+  },
+  exerciseDetails: {
+    flex: 1,
   },
   exerciseName: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#4caf50', // Main color
+    color: '#4caf50',
+  },
+  exerciseText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  emptyListText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+  loadingText: {
+    fontSize: 18,
+    color: '#4caf50',
   },
 });
 
