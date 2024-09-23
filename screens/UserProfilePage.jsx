@@ -8,28 +8,32 @@ import {
   ScrollView,
   RefreshControl,
   Alert,
+  Dimensions,
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
 import { useNavigation } from "@react-navigation/native";
 import { firebaseAuth, firebaseDB } from "../config/firebase.config";
 import { doc, getDoc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
+import { LinearGradient } from 'expo-linear-gradient';
+
+const { width } = Dimensions.get('window');
 
 const ProfilePage = () => {
   const navigation = useNavigation();
   const [userData, setUserData] = useState(null);
-  const [refreshing, setRefreshing] = useState(false); // State to handle refreshing
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(firebaseAuth, (user) => {
       if (user) {
         fetchUserData(user.uid);
       } else {
-        setUserData(null); // Clear the data if no user is logged in
+        setUserData(null);
       }
     });
 
-    return () => unsubscribe(); // Clean up the listener on component unmount
+    return () => unsubscribe();
   }, []);
 
   const fetchUserData = async (uid) => {
@@ -48,25 +52,41 @@ const ProfilePage = () => {
   };
 
   const handleSignOut = () => {
-    firebaseAuth
-      .signOut()
-      .then(() => {
-        navigation.navigate("LoginScreen");
-      })
-      .catch((error) => {
-        console.error("Sign out error: ", error);
-        Alert.alert("Error", "Failed to sign out. Please try again.");
-      });
+    Alert.alert(
+      "Sign Out",
+      "Are you sure you want to sign out?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        { 
+          text: "OK", 
+          onPress: () => {
+            firebaseAuth
+              .signOut()
+              .then(() => {
+                navigation.navigate("LoginScreen");
+              })
+              .catch((error) => {
+                console.error("Sign out error: ", error);
+                Alert.alert("Error", "Failed to sign out. Please try again.");
+              });
+          }
+        }
+      ]
+    );
   };
 
   const onRefresh = async () => {
     setRefreshing(true);
     const user = firebaseAuth.currentUser;
     if (user) {
-      await fetchUserData(user.uid); // Re-fetch user data
+      await fetchUserData(user.uid);
     }
     setRefreshing(false);
   };
+
 
   return (
     <ScrollView
@@ -75,11 +95,15 @@ const ProfilePage = () => {
         <RefreshControl
           refreshing={refreshing}
           onRefresh={onRefresh}
-          colors={['#1E88E5']} // Color of the refresh spinner
+          colors={['#1E88E5']}
         />
       }
     >
-      <View style={styles.header}>
+
+      <LinearGradient
+        colors={['#004d00', '#006400']}
+        style={styles.header}
+      >
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.iconButton}
@@ -87,7 +111,8 @@ const ProfilePage = () => {
           <Icon name="arrow-back" size={24} color="#FFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Profile</Text>
-      </View>
+      </LinearGradient>
+
 
       <View style={styles.profileSection}>
         <Image
@@ -97,12 +122,11 @@ const ProfilePage = () => {
           style={styles.profileImage}
         />
         <Text style={styles.userName}>{userData?.fullName || "Username"}</Text>
+        <Text style={styles.userEmail}>{userData?.providerData?.email || "Loading..."}</Text>
 
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.logoutButton} onPress={handleSignOut}>
-            <Text style={styles.logoutButtonText}>Log Out</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity style={styles.editProfileButton} onPress={() => navigation.navigate("EditProfilePage")}>
+          <Text style={styles.editProfileButtonText}>Edit Profile</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.statsSection}>
@@ -125,17 +149,20 @@ const ProfilePage = () => {
 
       <View style={styles.menuSection}>
         <MenuItem
-          icon="person-outline"
-          label="Personal Information"
-          onPress={() => navigation.navigate("EditProfilePage")}
-        />
-        <MenuItem
           icon="water-outline"
           label="Blood Sugar"
           onPress={() => navigation.navigate("BloodSugar")}
         />
-        <MenuItem icon="bar-chart-outline" label="Goals" />
-        <MenuItem icon="calendar-outline" label="History" />
+        <MenuItem 
+          icon="bar-chart-outline" 
+          label="Goals" 
+          onPress={() => navigation.navigate("Goals")}
+        />
+        <MenuItem 
+          icon="calendar-outline" 
+          label="History"
+          onPress={() => navigation.navigate("History")}
+        />
         <MenuItem
           icon="body-outline"
           label="Weight"
@@ -151,8 +178,11 @@ const ProfilePage = () => {
           label="Bookmarks"
           onPress={() => navigation.navigate("BookmarkListPage")}
         />
-
       </View>
+
+      <TouchableOpacity style={styles.logoutButton} onPress={handleSignOut}>
+        <Text style={styles.logoutButtonText}>Log Out</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 };
@@ -176,63 +206,68 @@ const MenuItem = ({ icon, label, onPress }) => (
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#E6F4EA",
+    backgroundColor: "#F5F5F5",
   },
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
     padding: 16,
-    backgroundColor: "#004d00",
-    borderBottomWidth: 1,
-    borderBottomColor: "#003300",
-    borderRadius: 12,
-    marginBottom: 16,
+    paddingTop: 40,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: "bold",
     color: "#FFF",
+    marginLeft: 16,
   },
   iconButton: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: "#006400",
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
   },
   profileSection: {
     alignItems: "center",
     marginTop: 20,
     backgroundColor: "#FFFFFF",
     paddingVertical: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E6F4EA",
+    borderRadius: 20,
+    marginHorizontal: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   profileImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 2,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 3,
     borderColor: "#004d00",
   },
   userName: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: "bold",
     color: "#004d00",
     marginTop: 10,
   },
-  buttonContainer: {
-    flexDirection: "row",
-    marginTop: 10,
+  userEmail: {
+    fontSize: 16,
+    color: "#666",
+    marginTop: 5,
   },
-  logoutButton: {
-    backgroundColor: "#d82701",
+  editProfileButton: {
+    marginTop: 15,
+    paddingVertical: 8,
     paddingHorizontal: 20,
-    paddingVertical: 10,
+    backgroundColor: "#E6F4EA",
     borderRadius: 20,
   },
-  logoutButtonText: {
-    color: "#FFF",
-    fontWeight: "bold",
+  editProfileButtonText: {
+    color: "#004d00",
+    fontWeight: "600",
   },
   statsSection: {
     flexDirection: "row",
@@ -240,8 +275,13 @@ const styles = StyleSheet.create({
     marginTop: 20,
     paddingVertical: 20,
     backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E6F4EA",
+    borderRadius: 20,
+    marginHorizontal: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   statItem: {
     alignItems: "center",
@@ -249,28 +289,53 @@ const styles = StyleSheet.create({
   statLabel: {
     color: "#004d00",
     marginTop: 5,
+    fontSize: 14,
   },
   statValue: {
     fontWeight: "bold",
     marginTop: 5,
     color: "#006400",
+    fontSize: 16,
   },
   menuSection: {
     marginTop: 20,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    marginHorizontal: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#E6F4EA",
-    padding: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "#E6F4EA",
+    borderBottomColor: "#E6E6E6",
   },
   menuLabel: {
     flex: 1,
     marginLeft: 16,
     fontSize: 16,
     color: "#004d00",
+  },
+  logoutButton: {
+    marginTop: 30,
+    marginBottom: 30,
+    backgroundColor: "#FF3B30",
+    paddingVertical: 15,
+    borderRadius: 10,
+    alignSelf: 'center',
+    width: width - 32,
+  },
+  logoutButtonText: {
+    color: "#FFF",
+    fontWeight: "bold",
+    fontSize: 18,
+    textAlign: 'center',
   },
 });
 

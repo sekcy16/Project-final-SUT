@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, BackHandler } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, DeviceEventEmitter, BackHandler } from 'react-native';
 import { Camera, CameraView } from 'expo-camera';
 import { BlurView } from 'expo-blur';
 import axios from 'axios';
@@ -10,6 +10,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 const FoodCamera = () => {
   const [permission, setPermission] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCameraReady, setIsCameraReady] = useState(false);
   const cameraRef = useRef(null);
   const navigation = useNavigation();
 
@@ -22,6 +23,33 @@ const FoodCamera = () => {
       const { status } = await Camera.requestCameraPermissionsAsync();
       setPermission(status === 'granted');
     })();
+
+    // Listen for the reset camera event
+    const subscription = DeviceEventEmitter.addListener('resetCamera', () => {
+      setIsCameraReady(false);
+      // Add any other reset logic here
+    });
+
+    return () => {
+      // Clean up the event listener
+      subscription.remove();
+    };
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      setIsCameraReady(false);
+      // Reset any other necessary state here
+
+      return () => {
+        // Clean up when the screen is unfocused
+        setIsCameraReady(false);
+      };
+    }, [])
+  );
+
+  const onCameraReady = useCallback(() => {
+    setIsCameraReady(true);
   }, []);
 
   const convertImageToBase64 = async (imageUri) => {
@@ -142,18 +170,24 @@ const FoodCamera = () => {
 
   return (
     <View style={styles.container}>
-      <CameraView ref={cameraRef} style={styles.camera}>
+      <CameraView 
+        ref={cameraRef} 
+        style={styles.camera}
+        onCameraReady={onCameraReady}
+      >
         {isLoading && (
           <BlurView intensity={50} style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#fff" />
             <Text style={styles.loadingText}>Loading...</Text>
           </BlurView>
         )}
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.captureButton} onPress={captureFrame}>
-            <MaterialIcons name="camera-alt" size={30} color="#fff" />
-          </TouchableOpacity>
-        </View>
+        {isCameraReady && (
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity style={styles.captureButton} onPress={captureFrame}>
+              <MaterialIcons name="camera-alt" size={30} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        )}
       </CameraView>
     </View>
   );
@@ -203,7 +237,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4.65,
     elevation: 7,
     position: 'absolute',
-    bottom: 80, // Adjust this value to move the button up or down
+    bottom: 20, // Adjust this value to move the button up or down
     left: '50%',
     transform: [{ translateX: -35 }], // Center the button horizontally
   },

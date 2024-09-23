@@ -4,7 +4,7 @@ export { default as SplashScreen } from './SplashScreen';
 export { default as HealthDashboard } from './HealthDashboard';
 export { default as MealEntry } from './MealEntry';
 export { default as BloodSugar } from './BloodSugar';
-export { default as ProfilePage } from './ProfilePage';
+export { default as UserProfilePage } from './UserProfilePage';
 export { default as DiaryPage } from './DiaryPage';
 export { default as FoodARPage } from './FoodARPage';
 export { default as FoodResultPage } from './FoodResultPage';
@@ -21,3 +21,5 @@ export { default as EditProfilePage} from './EditProfilePage';
 export { default as FoodDetail } from './FoodDetail'
 export { default as AddTaskScreen } from './DoctorScreen/AddTaskScreen'
 export { default as ProfileDoctor } from './DoctorScreen/ProfileDoctor'
+export { default as DoctorProfilePage } from './DoctorScreen/DoctorProfilePage'
+export { default as ScheduleScreen  } from './DoctorScreen/ScheduleScreen'

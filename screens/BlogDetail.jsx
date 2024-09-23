@@ -5,6 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import { getFirestore, doc, getDoc, collection, addDoc, Timestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { app } from '../config/firebase.config';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const BlogDetail = ({ route }) => {
   const navigation = useNavigation();
@@ -94,16 +95,21 @@ const BlogDetail = ({ route }) => {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Icon name="arrow-back" size={24} color="#000" />
+        <LinearGradient
+          colors={['#8FBC8F', '#F6FFF5']}
+          style={styles.header}
+        >
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Icon name="arrow-back" size={24} color="#FFF" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{blogData.title}</Text>
-        </View>
+        </LinearGradient>
 
         <View style={styles.contentContainer}>
-          <View style={[styles.authorIndicator, { backgroundColor: blogData.color || '#8FBC8F' }]} />
-          <Text style={styles.authorText}>โดย {blogData.author}</Text>
+          <View style={styles.authorContainer}>
+            <View style={[styles.authorIndicator, { backgroundColor: blogData.color || '#8FBC8F' }]} />
+            <Text style={styles.authorText}>โดย {blogData.author}</Text>
+          </View>
           {blogData.photo && (
             <Image source={{ uri: blogData.photo }} style={styles.blogImage} />
           )}
@@ -111,15 +117,18 @@ const BlogDetail = ({ route }) => {
         </View>
       </ScrollView>
 
-      {/* Report Button */}
       <TouchableOpacity
         style={styles.reportButton}
         onPress={() => setModalVisible(true)}
       >
-        <Icon name="flag" size={24} color="white" />
+        <LinearGradient
+          colors={['#FF6B6B', '#FF4C4C']}
+          style={styles.reportButtonGradient}
+        >
+          <Icon name="flag" size={24} color="white" />
+        </LinearGradient>
       </TouchableOpacity>
 
-      {/* Report Type Selection Modal */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -138,7 +147,10 @@ const BlogDetail = ({ route }) => {
                 ]}
                 onPress={() => setSelectedReportType(type)}
               >
-                <Text style={styles.modalOptionText}>{type}</Text>
+                <Text style={[
+                  styles.modalOptionText,
+                  selectedReportType === type ? styles.selectedOptionText : null,
+                ]}>{type}</Text>
               </TouchableOpacity>
             ))}
             <TextInput
@@ -148,12 +160,17 @@ const BlogDetail = ({ route }) => {
               onChangeText={setAdditionalComments}
               multiline
             />
-            <Pressable style={styles.submitButton} onPress={handleReport}>
-              <Text style={styles.submitButtonText}>ส่งรายงาน</Text>
-            </Pressable>
-            <Pressable style={styles.cancelButton} onPress={() => setModalVisible(false)}>
+            <TouchableOpacity style={styles.submitButton} onPress={handleReport}>
+              <LinearGradient
+                colors={['#8FBC8F', '#6B8E23']}
+                style={styles.submitButtonGradient}
+              >
+                <Text style={styles.submitButtonText}>ส่งรายงาน</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)}>
               <Text style={styles.cancelButtonText}>ยกเลิก</Text>
-            </Pressable>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -167,31 +184,44 @@ const styles = StyleSheet.create({
     backgroundColor: '#F6FFF5',
   },
   scrollContainer: {
-    padding: 16,
+    flexGrow: 1,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    padding: 16,
+    paddingTop: 40,
+  },
+  backButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
   },
   headerTitle: {
     marginLeft: 16,
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
+    color: '#FFF',
+    flex: 1,
   },
   contentContainer: {
     flex: 1,
+    padding: 16,
+  },
+  authorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   authorIndicator: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    marginBottom: 8,
+    marginRight: 8,
   },
   authorText: {
     fontSize: 14,
-    color: '#999',
-    marginBottom: 16,
+    color: '#666',
   },
   blogImage: {
     width: '100%',
@@ -202,8 +232,9 @@ const styles = StyleSheet.create({
   },
   contentText: {
     fontSize: 16,
+    lineHeight: 24,
+    color: '#333',
   },
-  // ปุ่มรายงาน
   reportButton: {
     position: 'absolute',
     bottom: 20,
@@ -211,36 +242,13 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#FF4C4C', // สีแดงสำหรับธง
-    justifyContent: 'center',
-    alignItems: 'center',
-
-    // เพิ่มเงาเพื่อให้ดูเป็น 3D
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,  // สำหรับ Android
+    overflow: 'hidden',
+    elevation: 5,
   },
-  reportButtonText: {
-    marginLeft: 8,
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  loadingContainer: {
+  reportButtonGradient: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  errorText: {
-    fontSize: 18,
-    color: 'red',
-    marginBottom: 16,
   },
   modalContainer: {
     flex: 1,
@@ -249,32 +257,26 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalContent: {
-    width: '80%',
+    width: '90%',
     backgroundColor: 'white',
-    borderRadius: 10,
+    borderRadius: 20,
     padding: 20,
     alignItems: 'center',
+    elevation: 5,
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 20,
+    color: '#333',
   },
   modalOption: {
     width: '100%',
-    padding: 10,
-    borderRadius: 5,
+    padding: 15,
+    borderRadius: 10,
     marginBottom: 10,
-    backgroundColor: '#FFF', // เปลี่ยนสีพื้นหลังปุ่ม
-    justifyContent: 'center',
-    alignItems: 'center',
-
-    // เพิ่มเงาให้ปุ่มเพื่อให้ดูมีมิติแบบ 3D
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,  // สำหรับ Android
+    backgroundColor: '#F0F0F0',
+    elevation: 2,
   },
   selectedOption: {
     backgroundColor: '#8FBC8F',
@@ -282,55 +284,48 @@ const styles = StyleSheet.create({
   modalOptionText: {
     fontSize: 16,
     color: '#333',
+    textAlign: 'center',
+  },
+  selectedOptionText: {
+    color: '#FFF',
+    fontWeight: 'bold',
   },
   commentsInput: {
     width: '100%',
     height: 100,
     borderColor: '#ddd',
     borderWidth: 1,
-    borderRadius: 5,
+    borderRadius: 10,
     padding: 10,
     marginTop: 10,
     textAlignVertical: 'top',
+    fontSize: 16,
   },
-  // ปุ่มส่ง
   submitButton: {
-    backgroundColor: '#8FBC8F',
-    padding: 10,
-    borderRadius: 5,
-    marginTop: 10,
     width: '100%',
+    height: 50,
+    borderRadius: 25,
+    marginTop: 20,
+    overflow: 'hidden',
+  },
+  submitButtonGradient: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-
-    // เพิ่มเงาเพื่อให้ดูมีมิติแบบ 3D
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,  // สำหรับ Android
   },
   submitButtonText: {
     color: 'white',
     fontWeight: 'bold',
+    fontSize: 18,
   },
   cancelButton: {
-    backgroundColor: '#ddd',
-    padding: 10,
-    borderRadius: 5,
     marginTop: 10,
-    width: '100%',
-    alignItems: 'center',
-
-    // เพิ่มเงาเพื่อให้ดูมีมิติแบบ 3D
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,  // สำหรับ Android
+    padding: 10,
   },
   cancelButtonText: {
-    color: '#000',
+    color: '#666',
     fontWeight: 'bold',
+    fontSize: 16,
   },
 });
 

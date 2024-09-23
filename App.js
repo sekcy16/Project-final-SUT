@@ -1,5 +1,12 @@
+// Imports
 import React, { useEffect } from "react";
-import { View, TouchableOpacity } from "react-native";
+import {
+  View,
+  TextInput,
+  StyleSheet,
+  TouchableOpacity,
+  Text,
+} from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
@@ -14,7 +21,8 @@ import {
   SplashScreen,
   HealthDashboard,
   MealEntry,
-  ProfilePage,
+  UserProfilePage,
+  DoctorProfilePage,
   DiaryPage,
   FoodARPage,
   FoodResultPage,
@@ -30,6 +38,7 @@ import {
   FoodDetail,
   AddTaskScreen,
   ProfileDoctor,
+  ScheduleScreen,
 } from "./screens";
 import FoodResult from "./components/FoodResult";
 import Nutrition from "./components/Nutrition";
@@ -44,41 +53,109 @@ import SummaryPage from "./screens/SummaryPage";
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-const CentralButton = ({ children, onPress }) => (
-  <TouchableOpacity
-    style={{
-      top: -20,
-      justifyContent: "center",
-      alignItems: "center",
-      shadowColor: "#8FBC8F",
-      shadowOffset: { width: 0, height: 10 },
-      shadowOpacity: 0.25,
-      shadowRadius: 3.5,
-      elevation: 5,
-    }}
-    onPress={onPress}
-  >
-    <View
-      style={{
-        width: 70,
-        height: 70,
-        borderRadius: 35,
-        backgroundColor: "#8FBC8F",
-        justifyContent: "center",
-        alignItems: "center",
-        borderWidth: 2,
-        borderColor: "#fff",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 5,
-      }}
-    >
-      {children}
+// SearchBar Component
+const SearchBar = () => (
+  <View style={styles.searchBarContainer}>
+    <View style={styles.searchBar}>
+      <Icon name="search" size={20} color="#888" style={styles.searchIcon} />
+      <TextInput
+        style={styles.searchInput}
+        placeholder="Search for a food"
+        placeholderTextColor="#888"
+      />
+      <Icon
+        name="barcode-outline"
+        size={20}
+        color="#888"
+        style={styles.barcodeIcon}
+      />
     </View>
-  </TouchableOpacity>
+  </View>
 );
 
+// CustomTabBar Component
+const CustomTabBar = ({ state, descriptors, navigation }) => {
+  return (
+    <View style={styles.tabContainer}>
+      {(state.index === 0 || state.index === 1) && <SearchBar />}
+      <View style={styles.tabBar}>
+        {state.routes.map((route, index) => {
+          const { options } = descriptors[route.key];
+          const label =
+            options.tabBarLabel !== undefined
+              ? options.tabBarLabel
+              : options.title !== undefined
+              ? options.title
+              : route.name;
+
+          const isFocused = state.index === index;
+
+          const onPress = () => {
+            const event = navigation.emit({
+              type: 'tabPress',
+              target: route.key,
+            });
+
+            if (!isFocused && !event.defaultPrevented) {
+              navigation.navigate(route.name);
+            }
+          };
+
+          return (
+            <TouchableOpacity
+              key={index}
+              accessibilityRole="button"
+              accessibilityState={isFocused ? { selected: true } : {}}
+              accessibilityLabel={options.tabBarAccessibilityLabel}
+              testID={options.tabBarTestID}
+              onPress={onPress}
+              style={styles.tabButton}
+            >
+              <Icon
+                name={options.tabBarIcon({ focused: isFocused }).props.name}
+                size={24}
+                color={isFocused ? '#007AFF' : '#8E8E93'}
+              />
+              <Text style={[styles.tabLabel, { color: isFocused ? '#007AFF' : '#8E8E93' }]}>
+                {label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+};
+
+// MainTabNavigator Component
+const MainTabNavigator = () => (
+  <Tab.Navigator
+    tabBar={(props) => <CustomTabBar {...props} />}
+    screenOptions={({ route }) => ({
+      headerShown: false,
+      tabBarIcon: ({ focused, color, size }) => {
+        let iconName;
+        if (route.name === "Dashboard") {
+          iconName = focused ? "grid" : "grid-outline";
+        } else if (route.name === "Diary") {
+          iconName = focused ? "book" : "book-outline";
+        } else if (route.name === "Blog") {
+          iconName = focused ? "chatbubbles" : "chatbubbles-outline";
+        } else if (route.name === "UserProfilePage") {
+          iconName = focused ? "person" : "person-outline";
+        }
+        return <Icon name={iconName} size={size} color={color} />;
+      },
+    })}
+  >
+    <Tab.Screen name="Dashboard" component={HealthDashboard} />
+    <Tab.Screen name="Diary" component={DiaryPage} />
+    <Tab.Screen name="Blog" component={BlogList} />
+    <Tab.Screen name="UserProfilePage" component={UserProfilePage} />
+  </Tab.Navigator>
+);
+
+// DoctorTabNavigator Component
 const DoctorTabNavigator = () => (
   <Tab.Navigator
     screenOptions={({ route }) => ({
@@ -95,7 +172,7 @@ const DoctorTabNavigator = () => (
           case "BlogList":
             iconName = focused ? "document" : "document-outline";
             break;
-          case "ProfilePage":
+          case "DoctorProfilePage":
             iconName = focused ? "person" : "person-outline";
             break;
           default:
@@ -103,22 +180,10 @@ const DoctorTabNavigator = () => (
         }
         return <Icon name={iconName} size={size} color={color} />;
       },
-      tabBarActiveTintColor: "#4CAF50",
-      tabBarInactiveTintColor: "gray",
-      tabBarStyle: {
-        backgroundColor: "#ffffff",
-        borderTopWidth: 1,
-        borderTopColor: "#e0e0e0",
-        height: 60,
-        paddingBottom: 5,
-      },
-      tabBarItemStyle: {
-        marginTop: 5,
-      },
-      tabBarLabelStyle: {
-        fontSize: 12,
-        marginBottom: 3,
-      },
+      tabBarActiveTintColor: "#007AFF",
+      tabBarInactiveTintColor: "#8E8E93",
+      tabBarStyle: styles.tabBar,
+      tabBarLabelStyle: styles.tabBarLabel,
     })}
   >
     <Tab.Screen
@@ -137,102 +202,17 @@ const DoctorTabNavigator = () => (
       options={{ tabBarLabel: "Blog" }}
     />
     <Tab.Screen
-      name="ProfilePage"
-      component={ProfilePage}
+      name="DoctorProfilePage"
+      component={DoctorProfilePage}
       options={{ tabBarLabel: "Profile" }}
     />
   </Tab.Navigator>
 );
 
-const MainTabNavigator = () => (
-  <Tab.Navigator
-    screenOptions={({ route }) => ({
-      headerShown: false,
-      tabBarIcon: ({ focused, color, size }) => {
-        let iconName;
-        switch (route.name) {
-          case "HealthDashboard":
-            iconName = focused ? "home" : "home-outline";
-            break;
-          case "MealEntry":
-            iconName = focused ? "restaurant" : "chatbubbles-outline";
-            break;
-          case "ProfilePage":
-            iconName = focused ? "person" : "person-outline";
-            break;
-          case "DiaryPage":
-            iconName = focused ? "book" : "book-outline";
-            break;
-          default:
-            iconName = "alert";
-        }
-        return <Icon name={iconName} size={size} color={color} />;
-      },
-      tabBarActiveTintColor: "#4CAF50",
-      tabBarInactiveTintColor: "gray",
-      tabBarStyle: {
-        backgroundColor: "#ffffff",
-        borderTopWidth: 1,
-        borderTopColor: "#e0e0e0",
-        height: 60,
-        paddingBottom: 5,
-      },
-      tabBarItemStyle: {
-        marginTop: 5,
-      },
-      tabBarLabelStyle: {
-        fontSize: 12,
-        marginBottom: 3,
-      },
-    })}
-  >
-    <Tab.Screen
-      name="HealthDashboard"
-      component={HealthDashboard}
-      options={{ tabBarLabel: "Home" }}
-    />
-    <Tab.Screen
-      name="DiaryPage"
-      component={DiaryPage}
-      options={{ tabBarLabel: "Diary" }}
-    />
-    <Tab.Screen
-      name="FoodARPage"
-      component={FoodARPage}
-      options={{
-        tabBarButton: (props) => (
-          <CentralButton {...props}>
-            <Icon name="camera-outline" size={25} color="#fff" />
-          </CentralButton>
-        ),
-        tabBarLabel: () => null,
-      }}
-    />
-    <Tab.Screen
-      name="Blog"
-      component={BlogList}
-      options={{
-        tabBarIcon: ({ focused, color, size }) => (
-          <Icon
-            name={focused ? "chatbubbles" : "chatbubbles-outline"}
-            size={size}
-            color={color}
-          />
-        ),
-        tabBarLabel: "Blog",
-      }}
-    />
-
-    <Tab.Screen
-      name="ProfilePage"
-      component={ProfilePage}
-      options={{ tabBarLabel: "Profile" }}
-    />
-  </Tab.Navigator>
-);
-
+// RootNavigator Component
 const RootNavigator = () => {
   const user = useSelector((state) => state.user?.user);
+
   useEffect(() => {
     console.log("Current User:", user);
   }, [user]);
@@ -253,7 +233,6 @@ const RootNavigator = () => {
       <Stack.Screen name="SignUpScreen" component={SignUpScreen} />
       <Stack.Screen name="Main" component={NavigatorComponent} />
       <Stack.Screen name="MealEntry" component={MealEntry} />
-
       <Stack.Screen name="FoodARPage" component={FoodARPage} />
       <Stack.Screen name="TotalCalories" component={TotalCalories} />
       <Stack.Screen name="FoodResultPage" component={FoodResultPage} />
@@ -284,10 +263,14 @@ const RootNavigator = () => {
       <Stack.Screen name="ProfileDoctor" component={ProfileDoctor} />
       <Stack.Screen name="BookmarkListPage" component={BookmarkListPage} />
       <Stack.Screen name="SummaryPage" component={SummaryPage} />
+      <Stack.Screen name="UserProfilePage" component={UserProfilePage} />
+      <Stack.Screen name="DoctorProfilePage" component={DoctorProfilePage} />
+      <Stack.Screen name="Schedule" component={ScheduleScreen} />
     </Stack.Navigator>
   );
 };
 
+// App Component
 const App = () => (
   <Provider store={Store}>
     <NavigationContainer>
@@ -295,5 +278,55 @@ const App = () => (
     </NavigationContainer>
   </Provider>
 );
+
+// Styles
+const styles = StyleSheet.create({
+  tabContainer: {
+    backgroundColor: "#FFFFFF",
+    borderTopWidth: 1,
+    borderTopColor: "#E5E5EA",
+  },
+  searchBarContainer: {
+    backgroundColor: "#F2F2F7",
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+  },
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    height: 40,
+  },
+  searchIcon: {
+    marginRight: 5,
+  },
+  searchInput: {
+    flex: 1,
+    height: 40,
+    color: "#000",
+  },
+  barcodeIcon: {
+    marginLeft: 5,
+  },
+  tabBar: {
+    flexDirection: "row",
+    backgroundColor: "#FFFFFF",
+  },
+  tabButton: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+  },
+  tabLabel: {
+    fontSize: 10,
+    marginTop: 2,
+  },
+  tabBarLabel: {
+    fontSize: 12,
+  },
+});
 
 export default App;

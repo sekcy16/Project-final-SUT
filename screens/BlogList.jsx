@@ -5,13 +5,14 @@ import { useNavigation } from '@react-navigation/native';
 import { getFirestore, collection, query, orderBy, onSnapshot, deleteDoc, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { app } from "../config/firebase.config";
+import { LinearGradient } from 'expo-linear-gradient';
 
 const BlogList = () => {
   const navigation = useNavigation();
   const [selectedTab, setSelectedTab] = useState('health');
   const [blogs, setBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [bookmarkedBlogs, setBookmarkedBlogs] = useState([]); // To track bookmarked blogs
+  const [bookmarkedBlogs, setBookmarkedBlogs] = useState([]);
   const auth = getAuth(app);
   const db = getFirestore(app);
 
@@ -107,9 +108,8 @@ const BlogList = () => {
   };
 
   const renderBlogItem = (item) => {
-    // Check if the current user is the author
     const isCurrentUserAuthor = auth.currentUser && auth.currentUser.uid === item.userId;
-    const isBookmarked = bookmarkedBlogs.includes(item.id); // Check if the blog is bookmarked
+    const isBookmarked = bookmarkedBlogs.includes(item.id);
 
     return (
       <TouchableOpacity
@@ -117,66 +117,76 @@ const BlogList = () => {
         style={styles.blogItem}
         onPress={() => navigation.navigate('BlogDetail', { blogId: item.id })}
       >
-        {item.photo && <Image source={{ uri: item.photo }} style={styles.blogImage} />}
-        <View style={styles.blogContent}>
-          <Text style={styles.blogTitle}>{item.title}</Text>
-          <View style={styles.blogInfo}>
-            <Text style={styles.blogAuthor}>By {item.author}</Text>
-            <Text style={styles.blogCategory}>{item.category}</Text>
-          </View>
-        </View>
-
-        {/* Bookmark Button */}
-        <TouchableOpacity
-          style={styles.bookmarkButton}
-          onPress={() => handleBookmark(item.id, { title: item.title, author: item.author })}
+        <LinearGradient
+          colors={['#7FDBDA', '#AED9E0']}
+          start={{x: 0, y: 0}}
+          end={{x: 1, y: 1}}
+          style={styles.blogGradient}
         >
-          <Icon
-            name={isBookmarked ? "bookmark" : "bookmark-outline"}
-            size={24}
-            color={isBookmarked ? "#FFD700" : "#FFD700"} // Change to full yellow if bookmarked
-          />        
+          {item.photo && <Image source={{ uri: item.photo }} style={styles.blogImage} />}
+          <View style={styles.blogContent}>
+            <Text style={styles.blogTitle}>{item.title}</Text>
+            <View style={styles.blogInfo}>
+              <Text style={styles.blogAuthor}>By {item.author}</Text>
+              <Text style={styles.blogCategory}>{item.category}</Text>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={styles.bookmarkButton}
+            onPress={() => handleBookmark(item.id, { title: item.title, author: item.author })}
+          >
+            <Icon
+              name={isBookmarked ? "bookmark" : "bookmark-outline"}
+              size={28}
+              color={isBookmarked ? "#5D9C59" : "#FFFFFF"}
+            />        
           </TouchableOpacity>
 
-        {isCurrentUserAuthor && (
-          <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={() => handleDeleteBlog(item.id)} // Handles blog deletion
-          >
-            <Icon name="trash-outline" size={24} color="#FF6347" />
-          </TouchableOpacity>
-        )}
+          {isCurrentUserAuthor && (
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={() => handleDeleteBlog(item.id)}
+            >
+              <Icon name="trash-outline" size={28} color="#FFFFFF" />
+            </TouchableOpacity>
+          )}
+        </LinearGradient>
       </TouchableOpacity>
     );
   };
 
-
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Icon name="arrow-back" size={24} color="#FFF" />
+      <LinearGradient
+        colors={['#B5EAD7', '#7FDBDA']}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 1}}
+        style={styles.header}
+      >
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Icon name="arrow-back" size={28} color="#FFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Blogs & Recipes</Text>
-      </View>
+      </LinearGradient>
 
       <View style={styles.tabContainer}>
         <TouchableOpacity
-          style={selectedTab === 'health' ? styles.activeTab : styles.inactiveTab}
+          style={[styles.tab, selectedTab === 'health' && styles.activeTab]}
           onPress={() => setSelectedTab('health')}
         >
-          <Text style={selectedTab === 'health' ? styles.tabTextActive : styles.tabTextInactive}>Health</Text>
+          <Text style={[styles.tabText, selectedTab === 'health' && styles.activeTabText]}>Health</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={selectedTab === 'recipe' ? styles.activeTab : styles.inactiveTab}
+          style={[styles.tab, selectedTab === 'recipe' && styles.activeTab]}
           onPress={() => setSelectedTab('recipe')}
         >
-          <Text style={selectedTab === 'recipe' ? styles.tabTextActive : styles.tabTextInactive}>Recipe</Text>
+          <Text style={[styles.tabText, selectedTab === 'recipe' && styles.activeTabText]}>Recipe</Text>
         </TouchableOpacity>
       </View>
 
       {loading ? (
-        <ActivityIndicator size="large" color="#8FBC8F" style={styles.loader} />
+        <ActivityIndicator size="large" color="#7FDBDA" style={styles.loader} />
       ) : (
         <ScrollView style={styles.blogList}>
           {blogs
@@ -189,8 +199,15 @@ const BlogList = () => {
         style={styles.createButton}
         onPress={() => navigation.navigate('CreateBlogScreen')}
       >
-        <Icon name="add" size={24} color="#FFF" />
-        <Text style={styles.createButtonText}>Create New Blog</Text>
+        <LinearGradient
+          colors={['#B5EAD7', '#7FDBDA']}
+          start={{x: 0, y: 0}}
+          end={{x: 1, y: 1}}
+          style={styles.createButtonGradient}
+        >
+          <Icon name="add" size={28} color="#FFF" />
+          <Text style={styles.createButtonText}>Create New Blog</Text>
+        </LinearGradient>
       </TouchableOpacity>
     </View>
   );
@@ -199,76 +216,83 @@ const BlogList = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFAD2',
+    backgroundColor: '#F0F8FF',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 30,
+    paddingTop: 50,
+    paddingBottom: 20,
     paddingHorizontal: 16,
-    backgroundColor: '#8FBC8F',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    marginBottom: 16,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+  },
+  backButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: 20,
+    padding: 8,
   },
   headerTitle: {
     flex: 1,
     textAlign: 'center',
-    fontSize: 20,
+    fontSize: 26,
     fontWeight: 'bold',
     color: '#FFF',
+    textShadowColor: 'rgba(0, 0, 0, 0.1)',
+    textShadowOffset: {width: -1, height: 1},
+    textShadowRadius: 10
   },
   tabContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginVertical: 10,
+    marginVertical: 20,
   },
-  activeTab: {
-    backgroundColor: '#8FBC8F',
-    paddingHorizontal: 24,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginHorizontal: 4,
-  },
-  inactiveTab: {
-    backgroundColor: '#CCCCCC',
-    paddingHorizontal: 24,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginHorizontal: 4,
-  },
-  tabTextActive: {
-    color: '#FFF',
-    fontWeight: 'bold',
-  },
-  tabTextInactive: {
-    color: '#556B2F',
-    fontWeight: 'bold',
-  },
-  blogList: {
-    flex: 1,
-  },
-  blogItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF8DC',
-    padding: 16,
-    marginHorizontal: 16,
-    marginVertical: 8,
-    borderRadius: 10,
-    elevation: 2,
+  tab: {
+    paddingHorizontal: 30,
+    paddingVertical: 12,
+    borderRadius: 25,
+    marginHorizontal: 10,
+    backgroundColor: '#E0E0E0',
+    elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
+  activeTab: {
+    backgroundColor: '#7FDBDA',
+  },
+  tabText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#555',
+  },
+  activeTabText: {
+    color: '#FFF',
+  },
+  blogList: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+  blogItem: {
+    marginVertical: 10,
+    borderRadius: 20,
+    overflow: 'hidden',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+  },
+  blogGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+  },
   blogImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 10,
+    width: 90,
+    height: 90,
+    borderRadius: 15,
     marginRight: 16,
   },
   blogContent: {
@@ -276,22 +300,42 @@ const styles = StyleSheet.create({
   },
   blogTitle: {
     fontWeight: 'bold',
-    fontSize: 16,
-    color: '#556B2F',
+    fontSize: 20,
+    color: '#FFF',
+    marginBottom: 8,
+    textShadowColor: 'rgba(0, 0, 0, 0.1)',
+    textShadowOffset: {width: -1, height: 1},
+    textShadowRadius: 5
   },
   blogInfo: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 8,
   },
   blogAuthor: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 16,
+    color: '#FFF',
+    fontWeight: '500',
   },
   blogCategory: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 'bold',
-    color: '#8FBC8F',
+    color: '#5D9C59',
+  },
+  bookmarkButton: {
+    position: 'absolute',
+    right: 16,
+    top: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: 15,
+    padding: 8,
+  },
+  deleteButton: {
+    position: 'absolute',
+    top: 16,
+    right: 60,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: 15,
+    padding: 8,
   },
   loader: {
     flex: 1,
@@ -300,36 +344,28 @@ const styles = StyleSheet.create({
   },
   createButton: {
     position: 'absolute',
-    right: 16,
-    bottom: 16,
-    backgroundColor: '#8FBC8F',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    right: 20,
+    bottom: 20,
     borderRadius: 30,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+  },
+  createButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 30,
   },
   createButtonText: {
     marginLeft: 8,
     color: '#FFF',
     fontWeight: 'bold',
+    fontSize: 18,
   },
-  bookmarkButton: {
-    position: 'absolute',
-    right: 16,
-    top: 16,
-  }, deleteButton: {
-    position: 'absolute',
-    top: 10,
-    right: 40,  // Adjust the right value to position it beside the bookmark
-    padding: 5,
-  },
-
 });
 
 export default BlogList;

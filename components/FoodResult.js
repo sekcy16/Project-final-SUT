@@ -53,7 +53,7 @@ const FoodResult = ({ route, navigation }) => {
           <Text style={styles.buttonText}>Retake</Text>
         </TouchableOpacity>
         {highestPrediction.value >= 0.35 && (
-          <TouchableOpacity style={styles.button} onPress={handleNutrition}>
+          <TouchableOpacity style={[styles.button, styles.retakeButton]} onPress={handleNutrition}>
             <Text style={styles.buttonText}>Nutrition</Text>
           </TouchableOpacity>
         )}
