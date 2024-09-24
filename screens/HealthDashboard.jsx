@@ -1,17 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Dimensions,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ProgressBar } from 'react-native-paper';
 import { firebaseAuth, firebaseDB } from "../config/firebase.config";
-import { doc, getDoc, collection, query, where, onSnapshot } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, onSnapshot, orderBy,limit,getDocs } from "firebase/firestore";
 
 const HealthDashboard = ({ navigation }) => {
   const [latestBloodSugar, setLatestBloodSugar] = useState(null);
@@ -32,6 +33,11 @@ const HealthDashboard = ({ navigation }) => {
   const [carbsGoal, setCarbsGoal] = useState(0);
   const [fatGoal, setFatGoal] = useState(0);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [breakfastData, setBreakfastData] = useState({ calories: 0, protein: 0, carbs: 0, fat: 0 });
+  const [lunchData, setLunchData] = useState({ calories: 0, protein: 0, carbs: 0, fat: 0 });
+  const [dinnerData, setDinnerData] = useState({ calories: 0, protein: 0, carbs: 0, fat: 0 });
+
+  
 
   useEffect(() => {
     // Fetch unread notifications
@@ -45,6 +51,7 @@ const HealthDashboard = ({ navigation }) => {
     // Load latest data when the screen is focused
     const focusListener = navigation.addListener('focus', () => {
       loadLatestData();
+      loadMealData();
     });
   
     // Cleanup functions
@@ -53,6 +60,26 @@ const HealthDashboard = ({ navigation }) => {
       navigation.removeListener('focus', focusListener);
     };
   }, [navigation]);
+
+  const loadMealData = async () => {
+    try {
+      const user = firebaseAuth.currentUser;
+      if (user) {
+        const diaryRef = doc(firebaseDB, 'users', user.uid, 'entries', new Date().toISOString().split('T')[0]);
+        const diarySnap = await getDoc(diaryRef);
+        if (diarySnap.exists()) {
+          const diaryData = diarySnap.data();
+          const meals = diaryData.meals || {};
+
+          setBreakfastData(meals['มื้อเช้า'] || { calories: 0, protein: 0, carbs: 0, fat: 0 });
+          setLunchData(meals['มื้อเที่ยง'] || { calories: 0, protein: 0, carbs: 0, fat: 0 });
+          setDinnerData(meals['มื้อเย็น'] || { calories: 0, protein: 0, carbs: 0, fat: 0 });
+        }
+      }
+    } catch (error) {
+      console.error('Error loading meal data:', error);
+    }
+  };
 
   const loadLatestData = async () => {
     try {
@@ -72,17 +99,17 @@ const HealthDashboard = ({ navigation }) => {
         }
       }
 
-      // Load latest blood sugar
-      const savedBloodSugarHistory = await AsyncStorage.getItem('bloodSugarHistory');
-      if (savedBloodSugarHistory) {
-        const bloodSugarHistory = JSON.parse(savedBloodSugarHistory);
-        if (bloodSugarHistory.length > 0) {
-          setLatestBloodSugar(bloodSugarHistory[0].level);
+      if (user) {
+        const bloodSugarRef = collection(firebaseDB, "users", user.uid, "bloodSugarHistory");
+        const bloodSugarQuery = query(bloodSugarRef, orderBy("date", "desc"), orderBy("time", "desc"), limit(1));
+        
+        const querySnapshot = await getDocs(bloodSugarQuery);
+        if (!querySnapshot.empty) {
+          const latestEntry = querySnapshot.docs[0].data();
+          setLatestBloodSugar(latestEntry.level); // Assuming 'level' is the blood sugar value
         } else {
-          setLatestBloodSugar(null);
+          setLatestBloodSugar(null); // No blood sugar entries found
         }
-      } else {
-        setLatestBloodSugar(null);
       }
 
       // Load average blood sugar
@@ -94,16 +121,14 @@ const HealthDashboard = ({ navigation }) => {
       }
 
       // Load latest weight
-      const savedWeightHistory = await AsyncStorage.getItem('weightHistory');
-      if (savedWeightHistory) {
-        const weightHistory = JSON.parse(savedWeightHistory);
-        if (weightHistory.length > 0) {
-          setLatestWeight(weightHistory[0].weight);
-        } else {
-          setLatestWeight(null);
-        }
+      const weightHistoryRef = collection(firebaseDB, "users", user.uid, "weightHistory");
+      const weightHistoryQuery = query(weightHistoryRef, orderBy("date", "desc"), limit(1)); // Assuming you have a 'date' field
+      const weightSnapshot = await getDocs(weightHistoryQuery);
+      if (!weightSnapshot.empty) {
+        const latestWeightEntry = weightSnapshot.docs[0].data();
+        setLatestWeight(latestWeightEntry.weight); // Adjust according to your data structure
       } else {
-        setLatestWeight(null);
+        setLatestWeight(null); // No weight entries found
       }
 
       // Fetch diary entries
@@ -179,6 +204,21 @@ const HealthDashboard = ({ navigation }) => {
       </View>
     );
   };
+  const getMotivationalMessage = () => {
+    const caloriePercentage = caloriesAllowed > 0 ? caloriesConsumed / caloriesAllowed : 0;
+    
+    if (caloriePercentage <= 0) {
+      return "อย่าลืมทานอาหารนะ :)";
+    } else if (caloriePercentage <= 0.5) {
+      return "คุณกำลังทำได้ดี! อย่าลืมทานอาหารให้ครบ 5 หมู่นะ";
+    }else if (caloriePercentage <= 0.8) {
+      return "ใกล้ถึงเป้าหมายแล้ว! พยายามรักษาสมดุลอาหารไว้นะ";
+    } else if (caloriePercentage <= 1) {
+      return "คุณทานอาหารได้ตามเป้าหมายแล้ว ยอดเยี่ยมมาก!";
+    } else {
+      return "วันนี้คุณทานอาหารเกินเป้าหมายแล้ว ลองปรับลดในครั้งถัดไปนะ";
+    }
+  };
   
 
   return (
@@ -204,6 +244,18 @@ const HealthDashboard = ({ navigation }) => {
         </View>
 
         <CalorieInfo />
+
+        <View style={styles.motivationalContainer}>
+          <Text style={styles.motivationalText}>{getMotivationalMessage()}</Text>
+        </View>
+
+        <TouchableOpacity
+          style={styles.diaryButton}
+          onPress={() => navigation.navigate('DiaryPage')}
+        >
+          <Icon name="book-open-variant" size={24} color="#FFF" />
+          <Text style={styles.diaryButtonText}>บันทึกอาหารและกิจกรรม</Text>
+        </TouchableOpacity>
 
         <View style={styles.cardContainer}>
           <HealthCard
@@ -379,6 +431,33 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     marginBottom: 15,
   },
+  motivationalContainer: {
+    backgroundColor: '#E8F5E9',
+    borderRadius: 8,
+    padding: 15,
+    marginBottom: 20,
+  },
+  motivationalText: {
+    fontSize: 16,
+    color: '#2E7D32',
+    textAlign: 'center',
+  },
+  diaryButton: {
+    backgroundColor: '#4CAF50',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 20,
+  },
+  diaryButtonText: {
+    color: '#FFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginLeft: 10,
+  },
 });
+
 
 export default HealthDashboard;

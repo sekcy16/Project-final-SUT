@@ -16,6 +16,8 @@ import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { app } from '../config/firebase.config';
 import { LinearGradient } from 'expo-linear-gradient';
+import PagerView from 'react-native-pager-view';
+
 
 const DiaryPage = () => {
   const navigation = useNavigation();
@@ -30,6 +32,15 @@ const DiaryPage = () => {
   const [totalExerciseCalories, setTotalExerciseCalories] = useState(0);
   const [totalCarbs, setTotalCarbs] = useState(0);
   const [tdee, setTdee] = useState(2700);
+  const [dailyCarbRecommendation, setDailyCarbRecommendation] = useState(0);
+  const [mealCarbRecommendations, setMealCarbRecommendations] = useState({
+    'มื้อเช้า': 0,
+    'มื้อเที่ยง': 0,
+    'มื้อเย็น': 0,
+  });
+  const [breakfastData, setBreakfastData] = useState({ calories: 0, protein: 0, carbs: 0, fat: 0 });
+  const [lunchData, setLunchData] = useState({ calories: 0, protein: 0, carbs: 0, fat: 0 });
+  const [dinnerData, setDinnerData] = useState({ calories: 0, protein: 0, carbs: 0, fat: 0 });
 
   const db = getFirestore(app);
   const auth = getAuth(app);
@@ -46,6 +57,40 @@ const DiaryPage = () => {
       tdee
     });
   };
+  const fetchUserData = useCallback(async () => {
+    try {
+      const userId = auth.currentUser.uid;
+      const userRef = doc(db, 'users', userId);
+      const userSnap = await getDoc(userRef);
+
+      if (userSnap.exists()) {
+        const userData = userSnap.data();
+        setTdee(userData.tdee || 2700);
+        
+        // Get daily carb recommendation from macronutrients
+        const dailyCarbs = userData.macronutrients?.carbs || 200;
+        setDailyCarbRecommendation(dailyCarbs);
+        
+        // Distribute carbs across meals (40% lunch, 30% breakfast and dinner)
+        const lunchCarbs = Math.round(dailyCarbs * 0.4);
+        const otherMealsCarbs = Math.round(dailyCarbs * 0.3);
+        setMealCarbRecommendations({
+          'มื้อเช้า': otherMealsCarbs,
+          'มื้อเที่ยง': lunchCarbs,
+          'มื้อเย็น': otherMealsCarbs,
+        });
+      } else {
+        console.log('No user data found');
+      }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+      Alert.alert('Error', 'Failed to fetch user data. Please try again.');
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchUserData();
+  }, [fetchUserData]);
 
   const fetchDiaryData = useCallback(async () => {
     try {
@@ -99,6 +144,17 @@ const DiaryPage = () => {
   useEffect(() => {
     fetchDiaryData();
   }, [fetchDiaryData]);
+
+  const getMealColors = (mealType) => {
+    const currentHour = new Date().getHours();
+    const isCurrentMeal = (
+      (mealType === 'มื้อเช้า' && currentHour >= 5 && currentHour < 11) ||
+      (mealType === 'มื้อเที่ยง' && currentHour >= 11 && currentHour < 16) ||
+      (mealType === 'มื้อเย็น' && (currentHour >= 16 || currentHour < 5))
+    );
+
+    return isCurrentMeal ? ['#FFA726', '#FB8C00'] : ['#4caf50', '#45a049'];
+  };
 
   const resetDiaryData = () => {
     setMeals({
@@ -249,9 +305,9 @@ const DiaryPage = () => {
       </LinearGradient>
       
       <View style={styles.caloriesSummary}>
-        <CalorieSummaryItem label="เป้าหมาย" value={`${tdee} Calories`} />
-        <CalorieSummaryItem label="อาหาร" value={`${totalFoodCalories} Calories`} />
-        <CalorieSummaryItem label="คงเหลือ" value={`${tdee - totalFoodCalories} Calories`} />
+        <CalorieSummaryItem label="เป้าหมาย" value={`${tdee} Cal`} />
+        <CalorieSummaryItem label="อาหาร" value={`${totalFoodCalories} Cal`} />
+        <CalorieSummaryItem label="คงเหลือ" value={`${tdee - totalFoodCalories} remaining`} />
       </View>
 
       <ScrollView style={styles.scrollView}>
@@ -260,10 +316,11 @@ const DiaryPage = () => {
             key={mealType}
             title={mealType}
             calories={mealData.calories}
-            carbRecommendation={45}
+            carbRecommendation={mealCarbRecommendations[mealType]}
             items={mealData.items}
             onAddPress={() => navigateToMealEntry(mealType)}
             onDelete={(index) => deleteFoodItem(mealType, index)}
+            gradientColors={getMealColors(mealType)}
           />
         ))}
         <ExerciseSection
@@ -277,6 +334,7 @@ const DiaryPage = () => {
   );
 };
 
+
 const CalorieSummaryItem = ({ label, value }) => (
   <View style={styles.calorieSummaryItem}>
     <Text style={styles.summaryLabel}>{label}</Text>
@@ -284,7 +342,7 @@ const CalorieSummaryItem = ({ label, value }) => (
   </View>
 );
 
-const MealSection = ({ title, calories, carbRecommendation, items = [], onAddPress, onDelete }) => {
+const MealSection = ({ title, calories, carbRecommendation, items = [], onAddPress, onDelete, gradientColors }) => {
   const totalCarbs = items.reduce((sum, item) => sum + (item.carbs || 0), 0);
 
   const handleDelete = (index) => {
@@ -307,7 +365,7 @@ const MealSection = ({ title, calories, carbRecommendation, items = [], onAddPre
   return (
     <View style={styles.mealSection}>
       <LinearGradient
-        colors={['#4caf50', '#45a049']}
+        colors={gradientColors}
         style={styles.mealHeader}
       >
         <View style={styles.mealTitleContainer}>
@@ -336,6 +394,9 @@ const MealSection = ({ title, calories, carbRecommendation, items = [], onAddPre
         </Text>
         <Text style={styles.carbRecommendationText}>
           คาร์บที่รับประทานไป: {totalCarbs} กรัม
+        </Text>
+        <Text style={[styles.carbRecommendationText, totalCarbs > carbRecommendation ? styles.carbWarning : null]}>
+          {totalCarbs > carbRecommendation ? 'เกินคำแนะนำ!' : 'อยู่ในเกณฑ์ที่แนะนำ'}
         </Text>
       </View>
 
@@ -555,6 +616,20 @@ const styles = StyleSheet.create({
   foodCarbs: {
     marginRight: 8,
     color: '#2e7d32',
+  },
+  carbRecommendation: {
+    backgroundColor: '#e8f5e9',
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#c8e6c9',
+  },
+  carbRecommendationText: {
+    fontSize: 14,
+    color: '#2e7d32',
+  },
+  carbWarning: {
+    color: '#ffbf00',
+    fontWeight: 'bold',
   },
 });
 

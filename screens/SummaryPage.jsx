@@ -143,49 +143,63 @@ const SummaryPage = ({ route }) => {
     </View>
   );
 
+  const HeaderComponent = () => (
+    <>
+      <LinearGradient colors={['#4caf50', '#45a049']} style={styles.header}>
+        <Text style={styles.headerText}>Summary for {new Date(date).toLocaleDateString()}</Text>
+      </LinearGradient>
+
+      <View style={styles.card}>
+        <Text style={styles.cardHeader}>Nutrition Summary</Text>
+        <View style={styles.caloriesSummary}>
+          <Text style={styles.caloriesText}>{diary.totalCalories}</Text>
+          <Text style={styles.caloriesLabel}>calories consumed</Text>
+        </View>
+        <Text style={styles.goalText}>Goal: {goals.tdee || 0} calories</Text>
+
+        <MacroProgressBar title="Carbs" current={diary.totalCarbs} goal={goals.carbs || 0} color="#FFB300" />
+        <MacroProgressBar title="Protein" current={diary.totalProtein} goal={goals.protein || 0} color="#2196F3" />
+        <MacroProgressBar title="Fat" current={diary.totalFat} goal={goals.fat || 0} color="#FF5722" />
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.cardHeader}>Exercise Summary</Text>
+        <View style={styles.exerciseSummary}>
+          <View style={styles.exerciseSummaryItem}>
+            <Icon name="flame-outline" size={24} color="#4caf50" />
+            <Text style={styles.exerciseSummaryText}>{diary.exercises.totalCaloriesBurned} kcal burned</Text>
+          </View>
+          <View style={styles.exerciseSummaryItem}>
+            <Icon name="time-outline" size={24} color="#4caf50" />
+            <Text style={styles.exerciseSummaryText}>{diary.exercises.totalDuration} minutes</Text>
+          </View>
+        </View>
+      </View>
+    </>
+  );
+
+  if (!diary || !goals) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView>
-        <LinearGradient colors={['#4caf50', '#45a049']} style={styles.header}>
-          <Text style={styles.headerText}>Summary for {new Date(date).toLocaleDateString()}</Text>
-        </LinearGradient>
-
-        <View style={styles.card}>
-          <Text style={styles.cardHeader}>Nutrition Summary</Text>
-          <View style={styles.caloriesSummary}>
-            <Text style={styles.caloriesText}>{diary.totalCalories}</Text>
-            <Text style={styles.caloriesLabel}>calories consumed</Text>
-          </View>
-          <Text style={styles.goalText}>Goal: {goals.tdee || 0} calories</Text>
-
-          <MacroProgressBar title="Carbs" current={diary.totalCarbs} goal={goals.carbs || 0} color="#FFB300" />
-          <MacroProgressBar title="Protein" current={diary.totalProtein} goal={goals.protein || 0} color="#2196F3" />
-          <MacroProgressBar title="Fat" current={diary.totalFat} goal={goals.fat || 0} color="#FF5722" />
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardHeader}>Exercise Summary</Text>
-          <View style={styles.exerciseSummary}>
-            <View style={styles.exerciseSummaryItem}>
-              <Icon name="flame-outline" size={24} color="#4caf50" />
-              <Text style={styles.exerciseSummaryText}>{diary.exercises.totalCaloriesBurned} kcal burned</Text>
-            </View>
-            <View style={styles.exerciseSummaryItem}>
-              <Icon name="time-outline" size={24} color="#4caf50" />
-              <Text style={styles.exerciseSummaryText}>{diary.exercises.totalDuration} minutes</Text>
-            </View>
-          </View>
-          <FlatList
-            data={diary.exercises.list}
-            keyExtractor={(item, index) => index.toString()}
-            renderItem={renderExerciseItem}
-            ListEmptyComponent={<Text style={styles.emptyListText}>No exercises recorded for this day.</Text>}
-          />
-        </View>
-      </ScrollView>
+      <FlatList
+        ListHeaderComponent={HeaderComponent}
+        data={diary.exercises.list}
+        keyExtractor={(item, index) => index.toString()}
+        renderItem={renderExerciseItem}
+        ListEmptyComponent={<Text style={styles.emptyListText}>No exercises recorded for this day.</Text>}
+        contentContainerStyle={styles.flatListContent}
+      />
     </SafeAreaView>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: {
@@ -311,6 +325,9 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 18,
     color: '#4caf50',
+  },
+  flatListContent: {
+    paddingBottom: 20,
   },
 });
 
