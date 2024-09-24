@@ -19,6 +19,8 @@ const PatientDetailScreen = ({ route, navigation }) => {
   const [selectedTab, setSelectedTab] = useState("bloodSugar"); // Tab state
   const [loading, setLoading] = useState(true); // Loading state
   const [weightHistory, setWeightHistory] = useState([]);
+  const [diaryEntries, setDiaryEntries] = useState([]);
+
 
   const fetchPatientData = async () => {
     try {
@@ -85,14 +87,56 @@ const PatientDetailScreen = ({ route, navigation }) => {
     }
   };
 
-  useEffect(() => {
-    fetchPatientData();
-    fetchBloodSugarHistory();
+  const fetchDiaryEntries = async () => {
+    try {
+      const formatDate = (date) => {
+        return date.toISOString().split('T')[0];
+      };
 
-    fetchWeightHistory(patientId).then((data) => {
-      setWeightHistory(data);
-    });
+      const today = new Date();
+      const oneWeekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+      const entriesRef = collection(firebaseDB, "users", patientId, "entries");
+      const q = query(
+        entriesRef,
+        where("date", ">=", formatDate(oneWeekAgo)),
+        where("date", "<=", formatDate(today))
+      );
+
+      const querySnapshot = await getDocs(q);
+      const entries = [];
+
+      querySnapshot.forEach((doc) => {
+        entries.push({ id: doc.id, ...doc.data() });
+      });
+
+      setDiaryEntries(entries);
+    } catch (error) {
+      console.error("Error fetching diary entries:", error);
+      Alert.alert("Error", "เกิดข้อผิดพลาดในการดึงข้อมูลไดอารี่");
+    }
+  };
+
+  useEffect(() => {
+    const fetchAllData = async () => {
+      setLoading(true);
+      try {
+        await fetchPatientData();
+        await fetchBloodSugarHistory();
+        const weightData = await fetchWeightHistory(patientId);
+        setWeightHistory(weightData);
+        await fetchDiaryEntries();
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        Alert.alert("Error", "เกิดข้อผิดพลาดในการดึงข้อมูล");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAllData();
   }, [patientId]);
+
 
   if (loading) {
     return (
@@ -216,10 +260,71 @@ const PatientDetailScreen = ({ route, navigation }) => {
             )}
           </View>
         );
+      case "diary":
+        return (
+          <View>
+            <Text style={styles.statsText}>ไดอารี่อาหารและการออกกำลังกาย</Text>
+            {diaryEntries.length > 0 ? (
+              diaryEntries.map((entry, index) => (
+                <View key={index} style={styles.diaryEntry}>
+                  <Text style={styles.diaryDate}>{new Date(entry.date).toLocaleDateString()}</Text>
+                  <Text style={styles.diaryCalories}>แคลอรี่รวม: {calculateTotalCalories(entry)} kcal</Text>
+                  <Text style={styles.diaryMacros}>
+                    คาร์โบไฮเดรต: {calculateTotalMacro(entry, 'carbs')}g |
+                    โปรตีน: {calculateTotalMacro(entry, 'protein')}g |
+                    ไขมัน: {calculateTotalMacro(entry, 'fat')}g
+                  </Text>
+                  <Text style={styles.mealTitle}>มื้ออาหาร:</Text>
+                  {Object.entries(entry.meals).map(([mealName, mealData], mealIndex) => (
+                    <View key={mealIndex} style={styles.meal}>
+                      <Text style={styles.mealName}>{mealName}</Text>
+                      {mealData.items.map((item, itemIndex) => (
+                        <Text key={itemIndex} style={styles.mealItem}>
+                          - {item.name} ({item.amount}): {item.calories} kcal
+                        </Text>
+                      ))}
+                    </View>
+                  ))}
+                  {entry.exercises && entry.exercises.length > 0 && (
+                    <View>
+                      <Text style={styles.exerciseTitle}>การออกกำลังกาย:</Text>
+                      {entry.exercises.map((exercise, exerciseIndex) => (
+                        <Text key={exerciseIndex} style={styles.exerciseItem}>
+                          - {exercise.name}: {exercise.duration} นาที, {exercise.calories} kcal
+                        </Text>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              ))
+            ) : (
+              <Text style={styles.noDataText}>ไม่มีข้อมูลไดอารี่</Text>
+            )}
+          </View>
+        );
       default:
         return null;
     }
   };
+  const calculateTotalCalories = (entry) => {
+    let total = 0;
+    Object.values(entry.meals).forEach(meal => {
+      total += meal.calories || 0;
+    });
+    entry.exercises?.forEach(exercise => {
+      total -= exercise.calories || 0;
+    });
+    return total.toFixed(0);
+  };
+
+  const calculateTotalMacro = (entry, macro) => {
+    let total = 0;
+    Object.values(entry.meals).forEach(meal => {
+      total += meal[macro] || 0;
+    });
+    return total.toFixed(1);
+  };
+
 
   return (
     <View style={styles.container}>
@@ -248,6 +353,12 @@ const PatientDetailScreen = ({ route, navigation }) => {
           >
             <Text style={styles.tabText}>น้ำหนัก</Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, selectedTab === "diary" && styles.activeTab]}
+            onPress={() => setSelectedTab("diary")}
+          >
+            <Text style={styles.tabText}>ไดอารี่</Text>
+          </TouchableOpacity>
         </View>
 
         {renderTabContent()}
@@ -268,6 +379,7 @@ const PatientDetailScreen = ({ route, navigation }) => {
     </View>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#E3F2FD" },
@@ -340,6 +452,65 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 }, // Offset for the shadow
     shadowRadius: 6, // Blur radius for the shadow
     elevation: 8, // Elevation for Android
+  },
+  diaryEntry: {
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 15,
+    marginHorizontal: 15,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  diaryDate: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 5,
+    color: '#2196F3',
+  },
+  diaryCalories: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  diaryMacros: {
+    fontSize: 14,
+    color: '#555',
+    marginBottom: 10,
+  },
+  mealTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginTop: 10,
+    marginBottom: 5,
+  },
+  meal: {
+    marginLeft: 10,
+    marginBottom: 10,
+  },
+  mealName: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#444',
+  },
+  mealItem: {
+    fontSize: 14,
+    color: '#666',
+    marginLeft: 10,
+  },
+  exerciseTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginTop: 10,
+    marginBottom: 5,
+  },
+  exerciseItem: {
+    fontSize: 14,
+    color: '#666',
+    marginLeft: 10,
   },
 });
 
