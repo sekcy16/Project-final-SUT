@@ -8,10 +8,10 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import { LineChart } from "react-native-chart-kit"; // For the graph
-import { firebaseDB } from "../../config/firebase.config"; // Import firebaseDB from your config
-import { doc, getDoc } from "firebase/firestore"; // Import Firestore functions
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { LineChart } from "react-native-chart-kit";
+import { firebaseDB } from "../../config/firebase.config";
+import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const PatientDetailScreen = ({ route, navigation }) => {
   const { patientId } = route.params; // Get patient ID from route parameters
@@ -160,51 +160,52 @@ const PatientDetailScreen = ({ route, navigation }) => {
     switch (selectedTab) {
       case "bloodSugar":
         return (
-          <View>
+          <View style={styles.tabContent}>
             <Text style={styles.statsText}>ระดับน้ำตาลในเลือด</Text>
             {patientData.bloodSugarHistory ? (
               <LineChart
                 data={{
-                  labels: patientData.bloodSugarHistory.map(
-                    (entry) => entry.date
-                  ), // ใช้วันที่จาก bloodSugarHistory
-                  datasets: [
-                    {
-                      data: patientData.bloodSugarHistory.map(
-                        (entry) => entry.level
-                      ),
-                    },
-                  ], // ใช้ค่าระดับน้ำตาลจาก bloodSugarHistory
+                  labels: patientData.bloodSugarHistory.map((entry) => entry.date),
+                  datasets: [{ data: patientData.bloodSugarHistory.map((entry) => entry.level) }],
                 }}
                 width={350}
-                height={200}
+                height={220}
                 chartConfig={{
-                  backgroundColor: "#fff",
-                  backgroundGradientFrom: "#fff",
-                  backgroundGradientTo: "#fff",
+                  backgroundColor: "#ffffff",
+                  backgroundGradientFrom: "#ffffff",
+                  backgroundGradientTo: "#ffffff",
                   decimalPlaces: 0,
-                  alignSelf: "center", // Center the graph horizontally
-                  marginVertical: 20,
-                  color: (opacity = 1) => `rgba(0, 123, 255, ${opacity})`, // สีของกราฟ
+                  color: (opacity = 1) => `rgba(33, 150, 243, ${opacity})`,
+                  labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                  style: {
+                    borderRadius: 16
+                  },
+                  propsForDots: {
+                    r: "6",
+                    strokeWidth: "2",
+                    stroke: "#2196F3"
+                  }
                 }}
                 bezier
                 style={styles.chart}
               />
             ) : (
-              <Text style={styles.noDataText}>
-                ไม่มีข้อมูลระดับน้ำตาลในเลือด
-              </Text>
+              <Text style={styles.noDataText}>ไม่มีข้อมูลระดับน้ำตาลในเลือด</Text>
             )}
             <Text style={styles.historyTitle}>ประวัติ</Text>
             {patientData.bloodSugarHistory ? (
               patientData.bloodSugarHistory.map((entry, index) => (
                 <View key={index} style={styles.historyItem}>
-                  <Text style={styles.historyDate}>{entry.date}</Text>
-                  <Text style={styles.historyValue}>
-                    {entry.level} mg/dL ({entry.status})
-                  </Text>
-
-                  <Text style={styles.historyTime}>เวลาวัด: {entry.time}</Text>
+                  <View style={styles.historyItemLeft}>
+                    <Text style={styles.historyDate}>{entry.date}</Text>
+                    <Text style={styles.historyTime}>เวลาวัด: {entry.time}</Text>
+                  </View>
+                  <View style={styles.historyItemRight}>
+                    <Text style={styles.historyValue}>{entry.level} mg/dL</Text>
+                    <Text style={[styles.historyStatus, { color: getStatusColor(entry.status) }]}>
+                      {entry.status}
+                    </Text>
+                  </View>
                 </View>
               ))
             ) : (
@@ -212,40 +213,46 @@ const PatientDetailScreen = ({ route, navigation }) => {
             )}
           </View>
         );
-      case "weight":
-        return (
-          <View>
-            <Text style={styles.statsText}>น้ำหนัก</Text>
-            {weightHistory && weightHistory.length > 0 ? (
-              <LineChart
-                data={{
-                  labels: weightHistory.map((entry) => entry.date),
-                  datasets: [
-                    {
-                      data: weightHistory.map((entry) => entry.weight),
-                      color: (opacity = 1) => `rgba(0, 0, 255, ${opacity})`,
-                      strokeWidth: 2,
+        case "weight":
+          return (
+            <View>
+              <Text style={styles.statsText}>น้ำหนัก</Text>
+              {weightHistory && weightHistory.length > 0 ? (
+                <LineChart
+                  data={{
+                    labels: weightHistory.map((entry) => entry.date),
+                    datasets: [
+                      {
+                        data: weightHistory.map((entry) => entry.weight),
+                        color: (opacity = 1) => `rgba(0, 0, 255, ${opacity})`,
+                        strokeWidth: 2,
+                      },
+                    ],
+                  }}
+                  width={350}
+                  height={220}
+                  chartConfig={{
+                    backgroundColor: "#fff",
+                    backgroundGradientFrom: "#fff",
+                    backgroundGradientTo: "#fff",
+                    decimalPlaces: 1,
+                    color: (opacity = 1) => `rgba(0, 123, 255, ${opacity})`,
+                    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                    style: {
+                      borderRadius: 16
                     },
-                  ],
-                }}
-                width={350}
-                height={220}
-                chartConfig={{
-                  backgroundColor: "#fff",
-                  backgroundGradientFrom: "#fff",
-                  backgroundGradientTo: "#fff",
-                  decimalPlaces: 1,
-                  alignSelf: "center", // Center the graph horizontally
-                  marginVertical: 20,
-                  color: (opacity = 1) => `rgba(0, 123, 255, ${opacity})`,
-                }}
-                bezier
-                style={styles.chart}
-              />
-            ) : (
-              <Text style={styles.noDataText}>ไม่มีข้อมูลน้ำหนัก</Text>
-            )}
-
+                    propsForDots: {
+                      r: "6",
+                      strokeWidth: "2",
+                      stroke: "#0000FF"
+                    }
+                  }}
+                  bezier
+                  style={styles.chart}
+                />
+              ) : (
+                <Text style={styles.noDataText}>ไม่มีข้อมูลน้ำหนัก</Text>
+              )}
             <Text style={styles.historyTitle}>ประวัติ</Text>
             {weightHistory && weightHistory.length > 0 ? (
               weightHistory.map((entry, index) => (
@@ -260,56 +267,92 @@ const PatientDetailScreen = ({ route, navigation }) => {
             )}
           </View>
         );
-      case "diary":
-        return (
-          <View>
-            <Text style={styles.statsText}>ไดอารี่อาหารและการออกกำลังกาย</Text>
-            {diaryEntries.length > 0 ? (
-              diaryEntries.map((entry, index) => (
-                <View key={index} style={styles.diaryEntry}>
-                  <Text style={styles.diaryDate}>{new Date(entry.date).toLocaleDateString()}</Text>
-                  <Text style={styles.diaryCalories}>แคลอรี่รวม: {calculateTotalCalories(entry)} kcal</Text>
-                  <Text style={styles.diaryMacros}>
-                    คาร์โบไฮเดรต: {calculateTotalMacro(entry, 'carbs')}g |
-                    โปรตีน: {calculateTotalMacro(entry, 'protein')}g |
-                    ไขมัน: {calculateTotalMacro(entry, 'fat')}g
-                  </Text>
-                  <Text style={styles.mealTitle}>มื้ออาหาร:</Text>
-                  {Object.entries(entry.meals).map(([mealName, mealData], mealIndex) => (
-                    <View key={mealIndex} style={styles.meal}>
-                      <Text style={styles.mealName}>{mealName}</Text>
-                      {mealData.items.map((item, itemIndex) => (
-                        <Text key={itemIndex} style={styles.mealItem}>
-                          - {item.name} ({item.amount}): {item.calories} kcal
-                        </Text>
-                      ))}
+        case "diary":
+          return (
+            <View style={styles.diaryContainer}>
+              <Text style={styles.diaryTitle}>ไดอารี่อาหารและการออกกำลังกาย</Text>
+              {diaryEntries.length > 0 ? (
+                diaryEntries.map((entry, index) => (
+                  <View key={index} style={styles.diaryEntry}>
+                    <View style={styles.diaryHeader}>
+                      <Text style={styles.diaryDate}>{new Date(entry.date).toLocaleDateString('th-TH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</Text>  
                     </View>
-                  ))}
-                  {entry.exercises && entry.exercises.length > 0 && (
-                    <View>
-                      <Text style={styles.exerciseTitle}>การออกกำลังกาย:</Text>
-                      {entry.exercises.map((exercise, exerciseIndex) => (
-                        <Text key={exerciseIndex} style={styles.exerciseItem}>
-                          - {exercise.name}: {exercise.duration} นาที, {exercise.calories} kcal
-                        </Text>
-                      ))}
+                    <View><Text style={styles.diaryCalories}>แคลอรี่รวม: {calculateTotalCalories(entry)} kcal</Text>
                     </View>
-                  )}
-                </View>
-              ))
-            ) : (
-              <Text style={styles.noDataText}>ไม่มีข้อมูลไดอารี่</Text>
-            )}
-          </View>
-        );
+                    <View style={styles.macrosContainer}>
+                      <View style={styles.macroItem}>
+                        <MaterialCommunityIcons name="bread-slice" size={24} color="#FF9800" />
+                        <Text style={styles.macroValue}>{calculateTotalMacro(entry, 'carbs')}g</Text>
+                        <Text style={styles.macroLabel}>คาร์โบไฮเดรต</Text>
+                      </View>
+                      <View style={styles.macroItem}>
+                        <MaterialCommunityIcons name="food-steak" size={24} color="#4CAF50" />
+                        <Text style={styles.macroValue}>{calculateTotalMacro(entry, 'protein')}g</Text>
+                        <Text style={styles.macroLabel}>โปรตีน</Text>
+                      </View>
+                      <View style={styles.macroItem}>
+                        <MaterialCommunityIcons name="oil" size={24} color="#2196F3" />
+                        <Text style={styles.macroValue}>{calculateTotalMacro(entry, 'fat')}g</Text>
+                        <Text style={styles.macroLabel}>ไขมัน</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.sectionTitle}>มื้ออาหาร</Text>
+                    {Object.entries(entry.meals).map(([mealName, mealData], mealIndex) => (
+                      <View key={mealIndex} style={styles.meal}>
+                        <Text style={styles.mealName}>{mealName}</Text>
+                        {mealData.items.map((item, itemIndex) => (
+                          <View key={itemIndex} style={styles.mealItem}>
+                            <Text style={styles.itemName}>{item.name}</Text>
+                            <Text style={styles.itemDetails}>{item.amount} • {item.calories} kcal</Text>
+                          </View>
+                        ))}
+                      </View>
+                    ))}
+                    {entry.exercises && entry.exercises.length > 0 && (
+                      <View>
+                        <Text style={styles.sectionTitle}>การออกกำลังกาย</Text>
+                        {entry.exercises.map((exercise, exerciseIndex) => (
+                          <View key={exerciseIndex} style={styles.exerciseItem}>
+                            <MaterialCommunityIcons name="run" size={24} color="#E91E63" />
+                            <View style={styles.exerciseDetails}>
+                              <Text style={styles.exerciseName}>{exercise.name}</Text>
+                              <Text style={styles.exerciseInfo}>{exercise.duration} นาที • {exercise.calories} kcal</Text>
+                            </View>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.noDataText}>ไม่มีข้อมูลไดอารี่</Text>
+              )}
+            </View>
+          );
+        default:
+          return null;
+      }
+    };
+
+    
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'ต่ำ':
+        return '#FF9800';
+      case 'ปกติ':
+        return '#4CAF50';
+      case 'สูง':
+        return '#F44336';
       default:
-        return null;
+        return '#757575';
     }
   };
   const calculateTotalCalories = (entry) => {
     let total = 0;
     Object.values(entry.meals).forEach(meal => {
-      total += meal.calories || 0;
+      meal.items.forEach(item => {
+        total += item.calories || 0;
+      });
     });
     entry.exercises?.forEach(exercise => {
       total -= exercise.calories || 0;
@@ -320,97 +363,153 @@ const PatientDetailScreen = ({ route, navigation }) => {
   const calculateTotalMacro = (entry, macro) => {
     let total = 0;
     Object.values(entry.meals).forEach(meal => {
-      total += meal[macro] || 0;
+      meal.items.forEach(item => {
+        total += item[macro] || 0;
+      });
     });
     return total.toFixed(1);
   };
 
-
+  
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.name}>{patientData.fullName || "No Name"}</Text>
         <Text style={styles.age}>
-          อายุ {patientData.age || "N/A"} | เบาหวานระดับ{" "}
-          {patientData.diabetesType || "N/A"}
+          อายุ {patientData.age || "N/A"} | เบาหวานระดับ {patientData.diabetesType || "N/A"}
         </Text>
       </View>
 
-      <ScrollView>
-        <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[
-              styles.tab,
-              selectedTab === "bloodSugar" && styles.activeTab,
-            ]}
-            onPress={() => setSelectedTab("bloodSugar")}
-          >
-            <Text style={styles.tabText}>ระดับน้ำตาลในเลือด</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, selectedTab === "weight" && styles.activeTab]}
-            onPress={() => setSelectedTab("weight")}
-          >
-            <Text style={styles.tabText}>น้ำหนัก</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, selectedTab === "diary" && styles.activeTab]}
-            onPress={() => setSelectedTab("diary")}
-          >
-            <Text style={styles.tabText}>ไดอารี่</Text>
-          </TouchableOpacity>
-        </View>
-
-        {renderTabContent()}
-
+      <View style={styles.tabContainer}>
         <TouchableOpacity
-          style={styles.button}
-          onPress={() =>
-            navigation.navigate("AdvicePage", {
-              patientName: patientData.fullName,
-              patientAge: patientData.age,
-              patientLevel: patientData.diabetesType,
-            })
-          }
+          style={[styles.tab, selectedTab === "bloodSugar" && styles.activeTab]}
+          onPress={() => setSelectedTab("bloodSugar")}
         >
-          <Text style={styles.buttonText}>ให้คำแนะนำ</Text>
+          <MaterialCommunityIcons 
+            name="water" 
+            size={24} 
+            color={selectedTab === "bloodSugar" ? "#2196F3" : "#757575"} 
+          />
+          <Text style={[styles.tabText, selectedTab === "bloodSugar" && styles.activeTabText]}>
+            น้ำตาล
+          </Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, selectedTab === "weight" && styles.activeTab]}
+          onPress={() => setSelectedTab("weight")}
+        >
+          <MaterialCommunityIcons 
+            name="scale-bathroom" 
+            size={24} 
+            color={selectedTab === "weight" ? "#2196F3" : "#757575"} 
+          />
+          <Text style={[styles.tabText, selectedTab === "weight" && styles.activeTabText]}>
+            น้ำหนัก
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, selectedTab === "diary" && styles.activeTab]}
+          onPress={() => setSelectedTab("diary")}
+        >
+          <MaterialCommunityIcons 
+            name="book-open-variant" 
+            size={24} 
+            color={selectedTab === "diary" ? "#2196F3" : "#757575"} 
+          />
+          <Text style={[styles.tabText, selectedTab === "diary" && styles.activeTabText]}>
+            ไดอารี่
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView style={styles.content}>
+        {renderTabContent()}
       </ScrollView>
+      <TouchableOpacity
+        style={styles.adviceButton}
+        onPress={() => navigation.navigate("AdvicePage", {
+          patientName: patientData.fullName,
+          patientAge: patientData.age,
+          patientLevel: patientData.diabetesType,
+          userId: patientData.id, // Add this line to pass the patient's ID
+        })}
+      >
+        <MaterialCommunityIcons name="lightbulb-on" size={24} color="white" />
+        <Text style={styles.adviceButtonText}>ให้คำแนะนำ</Text>
+      </TouchableOpacity>
     </View>
   );
 };
-
-
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#E3F2FD" },
+  container: { 
+    flex: 1, 
+    backgroundColor: "#F5F5F5" 
+  },
   header: {
     padding: 20,
     backgroundColor: "#2196F3",
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
+    elevation: 4,
   },
-  name: { fontSize: 26, fontWeight: "bold", color: "white" },
-  age: { fontSize: 18, color: "white", marginTop: 5 },
+  name: { 
+    fontSize: 26, 
+    fontWeight: "bold", 
+    color: "white" 
+  },
+  age: { 
+    fontSize: 18, 
+    color: "white", 
+    marginTop: 5 
+  },
   tabContainer: {
     flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: "#ddd",
     backgroundColor: "white",
+    borderRadius: 25,
+    margin: 15,
+    elevation: 2,
   },
-  tab: { flex: 1, padding: 15, alignItems: "center" },
-  activeTab: { borderBottomWidth: 3, borderBottomColor: "#2196F3" },
-  tabText: { fontSize: 16, color: "#333" },
-  statsText: {
-    fontSize: 18,
+  tab: { 
+    flex: 1, 
+    padding: 15, 
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  activeTab: { 
+    borderBottomWidth: 3, 
+    borderBottomColor: "#2196F3" 
+  },
+  tabText: { 
+    fontSize: 14, 
+    color: "#757575",
+    marginTop: 5,
+  },
+  activeTabText: {
+    color: "#2196F3",
     fontWeight: "bold",
-    paddingHorizontal: 20,
-    marginVertical: 10,
   },
-  chart: { borderRadius: 12, marginVertical: 20, marginHorizontal: 10 },
-  historyTitle: {
+  content: {
+    flex: 1,
+  },
+  tabContent: {
+    padding: 15,
+  },
+  statsText: {
     fontSize: 20,
     fontWeight: "bold",
-    padding: 20,
+    marginBottom: 15,
+    color: "#333",
+  },
+  chart: { 
+    borderRadius: 16, 
+    marginVertical: 20,
+    alignItems: "center",
+  },
+  historyTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginTop: 20,
+    marginBottom: 10,
     color: "#2196F3",
   },
   historyItem: {
@@ -418,99 +517,157 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     padding: 15,
     backgroundColor: "white",
-    marginHorizontal: 15,
     marginBottom: 10,
     borderRadius: 10,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
-  historyDate: { fontSize: 16, color: "#555" },
-  historyValue: { fontSize: 16, fontWeight: "bold", color: "#333" },
+  historyItemLeft: {
+    flex: 1,
+  },
+  historyItemRight: {
+    alignItems: "flex-end",
+  },
+  historyDate: { 
+    fontSize: 16, 
+    color: "#333",
+    fontWeight: "bold",
+  },
+  historyTime: { 
+    fontSize: 14, 
+    color: "#757575",
+    marginTop: 4,
+  },
+  historyValue: { 
+    fontSize: 18, 
+    fontWeight: "bold", 
+    color: "#2196F3" 
+  },
+  historyStatus: {
+    fontSize: 14,
+    marginTop: 4,
+  },
   noDataText: {
     fontSize: 16,
-    color: "#aaa",
+    color: "#757575",
     textAlign: "center",
-    marginTop: 10,
+    marginTop: 20,
   },
-  button: {
-    backgroundColor: "#2196F3",
+  adviceButton: {
+    flexDirection: "row",
+    backgroundColor: "#4CAF50",
     padding: 15,
     margin: 20,
-    borderRadius: 8,
+    borderRadius: 25,
     alignItems: "center",
+    justifyContent: "center",
+    elevation: 4,
   },
-  buttonText: { color: "white", fontSize: 18, fontWeight: "bold" },
-  chart: {
-    borderRadius: 12,
-    marginVertical: 20,
-    marginHorizontal: 10,
-    alignSelf: "center", // Center the chart horizontally
-    shadowColor: "#000", // Shadow color for iOS
-    shadowOpacity: 0.2, // Opacity of the shadow
-    shadowOffset: { width: 0, height: 4 }, // Offset for the shadow
-    shadowRadius: 6, // Blur radius for the shadow
-    elevation: 8, // Elevation for Android
+  adviceButtonText: { 
+    color: "white", 
+    fontSize: 18, 
+    fontWeight: "bold",
+    marginLeft: 10,
+  },
+  // New styles for the diary section
+  diaryContainer: {
+    padding: 15,
+  },
+  diaryTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 20,
   },
   diaryEntry: {
-    backgroundColor: 'white',
-    borderRadius: 10,
+    backgroundColor: "white",
+    borderRadius: 15,
     padding: 15,
-    marginBottom: 15,
-    marginHorizontal: 15,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    marginBottom: 20,
     elevation: 3,
+  },
+  diaryHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
   },
   diaryDate: {
     fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 5,
-    color: '#2196F3',
+    fontWeight: "bold",
+    color: "#2196F3",
   },
   diaryCalories: {
     fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 5,
+    color: "#4CAF50",
+    fontWeight: "bold",
   },
-  diaryMacros: {
-    fontSize: 14,
-    color: '#555',
+  macrosContainer: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    backgroundColor: "#F5F5F5",
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 15,
+  },
+  macroItem: {
+    alignItems: "center",
+  },
+  macroValue: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginTop: 5,
+  },
+  macroLabel: {
+    fontSize: 12,
+    color: "#757575",
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#333",
+    marginTop: 15,
     marginBottom: 10,
-  },
-  mealTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginTop: 10,
-    marginBottom: 5,
   },
   meal: {
-    marginLeft: 10,
-    marginBottom: 10,
+    marginBottom: 15,
   },
   mealName: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#444',
-  },
-  mealItem: {
-    fontSize: 14,
-    color: '#666',
-    marginLeft: 10,
-  },
-  exerciseTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginTop: 10,
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#2196F3",
     marginBottom: 5,
   },
-  exerciseItem: {
+  mealItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 5,
+  },
+  itemName: {
+    fontSize: 16,
+    color: "#333",
+  },
+  itemDetails: {
     fontSize: 14,
-    color: '#666',
+    color: "#757575",
+  },
+  exerciseItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  exerciseDetails: {
     marginLeft: 10,
+    flex: 1,
+  },
+  exerciseName: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#333",
+  },
+  exerciseInfo: {
+    fontSize: 14,
+    color: "#757575",
   },
 });
 

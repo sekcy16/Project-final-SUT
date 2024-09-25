@@ -1,4 +1,3 @@
-// Imports
 import React, { useEffect } from "react";
 import {
   View,
@@ -7,12 +6,13 @@ import {
   TouchableOpacity,
   Text,
 } from "react-native";
-import { NavigationContainer } from "@react-navigation/native";
+import { NavigationContainer, useNavigation } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Provider, useSelector } from "react-redux";
 import Icon from "react-native-vector-icons/Ionicons";
 import Store from "./context/store";
+
 
 // Import your screens and components
 import {
@@ -39,6 +39,7 @@ import {
   AddTaskScreen,
   ProfileDoctor,
   ScheduleScreen,
+  AddFood, // เพิ่ม import สำหรับหน้า AddFood
 } from "./screens";
 import FoodResult from "./components/FoodResult";
 import Nutrition from "./components/Nutrition";
@@ -53,25 +54,41 @@ import SummaryPage from "./screens/SummaryPage";
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
+
 // SearchBar Component
-const SearchBar = () => (
-  <View style={styles.searchBarContainer}>
-    <View style={styles.searchBar}>
-      <Icon name="search" size={20} color="#888" style={styles.searchIcon} />
-      <TextInput
-        style={styles.searchInput}
-        placeholder="Search for a food"
-        placeholderTextColor="#888"
-      />
-      <Icon
-        name="barcode-outline"
-        size={20}
-        color="#888"
-        style={styles.barcodeIcon}
-      />
+const SearchBar = () => {
+  const navigation = useNavigation();
+
+  const handleSearchPress = () => {
+    navigation.navigate('AddFood');
+  };
+
+  const handleBarcodePress = () => {
+    navigation.navigate('FoodARPage');
+  };
+
+  return (
+    <View style={styles.searchBarContainer}>
+      <TouchableOpacity style={styles.searchBar} onPress={handleSearchPress}>
+        <Icon name="search" size={20} color="#888" style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search for a food"
+          placeholderTextColor="#888"
+          editable={false}
+        />
+      </TouchableOpacity>
+      <TouchableOpacity onPress={handleBarcodePress}>
+        <Icon
+          name="barcode-outline"
+          size={20}
+          color="#888"
+          style={styles.barcodeIcon}
+        />
+      </TouchableOpacity>
     </View>
-  </View>
-);
+  );
+};
 
 // CustomTabBar Component
 const CustomTabBar = ({ state, descriptors, navigation }) => {
@@ -208,7 +225,6 @@ const DoctorTabNavigator = () => (
     />
   </Tab.Navigator>
 );
-
 // RootNavigator Component
 const RootNavigator = () => {
   const user = useSelector((state) => state.user?.user);
@@ -266,6 +282,7 @@ const RootNavigator = () => {
       <Stack.Screen name="UserProfilePage" component={UserProfilePage} />
       <Stack.Screen name="DoctorProfilePage" component={DoctorProfilePage} />
       <Stack.Screen name="Schedule" component={ScheduleScreen} />
+      <Stack.Screen name="AddFood" component={AddFood} />
     </Stack.Navigator>
   );
 };
@@ -290,6 +307,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#F2F2F7",
     paddingVertical: 10,
     paddingHorizontal: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   searchBar: {
     flexDirection: "row",
@@ -298,9 +317,15 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 10,
     height: 40,
+    flex: 1,
   },
-  searchIcon: {
-    marginRight: 5,
+  barcodeIcon: {
+    marginLeft: 10,
+  },
+  searchInput: {
+    flex: 1,
+    height: 40,
+    color: "#000",
   },
   searchInput: {
     flex: 1,
