@@ -162,19 +162,19 @@ const HealthDashboard = ({ navigation }) => {
         <Text style={styles.calorieInfoTitle}>Today's Nutrition</Text>
   
         <Text style={styles.calorieInfoText}>Calories: {caloriesConsumedNumber} / {caloriesAllowedNumber} kcal</Text>
-        <ProgressBar progress={caloriesPercentage} color="#FF6347" style={styles.progressBar} />
+        <ProgressBar progress={caloriesPercentage} color="#4CAF50" style={styles.progressBar} />
         <Text style={styles.calorieInfoTextSmall}>{caloriesLeft} kcal left</Text>
   
         <Text style={styles.calorieInfoText}>Protein: {proteinConsumedNumber} / {proteinGoal} g</Text>
-        <ProgressBar progress={proteinPercentage} color="#1E90FF" style={styles.progressBar} />
+        <ProgressBar progress={proteinPercentage} color="#8BC34A" style={styles.progressBar} />
         <Text style={styles.calorieInfoTextSmall}>{proteinLeft}g left</Text>
   
         <Text style={styles.calorieInfoText}>Carbs: {carbsConsumedNumber} / {carbsGoal} g</Text>
-        <ProgressBar progress={carbsPercentage} color="#32CD32" style={styles.progressBar} />
+        <ProgressBar progress={carbsPercentage} color="#CDDC39" style={styles.progressBar} />
         <Text style={styles.calorieInfoTextSmall}>{carbsLeft}g left</Text>
   
         <Text style={styles.calorieInfoText}>Fat: {fatConsumedNumber} / {fatGoal} g</Text>
-        <ProgressBar progress={fatPercentage} color="#FFD700" style={styles.progressBar} />
+        <ProgressBar progress={fatPercentage} color="#FFC107" style={styles.progressBar} />
         <Text style={styles.calorieInfoTextSmall}>{fatLeft}g left</Text>
       </View>
     );
@@ -185,8 +185,7 @@ const HealthDashboard = ({ navigation }) => {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollView}>
         <View style={styles.header}>
-          <Text style={styles.headerText}>สวัสดี,
-            คุณสมชาย</Text>
+          <Text style={styles.headerText}>สวัสดี, คุณสมชาย</Text>
           <TouchableOpacity
             style={[
               styles.notificationIcon,
@@ -194,7 +193,7 @@ const HealthDashboard = ({ navigation }) => {
             ]}
             onPress={() => navigation.navigate('NotificationListScreen')}
           >
-            <Icon name="bell" size={24} color="#333" />
+            <Icon name="bell" size={24} color="#4CAF50" />
             {unreadNotifications > 0 && (
               <View style={styles.notificationBadge}>
                 <Text style={styles.notificationBadgeText}>{unreadNotifications}</Text>
@@ -210,42 +209,42 @@ const HealthDashboard = ({ navigation }) => {
             title="ระดับน้ำตาลในเลือด"
             value={latestBloodSugar !== null ? `${latestBloodSugar} mg/dL` : 'ไม่มีข้อมูล'}
             icon="blood-bag"
-            color="#FF6B6B"
+            color="#4CAF50"
             onPress={() => navigation.navigate('BloodSugar')}
           />
           <HealthCard
             title="ค่าเฉลี่ยน้ำตาลในเลือดวันนี้"
             value={averageBloodSugar !== null ? `${averageBloodSugar.toFixed(1)} mg/dL` : 'ไม่มีข้อมูล'}
             icon="chart-line"
-            color="#9D84B7"
+            color="#8BC34A"
             onPress={() => navigation.navigate('BloodSugar')}
           />
           <HealthCard
             title="น้ำหนัก"
             value={latestWeight !== null ? `${latestWeight} KG` : 'ไม่มีข้อมูล'}
             icon="weight"
-            color="#4ECDC4"
+            color="#CDDC39"
             onPress={() => navigation.navigate('WeightProgress')}
           />
           <HealthCard
             title="คาร์โบไฮเดรต"
             value={carbIntake !== null ? `${carbIntake} g` : 'ไม่มีข้อมูล'}
             icon="pasta"
-            color="#FFD93D"
+            color="#FFC107"
             onPress={() => navigation.navigate('DiaryPage')}
           />
           <HealthCard
             title="ออกกำลังกาย"
             value={exerciseMinutes !== null ? `${exerciseMinutes} นาที` : 'ไม่มีข้อมูล'}
             icon="run"
-            color="#6BCB77"
+            color="#4CAF50"
             onPress={() => navigation.navigate('DiaryPage')}
           />
           <HealthCard
             title="ดื่มน้ำ"
             value={waterIntake !== null ? `${waterIntake} ml` : 'ไม่มีข้อมูล'}
             icon="cup-water"
-            color="#4D96FF"
+            color="#03A9F4"
             onPress={() => navigation.navigate('WaterIntake')}
           />
         </View>
@@ -268,10 +267,11 @@ const HealthCard = ({ title, value, icon, color, onPress }) => (
   </TouchableOpacity>
 );
 
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F7F7F7',
+    backgroundColor: '#E8F5E9',
   },
   scrollView: {
     paddingVertical: 20,
@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
   headerText: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#2E7D32',
   },
   notificationIcon: {
     padding: 8,
@@ -299,18 +299,18 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   notificationIconWithBadge: {
-    position: 'relative', // Added for badge positioning
+    position: 'relative',
   },
   notificationBadge: {
-    position: 'absolute', // Positioned absolutely on top of the notification icon
-    top: -5, // Adjust positioning as needed
+    position: 'absolute',
+    top: -5,
     right: -5,
-    backgroundColor: 'red', // Change color as desired
-    borderRadius: 10, // Round corners for the badge
+    backgroundColor: '#FF5722',
+    borderRadius: 10,
     padding: 5,
   },
   notificationBadgeText: {
-    color: '#fff', // White text for better contrast
+    color: '#fff',
     fontSize: 12,
   },
   cardContainer: {
@@ -341,12 +341,13 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#2E7D32',
     marginBottom: 5,
   },
   cardValue: {
     fontSize: 18,
     fontWeight: 'bold',
+    color: '#1B5E20',
   },
   calorieInfoContainer: {
     marginBottom: 20,
@@ -363,15 +364,16 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 10,
+    color: '#2E7D32',
   },
   calorieInfoText: {
     fontSize: 16,
-    color: '#333',
+    color: '#1B5E20',
     marginBottom: 5,
   },
   calorieInfoTextSmall: {
     fontSize: 14,
-    color: '#666',
+    color: '#388E3C',
     marginBottom: 10,
   },
   progressBar: {

@@ -1,19 +1,29 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image, SafeAreaView, StatusBar } from 'react-native';
-import { collection, getDocs, onSnapshot, query, where, orderBy, descending, doc, updateDoc } from 'firebase/firestore';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, SafeAreaView, StatusBar } from 'react-native';
+import { collection, onSnapshot, query, where, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { firebaseDB } from '../config/firebase.config';
 import { getAuth } from 'firebase/auth';
 
+const GradientBackground = ({ children }) => (
+  <View style={styles.gradientBackground}>
+    {children}
+  </View>
+);
+
 export default function NotificationListScreen({ navigation }) {
   const [notifications, setNotifications] = useState([]);
-  const unsubscribeRef = useRef(null); // To store the unsubscribe function
+  const unsubscribeRef = useRef(null);
 
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
         const userId = getAuth().currentUser?.uid;
         if (userId) {
-          const q = query(collection(firebaseDB, 'Notidetails'), where('userId', '==', userId), orderBy('date', descending));
+          const q = query(
+            collection(firebaseDB, 'Notidetails'),
+            where('userId', '==', userId),
+            orderBy('date', 'desc')
+          );
           const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const notificationsList = querySnapshot.docs.map((doc) => ({
               id: doc.id,
@@ -21,7 +31,7 @@ export default function NotificationListScreen({ navigation }) {
             }));
             setNotifications(notificationsList);
           });
-          unsubscribeRef.current = unsubscribe; // Store unsubscribe function
+          unsubscribeRef.current = unsubscribe;
         } else {
           console.error('No user is logged in.');
         }
@@ -32,10 +42,9 @@ export default function NotificationListScreen({ navigation }) {
 
     fetchNotifications();
 
-    // Cleanup function to unsubscribe from listener on unmount
     return () => {
       if (unsubscribeRef.current) {
-        unsubscribeRef.current(); // Unsubscribe from listener
+        unsubscribeRef.current();
       }
     };
   }, []);
@@ -63,75 +72,103 @@ export default function NotificationListScreen({ navigation }) {
 
   const renderItem = ({ item }) => (
     <TouchableOpacity
-      style={[styles.item, styles.shadow, item.read ? null : styles.unread]} // Apply unread style if not read
+      style={[styles.item, item.read ? styles.read : styles.unread]}
       onPress={() => {
-        // Update notification as read in Firestore on press
         handleMarkAsRead(item.id);
         navigation.navigate('NotificationDetailScreen', { item });
       }}
     >
-      <View style={styles.avatarContainer}>
-        <Image source={{ uri: 'https://via.placeholder.com/50' }} style={styles.avatar} />
+      <View style={styles.iconContainer}>
+        <Text style={[styles.icon, !item.read && styles.unreadIcon]}>🔔</Text>
       </View>
       <View style={styles.textContainer}>
-        <Text style={styles.title}>{item.title}</Text>
+        <Text style={[styles.title, !item.read && styles.unreadText]}>{item.title}</Text>
         <Text style={styles.date}>{formatDateTime(item.date)}</Text>
       </View>
-      {item.read ? null : ( // Only render unread indicator if notification is unread
-        <View style={styles.unreadIndicator}>
-          {/* Add a red circle here */}
-        </View>
-      )}
+      <Text style={styles.chevron}>›</Text>
     </TouchableOpacity>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar backgroundColor={styles.header.backgroundColor} />
-      <FlatList
-        data={notifications}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        ListEmptyComponent={() => (
-          <Text style={styles.emptyText}>No notifications found.</Text>
-        )}
-      />
-    </SafeAreaView>
+    <GradientBackground>
+      <StatusBar barStyle="light-content" />
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Notifications</Text>
+        </View>
+        <FlatList
+          data={notifications}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={() => (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyIcon}>🔔</Text>
+              <Text style={styles.emptyText}>No notifications yet</Text>
+            </View>
+          )}
+        />
+      </SafeAreaView>
+    </GradientBackground>
   );
 }
 
 const styles = StyleSheet.create({
+  gradientBackground: {
+    flex: 1,
+    backgroundColor: '#E8F5E9',
+  },
   container: {
     flex: 1,
-    backgroundColor: '#F7F7F7',
+  },
+  header: {
+    backgroundColor: '#4CAF50',
+    padding: 20,
+    alignItems: 'center',
+  },
+  headerTitle: {
+    color: 'white',
+    fontSize: 22,
+    fontWeight: 'bold',
+  },
+  listContent: {
+    paddingVertical: 10,
   },
   item: {
     flexDirection: 'row',
     padding: 15,
-    marginHorizontal: 20,
-    marginVertical: 10,
-    backgroundColor: '#FFFFFF',
+    marginHorizontal: 10,
+    marginVertical: 5,
+    backgroundColor: 'white',
     borderRadius: 10,
-    elevation: 5,
-    alignItems: 'center', // Ensures avatar and text stay aligned
-  },
-  shadow: {
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.1,
     shadowRadius: 4,
+    elevation: 3,
   },
-  avatarContainer: {
+  read: {
+    opacity: 0.7,
+  },
+  unread: {
+    backgroundColor: '#C8E6C9',
+  },
+  iconContainer: {
     marginRight: 15,
-    width: 50,  // Ensure container has the same width as avatar
-    height: 50, // Ensure container has the same height as avatar
-    borderRadius: 25, // Half the width/height to make it a circle
-    overflow: 'hidden',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#4CAF50',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  avatar: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 25, // Make the image itself a circle
+  icon: {
+    fontSize: 20,
+    color: '#FFF',
+  },
+  unreadIcon: {
+    color: '#FFEB3B',
   },
   textContainer: {
     flex: 1,
@@ -139,31 +176,34 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 16,
-    fontWeight: 'bold',
     marginBottom: 5,
+    color: '#1B5E20',
+  },
+  unreadText: {
+    fontWeight: 'bold',
+    color: '#2E7D32',
   },
   date: {
     fontSize: 12,
-    color: '#888',
+    color: '#689F38',
+  },
+  chevron: {
+    fontSize: 24,
+    color: '#4CAF50',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 50,
+  },
+  emptyIcon: {
+    fontSize: 50,
+    color: '#4CAF50',
+    marginBottom: 10,
   },
   emptyText: {
-    textAlign: 'center',
-    marginTop: 20,
     fontSize: 16,
-    color: '#999',
-  },
-  header: {
-    backgroundColor: '#000',
-    padding: 10,
-    justifyContent: 'center',
-  },
-  unreadIndicator: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    width: 8,
-    height: 8,
-    backgroundColor: 'red',
-    borderRadius: 4,
+    color: '#4CAF50',
   },
 });

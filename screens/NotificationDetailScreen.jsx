@@ -1,20 +1,39 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet, Image, TouchableOpacity, Alert } from 'react-native';
-import { deleteDoc, doc } from 'firebase/firestore'; // For Firestore delete functionality
-import { firebaseDB } from '../config/firebase.config'; // Ensure correct path to config
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, StatusBar } from 'react-native';
+import { deleteDoc, doc } from 'firebase/firestore';
+import { firebaseDB } from '../config/firebase.config';
+
+const GradientBackground = ({ children }) => (
+  <View style={styles.gradientBackground}>
+    {children}
+  </View>
+);
 
 export default function NotificationDetailScreen({ route, navigation }) {
   const { item } = route.params;
 
   const handleDelete = async () => {
-    try {
-      await deleteDoc(doc(firebaseDB, 'Notidetails', item.id)); // Delete the document by its ID
-      Alert.alert("Notification Deleted", "This notification has been deleted.");
-      navigation.goBack(); // Navigate back to the list screen after deletion
-    } catch (error) {
-      console.error('Error deleting notification:', error);
-      Alert.alert("Error", "Failed to delete the notification.");
-    }
+    Alert.alert(
+      "Delete Notification",
+      "Are you sure you want to delete this notification?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Delete", 
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteDoc(doc(firebaseDB, 'Notidetails', item.id));
+              Alert.alert("Deleted", "The notification has been deleted.");
+              navigation.goBack();
+            } catch (error) {
+              console.error('Error deleting notification:', error);
+              Alert.alert("Error", "Failed to delete the notification.");
+            }
+          }
+        }
+      ]
+    );
   };
 
   const formatDateTime = (timestamp) => {
@@ -30,83 +49,109 @@ export default function NotificationDetailScreen({ route, navigation }) {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      {/* Notification Header */}
-      <View style={styles.header}>
-        <Image source={{ uri: 'https://via.placeholder.com/50' }} style={styles.avatar} />
-        <View style={styles.headerContent}>
-          <Text style={styles.title}>{item.title}</Text>
-          <Text style={styles.date}>{formatDateTime(item.date)}</Text>
+    <GradientBackground>
+      <StatusBar barStyle="light-content" />
+      <ScrollView>
+        <View style={styles.content}>
+          <View style={styles.iconContainer}>
+            <Text style={styles.iconText}>🔔</Text>
+          </View>
+          <View style={styles.header}>
+            <Text style={styles.title}>{item.title}</Text>
+            <Text style={styles.date}>
+              🕒 {formatDateTime(item.date)}
+            </Text>
+          </View>
+          <View style={styles.messageContainer}>
+            <Text style={styles.message}>{item.message}</Text>
+          </View>
         </View>
-        <TouchableOpacity onPress={handleDelete} style={styles.deleteButton}>
-          <Text style={styles.deleteIcon}>❌</Text>
+        <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
+          <Text style={styles.deleteIcon}>🗑️</Text>
+          <Text style={styles.deleteButtonText}>Delete Notification</Text>
         </TouchableOpacity>
-      </View>
-
-      {/* Notification Message */}
-      <View style={styles.content}>
-        <Text style={styles.message}>{item.message}</Text>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </GradientBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  gradientBackground: {
     flex: 1,
-    backgroundColor: '#F7F7F7',
+    backgroundColor: '#E8F5E9',
+  },
+  content: {
+    margin: 16,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 5,
+  },
+  iconContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+    backgroundColor: '#4CAF50',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignSelf: 'center',
+    marginTop: -40,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 5,
+  },
+  iconText: {
+    fontSize: 40,
+    color: '#FFF',
   },
   header: {
-    flexDirection: 'row',
-    padding: 20,
-    marginHorizontal: 0,
-    marginTop: 0,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 0, // No rounding at the top-left corner
-    borderTopRightRadius: 0, // No rounding at the top-right corner
-    borderBottomLeftRadius: 10, // Rounded bottom-left corner
-    borderBottomRightRadius: 10, // Rounded bottom-right corner
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    alignItems: 'center',
-  },
-  avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 15,
-  },
-  headerContent: {
-    flex: 1,
+    marginBottom: 20,
   },
   title: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#1B5E20',
+    marginBottom: 10,
+    textAlign: 'center',
   },
   date: {
     fontSize: 14,
-    color: '#999',
-    marginTop: 4,
+    color: '#689F38',
+    textAlign: 'center',
   },
-  deleteButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: '#FDECEA',
-    borderRadius: 50,
-  },
-  deleteIcon: {
-    fontSize: 18,
-    color: '#FF3B30',
-  },
-  content: {
-    padding: 20,
+  messageContainer: {
+    backgroundColor: '#C8E6C9',
+    borderRadius: 10,
+    padding: 15,
   },
   message: {
     fontSize: 16,
     lineHeight: 24,
+    color: '#2E7D32',
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    backgroundColor: '#FF5722',
+    margin: 16,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteIcon: {
+    marginRight: 10,
+    fontSize: 24,
+  },
+  deleteButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
