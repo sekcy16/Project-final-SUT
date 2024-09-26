@@ -138,7 +138,7 @@ const FoodCamera = () => {
   }, []);
 
   const handleBackAction = useCallback(() => {
-    navigation.navigate('HealthDashboard'); // Navigate to HealthDashboard instead of going back
+    navigation.navigate('Dashboard'); // Navigate to HealthDashboard instead of going back
     return true; // Return true to indicate we've handled the back action
   }, [navigation]);
 

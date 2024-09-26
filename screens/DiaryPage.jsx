@@ -407,11 +407,11 @@ const MealSection = ({ title, calories, carbRecommendation, items = [], onAddPre
 
       {items.map((item, index) => (
         <TouchableOpacity key={index} style={styles.foodItem}>
-          <View>
-            <Text style={styles.foodName}>{item.name}</Text>
+          <View style={styles.foodItemLeft}>
+            <Text style={styles.foodName} numberOfLines={1} ellipsizeMode="tail">{item.name}</Text>
             <Text style={styles.foodAmount}>{item.amount}</Text>
           </View>
-          <View style={styles.foodCaloriesContainer}>
+          <View style={styles.foodItemRight}>
             <Text style={styles.foodCalories}>{item.calories} cals</Text>
             <Text style={styles.foodCarbs}>{item.carbs || 0} g carbs</Text>
             <TouchableOpacity onPress={() => handleDelete(index)}>
@@ -654,6 +654,14 @@ const styles = StyleSheet.create({
   carbWarning: {
     color: '#ffbf00',
     fontWeight: 'bold',
+  },
+  foodItemLeft: {
+    flex: 1,
+    marginRight: 10,
+  },
+  foodItemRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 });
 

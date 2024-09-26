@@ -48,7 +48,7 @@ const Nutrition = ({ route }) => {
     DeviceEventEmitter.emit('resetCamera');
     
     // Navigate to the dashboard
-    navigation.navigate('HealthDashboard');
+    navigation.navigate('AddFood');
   };
 
   return (

@@ -40,6 +40,7 @@ import {
   ProfileDoctor,
   ScheduleScreen,
   AddFood, // เพิ่ม import สำหรับหน้า AddFood
+  
 } from "./screens";
 import FoodResult from "./components/FoodResult";
 import Nutrition from "./components/Nutrition";
@@ -50,6 +51,8 @@ import BlogDetail from "./screens/BlogDetail";
 import CreateBlogScreen from "./screens/CreateBlogScreen";
 import BookmarkListPage from "./screens/BookmarkListPage";
 import SummaryPage from "./screens/SummaryPage";
+import FoodQRPage from "./screens/FoodQRPage";
+import FoodQRResult from "./components/FoodQRResult";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -283,6 +286,8 @@ const RootNavigator = () => {
       <Stack.Screen name="DoctorProfilePage" component={DoctorProfilePage} />
       <Stack.Screen name="Schedule" component={ScheduleScreen} />
       <Stack.Screen name="AddFood" component={AddFood} />
+      <Stack.Screen name="FoodQRPage" component={FoodQRPage} />
+      <Stack.Screen name="FoodQRResult" component={FoodQRResult} />
     </Stack.Navigator>
   );
 };
