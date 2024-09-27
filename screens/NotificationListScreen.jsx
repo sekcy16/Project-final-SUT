@@ -1,18 +1,24 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, SafeAreaView, StatusBar } from 'react-native';
+import { 
+  View, 
+  Text, 
+  FlatList, 
+  TouchableOpacity, 
+  StyleSheet, 
+  SafeAreaView, 
+  StatusBar 
+} from 'react-native';
 import { collection, onSnapshot, query, where, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { firebaseDB } from '../config/firebase.config';
 import { getAuth } from 'firebase/auth';
+import { LinearGradient } from 'expo-linear-gradient';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useNavigation } from '@react-navigation/native';
 
-const GradientBackground = ({ children }) => (
-  <View style={styles.gradientBackground}>
-    {children}
-  </View>
-);
-
-export default function NotificationListScreen({ navigation }) {
+export default function NotificationListScreen() {
   const [notifications, setNotifications] = useState([]);
   const unsubscribeRef = useRef(null);
+  const navigation = useNavigation();
 
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -52,7 +58,7 @@ export default function NotificationListScreen({ navigation }) {
   const formatDateTime = (timestamp) => {
     if (!timestamp) return 'Unknown date';
     const date = new Date(timestamp);
-    return date.toLocaleString('en-US', {
+    return date.toLocaleString('th-TH', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -79,22 +85,25 @@ export default function NotificationListScreen({ navigation }) {
       }}
     >
       <View style={styles.iconContainer}>
-        <Text style={[styles.icon, !item.read && styles.unreadIcon]}>🔔</Text>
+        <Icon name="bell" size={24} color={item.read ? "#FFF" : "#FFEB3B"} />
       </View>
       <View style={styles.textContainer}>
         <Text style={[styles.title, !item.read && styles.unreadText]}>{item.title}</Text>
         <Text style={styles.date}>{formatDateTime(item.date)}</Text>
       </View>
-      <Text style={styles.chevron}>›</Text>
+      <Icon name="chevron-right" size={24} color="#4A90E2" />
     </TouchableOpacity>
   );
 
   return (
-    <GradientBackground>
+    <LinearGradient colors={['#4A90E2', '#50E3C2']} style={styles.container}>
       <StatusBar barStyle="light-content" />
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Notifications</Text>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Icon name="arrow-left" size={24} color="#FFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>การแจ้งเตือน</Text>
         </View>
         <FlatList
           data={notifications}
@@ -103,33 +112,39 @@ export default function NotificationListScreen({ navigation }) {
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={() => (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyIcon}>🔔</Text>
-              <Text style={styles.emptyText}>No notifications yet</Text>
+              <Icon name="bell-off" size={50} color="#FFF" />
+              <Text style={styles.emptyText}>ไม่มีการแจ้งเตือน</Text>
             </View>
           )}
         />
       </SafeAreaView>
-    </GradientBackground>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  gradientBackground: {
-    flex: 1,
-    backgroundColor: '#E8F5E9',
-  },
   container: {
     flex: 1,
   },
+  safeArea: {
+    flex: 1,
+  },
   header: {
-    backgroundColor: '#4CAF50',
-    padding: 20,
+    flexDirection: 'row',
     alignItems: 'center',
+    padding: 16,
+    paddingTop: 50,
+  },
+  backButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
   headerTitle: {
-    color: 'white',
-    fontSize: 22,
-    fontWeight: 'bold',
+    fontSize: 24,
+    color: '#FFF',
+    marginLeft: 16,
+    fontFamily: 'Kanit-Bold',
   },
   listContent: {
     paddingVertical: 10,
@@ -137,10 +152,10 @@ const styles = StyleSheet.create({
   item: {
     flexDirection: 'row',
     padding: 15,
-    marginHorizontal: 10,
-    marginVertical: 5,
-    backgroundColor: 'white',
-    borderRadius: 10,
+    marginHorizontal: 16,
+    marginVertical: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 12,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -152,23 +167,16 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   unread: {
-    backgroundColor: '#C8E6C9',
+    backgroundColor: '#FFF',
   },
   iconContainer: {
-    marginRight: 15,
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#4A90E2',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  icon: {
-    fontSize: 20,
-    color: '#FFF',
-  },
-  unreadIcon: {
-    color: '#FFEB3B',
+    marginRight: 15,
   },
   textContainer: {
     flex: 1,
@@ -177,19 +185,17 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     marginBottom: 5,
-    color: '#1B5E20',
+    color: '#333',
+    fontFamily: 'Kanit-Regular',
   },
   unreadText: {
-    fontWeight: 'bold',
-    color: '#2E7D32',
+    fontFamily: 'Kanit-Bold',
+    color: '#4A90E2',
   },
   date: {
     fontSize: 12,
-    color: '#689F38',
-  },
-  chevron: {
-    fontSize: 24,
-    color: '#4CAF50',
+    color: '#666',
+    fontFamily: 'Kanit-Regular',
   },
   emptyContainer: {
     flex: 1,
@@ -197,13 +203,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 50,
   },
-  emptyIcon: {
-    fontSize: 50,
-    color: '#4CAF50',
-    marginBottom: 10,
-  },
   emptyText: {
-    fontSize: 16,
-    color: '#4CAF50',
+    fontSize: 18,
+    color: '#FFF',
+    marginTop: 10,
+    fontFamily: 'Kanit-Regular',
   },
 });

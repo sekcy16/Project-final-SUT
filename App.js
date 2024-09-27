@@ -37,6 +37,7 @@ import {
   AddFood,
   FoodQRResult,
   FoodQRPage,
+  RelativesListScreen,
 } from "./screens";
 
 // Import other components
@@ -330,6 +331,7 @@ const RootNavigator = () => {
       <Stack.Screen name="UserProfilePage" component={UserProfilePage} />
       <Stack.Screen name="DoctorProfilePage" component={DoctorProfilePage} />
       <Stack.Screen name="Schedule" component={ScheduleScreen} />
+      <Stack.Screen name="RelativesListScreen" component={RelativesListScreen} />
       <Stack.Screen 
         name="AddFood" 
         component={AddFood}

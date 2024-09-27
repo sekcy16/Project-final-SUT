@@ -119,7 +119,7 @@ const ProfilePage = () => {
             {userData?.fullName || "ชื่อผู้ใช้"}
           </Text>
           <Text style={styles.userEmail}>
-            {userData?.providerData?.email || "กำลังโหลด..."}
+            {userData?.email || "กำลังโหลด..."}
           </Text>
 
           <TouchableOpacity
@@ -174,6 +174,12 @@ const ProfilePage = () => {
             label="บุ๊กมาร์ก"
             onPress={() => navigation.navigate("BookmarkListPage")}
             color="#6BCB77"
+          />
+          <MenuItem
+            icon="account-group"
+            label="รายชื่อญาติ"
+            onPress={() => navigation.navigate("RelativesListScreen")}
+            color="#FF7F50"
           />
         </View>
 
