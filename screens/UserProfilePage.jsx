@@ -10,14 +10,14 @@ import {
   Alert,
   Dimensions,
 } from "react-native";
-import Icon from "react-native-vector-icons/Ionicons";
+import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { useNavigation } from "@react-navigation/native";
 import { firebaseAuth, firebaseDB } from "../config/firebase.config";
 import { doc, getDoc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from "expo-linear-gradient";
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
 
 const ProfilePage = () => {
   const navigation = useNavigation();
@@ -44,38 +44,37 @@ const ProfilePage = () => {
       if (userDoc.exists()) {
         setUserData(userDoc.data());
       } else {
-        console.error("No such document!");
+        console.error("ไม่พบเอกสารดังกล่าว!");
       }
     } catch (error) {
-      console.error("Error fetching user data:", error);
+      console.error("เกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้:", error);
     }
   };
 
   const handleSignOut = () => {
-    Alert.alert(
-      "Sign Out",
-      "Are you sure you want to sign out?",
-      [
-        {
-          text: "Cancel",
-          style: "cancel"
+    Alert.alert("ออกจากระบบ", "คุณแน่ใจหรือไม่ที่ต้องการออกจากระบบ?", [
+      {
+        text: "ยกเลิก",
+        style: "cancel",
+      },
+      {
+        text: "ตกลง",
+        onPress: () => {
+          firebaseAuth
+            .signOut()
+            .then(() => {
+              navigation.navigate("LoginScreen");
+            })
+            .catch((error) => {
+              console.error("ข้อผิดพลาดในการออกจากระบบ: ", error);
+              Alert.alert(
+                "ข้อผิดพลาด",
+                "ไม่สามารถออกจากระบบได้ กรุณาลองอีกครั้ง"
+              );
+            });
         },
-        { 
-          text: "OK", 
-          onPress: () => {
-            firebaseAuth
-              .signOut()
-              .then(() => {
-                navigation.navigate("LoginScreen");
-              })
-              .catch((error) => {
-                console.error("Sign out error: ", error);
-                Alert.alert("Error", "Failed to sign out. Please try again.");
-              });
-          }
-        }
-      ]
-    );
+      },
+    ]);
   };
 
   const onRefresh = async () => {
@@ -87,226 +86,240 @@ const ProfilePage = () => {
     setRefreshing(false);
   };
 
-
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          colors={['#1E88E5']}
-        />
-      }
-    >
-
-      <LinearGradient
-        colors={['#004d00', '#006400']}
-        style={styles.header}
+    <LinearGradient colors={["#4A90E2", "#50E3C2"]} style={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.scrollViewContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={["#1E88E5"]}
+          />
+        }
       >
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.iconButton}
-        >
-          <Icon name="arrow-back" size={24} color="#FFF" />
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+          >
+            <Icon name="arrow-left" size={24} color="#FFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>โปรไฟล์</Text>
+        </View>
+
+        <View style={styles.profileCard}>
+          <Image
+            source={{
+              uri: userData?.profilePic || "https://via.placeholder.com/100",
+            }}
+            style={styles.profileImage}
+          />
+          <Text style={styles.userName}>
+            {userData?.fullName || "ชื่อผู้ใช้"}
+          </Text>
+          <Text style={styles.userEmail}>
+            {userData?.providerData?.email || "กำลังโหลด..."}
+          </Text>
+
+          <TouchableOpacity
+            style={styles.editProfileButton}
+            onPress={() => navigation.navigate("EditProfilePage")}
+          >
+            <Text style={styles.editProfileButtonText}>แก้ไขโปรไฟล์</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.statsSection}>
+          <StatItem
+            icon="human-male-height"
+            label="น้ำหนัก"
+            value={`${userData?.weight || "ไม่ระบุ"} กก.`}
+            color="#FF6B6B"
+          />
+          <StatItem
+            icon="human-male-height-variant"
+            label="ส่วนสูง"
+            value={`${userData?.height || "ไม่ระบุ"} ซม.`}
+            color="#4ECDC4"
+          />
+          <StatItem
+            icon="scale-bathroom"
+            label="BMI"
+            value={`${userData?.bmi || "ไม่ระบุ"}`}
+            color="#FFD93D"
+          />
+        </View>
+        <View style={styles.menuSection}>
+          <MenuItem
+            icon="water-percent"
+            label="น้ำตาลในเลือด"
+            onPress={() => navigation.navigate("BloodSugar")}
+            color="#FF6B6B"
+          />
+          <MenuItem
+            icon="scale"
+            label="น้ำหนัก"
+            onPress={() => navigation.navigate("WeightProgress")}
+            color="#4ECDC4"
+          />
+          <MenuItem
+            icon="bell-outline"
+            label="การแจ้งเตือน"
+            onPress={() => navigation.navigate("NotificationListScreen")}
+            color="#FFD93D"
+          />
+          <MenuItem
+            icon="bookmark-outline"
+            label="บุ๊กมาร์ก"
+            onPress={() => navigation.navigate("BookmarkListPage")}
+            color="#6BCB77"
+          />
+        </View>
+
+        <TouchableOpacity style={styles.logoutButton} onPress={handleSignOut}>
+          <Text style={styles.logoutButtonText}>ออกจากระบบ</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Profile</Text>
-      </LinearGradient>
-
-
-      <View style={styles.profileSection}>
-        <Image
-          source={{
-            uri: userData?.profilePic || "https://via.placeholder.com/100",
-          }}
-          style={styles.profileImage}
-        />
-        <Text style={styles.userName}>{userData?.fullName || "Username"}</Text>
-        <Text style={styles.userEmail}>{userData?.providerData?.email || "Loading..."}</Text>
-
-        <TouchableOpacity style={styles.editProfileButton} onPress={() => navigation.navigate("EditProfilePage")}>
-          <Text style={styles.editProfileButtonText}>Edit Profile</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.statsSection}>
-        <StatItem
-          icon="body-outline"
-          label="Weight"
-          value={`${userData?.weight || "N/A"} kg`}
-        />
-        <StatItem
-          icon="resize-outline"
-          label="Height"
-          value={`${userData?.height || "N/A"} cm`}
-        />
-        <StatItem
-          icon="fitness-outline"
-          label="BMI"
-          value={`${userData?.bmi || "N/A"}`}
-        />
-      </View>
-
-      <View style={styles.menuSection}>
-        <MenuItem
-          icon="water-outline"
-          label="Blood Sugar"
-          onPress={() => navigation.navigate("BloodSugar")}
-        />
-        <MenuItem 
-          icon="bar-chart-outline" 
-          label="Goals" 
-          onPress={() => navigation.navigate("Goals")}
-        />
-        <MenuItem 
-          icon="calendar-outline" 
-          label="History"
-          onPress={() => navigation.navigate("History")}
-        />
-        <MenuItem
-          icon="body-outline"
-          label="Weight"
-          onPress={() => navigation.navigate("WeightProgress")}
-        />
-        <MenuItem
-          icon="notifications-outline"
-          label="Notifications"
-          onPress={() => navigation.navigate("NotificationListScreen")}
-        />
-        <MenuItem
-          icon="bookmark-outline"
-          label="Bookmarks"
-          onPress={() => navigation.navigate("BookmarkListPage")}
-        />
-      </View>
-
-      <TouchableOpacity style={styles.logoutButton} onPress={handleSignOut}>
-        <Text style={styles.logoutButtonText}>Log Out</Text>
-      </TouchableOpacity>
-    </ScrollView>
+      </ScrollView>
+    </LinearGradient>
   );
 };
 
-const StatItem = ({ icon, label, value }) => (
+const StatItem = ({ icon, label, value, color }) => (
   <View style={styles.statItem}>
-    <Icon name={icon} size={24} color="#004d00" />
+    <Icon name={icon} size={28} color={color} />
     <Text style={styles.statLabel}>{label}</Text>
-    <Text style={styles.statValue}>{value}</Text>
+    <Text style={[styles.statValue, { color: color }]}>{value}</Text>
   </View>
 );
-
-const MenuItem = ({ icon, label, onPress }) => (
+const MenuItem = ({ icon, label, onPress, color }) => (
   <TouchableOpacity style={styles.menuItem} onPress={onPress}>
-    <Icon name={icon} size={24} color="#004d00" />
+    <View style={[styles.menuIconContainer, { backgroundColor: color }]}>
+      <Icon name={icon} size={24} color="#FFF" />
+    </View>
     <Text style={styles.menuLabel}>{label}</Text>
-    <Icon name="chevron-forward-outline" size={24} color="#999" />
+    <Icon name="chevron-right" size={24} color="#999" />
   </TouchableOpacity>
 );
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5F5F5",
+  },
+  scrollViewContent: {
+    flexGrow: 1,
+    paddingBottom: 30,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     padding: 16,
-    paddingTop: 40,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    paddingTop: 50,
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#FFF",
-    marginLeft: 16,
-  },
-  iconButton: {
+  backButton: {
     padding: 8,
-    borderRadius: 8,
+    borderRadius: 20,
     backgroundColor: "rgba(255, 255, 255, 0.2)",
   },
-  profileSection: {
+  headerTitle: {
+    fontSize: 28,
+    color: "#FFF",
+    marginLeft: 16,
+    fontFamily: "Kanit-Bold",
+    textShadowColor: "rgba(0, 0, 0, 0.1)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  profileCard: {
     alignItems: "center",
     marginTop: 20,
-    backgroundColor: "#FFFFFF",
-    paddingVertical: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    paddingVertical: 30,
     borderRadius: 20,
     marginHorizontal: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 5,
   },
   profileImage: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    borderWidth: 3,
-    borderColor: "#004d00",
+    borderWidth: 4,
+    borderColor: "#4A90E2",
   },
   userName: {
     fontSize: 24,
-    fontWeight: "bold",
-    color: "#004d00",
-    marginTop: 10,
+    color: "#333",
+    marginTop: 15,
+    fontFamily: "Kanit-Bold",
   },
   userEmail: {
     fontSize: 16,
     color: "#666",
     marginTop: 5,
+    fontFamily: "Kanit-Regular",
   },
   editProfileButton: {
-    marginTop: 15,
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    backgroundColor: "#E6F4EA",
-    borderRadius: 20,
+    marginTop: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 25,
+    backgroundColor: "#4A90E2",
+    borderRadius: 25,
   },
   editProfileButtonText: {
-    color: "#004d00",
-    fontWeight: "600",
+    color: "#FFF",
+    fontFamily: "Kanit-Bold",
+    fontSize: 16,
   },
   statsSection: {
     flexDirection: "row",
     justifyContent: "space-around",
     marginTop: 20,
     paddingVertical: 20,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
     borderRadius: 20,
     marginHorizontal: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 5,
   },
   statItem: {
     alignItems: "center",
   },
   statLabel: {
-    color: "#004d00",
-    marginTop: 5,
+    color: "#666",
+    marginTop: 8,
     fontSize: 14,
+    fontFamily: "Kanit-Regular",
   },
   statValue: {
-    fontWeight: "bold",
+    fontFamily: "Kanit-Bold",
     marginTop: 5,
-    color: "#006400",
-    fontSize: 16,
+    fontSize: 18,
+  },
+  menuIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 16,
   },
   menuSection: {
     marginTop: 20,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
     borderRadius: 20,
     marginHorizontal: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 5,
+    overflow: "hidden",
   },
   menuItem: {
     flexDirection: "row",
@@ -318,24 +331,28 @@ const styles = StyleSheet.create({
   },
   menuLabel: {
     flex: 1,
-    marginLeft: 16,
     fontSize: 16,
-    color: "#004d00",
+    color: "#333",
+    fontFamily: "Kanit-Regular",
   },
+
   logoutButton: {
     marginTop: 30,
-    marginBottom: 30,
+    marginHorizontal: 16,
     backgroundColor: "#FF3B30",
     paddingVertical: 15,
-    borderRadius: 10,
-    alignSelf: 'center',
-    width: width - 32,
+    borderRadius: 25,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
   },
   logoutButtonText: {
     color: "#FFF",
-    fontWeight: "bold",
     fontSize: 18,
-    textAlign: 'center',
+    textAlign: "center",
+    fontFamily: "Kanit-Bold",
   },
 });
 

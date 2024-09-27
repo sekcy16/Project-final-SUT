@@ -23,7 +23,7 @@ const FoodResult = ({ route, navigation }) => {
   };
 
   const handleBackAction = useCallback(() => {
-    navigation.navigate('HealthDashboard'); // Navigate to FoodScreen instead of going back
+    navigation.navigate('Dashboard'); // Navigate to FoodScreen instead of going back
     return true; // Return true to indicate we've handled the back action
   }, [navigation]);
 

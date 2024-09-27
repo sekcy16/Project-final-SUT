@@ -1,26 +1,42 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-} from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { ProgressBar } from 'react-native-paper';
+  Dimensions,
+  RefreshControl,
+} from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import { SafeAreaView } from "react-native-safe-area-context";
+import PagerView from "react-native-pager-view";
+import { ProgressBar } from "react-native-paper";
+import { LinearGradient } from "expo-linear-gradient";
 import { firebaseAuth, firebaseDB } from "../config/firebase.config";
-import { doc, getDoc, collection, query, where, onSnapshot } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  collection,
+  query,
+  where,
+  onSnapshot,
+} from "firebase/firestore";
+import { Svg, Circle, Path, G, Text as SvgText } from "react-native-svg";
+
+const { width, height } = Dimensions.get("window");
 
 const HealthDashboard = ({ navigation }) => {
+  const [userData, setUserData] = useState(null);
   const [latestBloodSugar, setLatestBloodSugar] = useState(null);
   const [latestWeight, setLatestWeight] = useState(null);
   const [carbIntake, setCarbIntake] = useState(null);
   const [exerciseMinutes, setExerciseMinutes] = useState(null);
   const [waterIntake, setWaterIntake] = useState(null);
   const [averageBloodSugar, setAverageBloodSugar] = useState(null);
-  const [isNotificationListModalVisible, setIsNotificationListModalVisible] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
 
   // New state variables for calorie and macronutrient tracking
   const [caloriesAllowed, setCaloriesAllowed] = useState(0);
@@ -31,355 +47,775 @@ const HealthDashboard = ({ navigation }) => {
   const [proteinGoal, setProteinGoal] = useState(0);
   const [carbsGoal, setCarbsGoal] = useState(0);
   const [fatGoal, setFatGoal] = useState(0);
-  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [meals, setMeals] = useState({});
 
   useEffect(() => {
+    const unsubscribeAuth = firebaseAuth.onAuthStateChanged((user) => {
+      if (user) {
+        fetchUserData(user.uid);
+      } else {
+        setUserData(null);
+      }
+    });
+
     // Fetch unread notifications
-    const unsubscribe = onSnapshot(
-      query(collection(firebaseDB, 'Notidetails'), where('userId', '==', firebaseAuth.currentUser?.uid), where('read', '==', false)),
+    const unsubscribeNotifications = onSnapshot(
+      query(
+        collection(firebaseDB, "Notidetails"),
+        where("userId", "==", firebaseAuth.currentUser?.uid),
+        where("read", "==", false)
+      ),
       (querySnapshot) => {
         setUnreadNotifications(querySnapshot.size);
       }
     );
-  
+
     // Load latest data when the screen is focused
-    const focusListener = navigation.addListener('focus', () => {
+    const focusListener = navigation.addListener("focus", () => {
       loadLatestData();
     });
-  
+
     // Cleanup functions
     return () => {
-      unsubscribe();
-      navigation.removeListener('focus', focusListener);
+      unsubscribeAuth();
+      unsubscribeNotifications();
+      navigation.removeListener("focus", focusListener);
     };
   }, [navigation]);
 
+  const fetchUserData = async (uid) => {
+    try {
+      const userDocRef = doc(firebaseDB, "users", uid);
+      const userDoc = await getDoc(userDocRef);
+
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        setUserData(data);
+        setLatestWeight(data.weight);
+        setCaloriesAllowed(data.tdee || 0);
+        setProteinGoal(data.macronutrients?.protein || 0);
+        setCarbsGoal(data.macronutrients?.carbs || 0);
+        setFatGoal(data.macronutrients?.fat || 0);
+      } else {
+        console.error("ไม่พบเอกสารผู้ใช้!");
+      }
+    } catch (error) {
+      console.error("เกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้:", error);
+    }
+  };
+
   const loadLatestData = async () => {
     try {
-      // Load the calorie and macronutrient data from Firebase
-      const user = firebaseAuth.currentUser;
-      if (user) {
-        const docRef = doc(firebaseDB, "users", user.uid);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setCaloriesAllowed(data.tdee);
-          setProteinGoal(data.macronutrients?.protein || 50); // Default to 50 if not set
-        setCarbsGoal(data.macronutrients?.carbs || 300); // Default to 300 if not set
-        setFatGoal(data.macronutrients?.fat || 70); // Default to 70 if not set
-        } else {
-          console.log("No such document!");
-        }
-      }
-
       // Load latest blood sugar
-      const savedBloodSugarHistory = await AsyncStorage.getItem('bloodSugarHistory');
+      const savedBloodSugarHistory = await AsyncStorage.getItem(
+        "bloodSugarHistory"
+      );
       if (savedBloodSugarHistory) {
         const bloodSugarHistory = JSON.parse(savedBloodSugarHistory);
         if (bloodSugarHistory.length > 0) {
           setLatestBloodSugar(bloodSugarHistory[0].level);
-        } else {
-          setLatestBloodSugar(null);
         }
-      } else {
-        setLatestBloodSugar(null);
       }
 
       // Load average blood sugar
-      const savedAverageBloodSugar = await AsyncStorage.getItem('averageBloodSugarToday');
+      const savedAverageBloodSugar = await AsyncStorage.getItem(
+        "averageBloodSugarToday"
+      );
       if (savedAverageBloodSugar) {
         setAverageBloodSugar(parseFloat(savedAverageBloodSugar));
-      } else {
-        setAverageBloodSugar(null);
-      }
-
-      // Load latest weight
-      const savedWeightHistory = await AsyncStorage.getItem('weightHistory');
-      if (savedWeightHistory) {
-        const weightHistory = JSON.parse(savedWeightHistory);
-        if (weightHistory.length > 0) {
-          setLatestWeight(weightHistory[0].weight);
-        } else {
-          setLatestWeight(null);
-        }
-      } else {
-        setLatestWeight(null);
       }
 
       // Fetch diary entries
-      const diaryRef = doc(firebaseDB, 'users', user.uid, 'entries', new Date().toISOString().split('T')[0]);
-      const diarySnap = await getDoc(diaryRef);
-      if (diarySnap.exists()) {
-        const diaryData = diarySnap.data();
-        const meals = diaryData.meals || {};
-
-        let totalCalories = 0;
-        let totalProtein = 0;
-        let totalCarbs = 0;
-        let totalFat = 0;
-
-        Object.values(meals).forEach(meal => {
-          totalCalories += meal.calories || 0;
-          totalProtein += meal.protein || 0;
-          totalCarbs += meal.carbs || 0;
-          totalFat += meal.fat || 0;
-        });
-
-        setCaloriesConsumed(totalCalories);
-        setProteinConsumed(totalProtein);
-        setCarbsConsumed(totalCarbs);
-        setFatConsumed(totalFat);
+      const user = firebaseAuth.currentUser;
+      if (user) {
+        const diaryRef = doc(
+          firebaseDB,
+          "users",
+          user.uid,
+          "entries",
+          new Date().toISOString().split("T")[0]
+        );
+        const diarySnap = await getDoc(diaryRef);
+        if (diarySnap.exists()) {
+          const diaryData = diarySnap.data();
+          setMeals(diaryData.meals || getDefaultMeals());
+        } else {
+          console.log("ไม่พบข้อมูลไดอารี่ ใช้ข้อมูลเริ่มต้น");
+          setMeals(getDefaultMeals());
+        }
       } else {
-        console.log("No diary data found!");
+        setMeals(getDefaultMeals());
       }
 
+      // Calculate totals
+      const { totalCalories, totalProtein, totalCarbs, totalFat } =
+        calculateTotals(meals);
+
+      setCaloriesConsumed(totalCalories);
+      setProteinConsumed(totalProtein);
+      setCarbsConsumed(totalCarbs);
+      setFatConsumed(totalFat);
     } catch (error) {
-      console.error('Error loading latest data:', error);
+      console.error("เกิดข้อผิดพลาดในการโหลดข้อมูลล่าสุด:", error);
+      // Use default data in case of error
+      setMeals(getDefaultMeals());
+      const { totalCalories, totalProtein, totalCarbs, totalFat } =
+        calculateTotals(getDefaultMeals());
+      setCaloriesConsumed(totalCalories);
+      setProteinConsumed(totalProtein);
+      setCarbsConsumed(totalCarbs);
+      setFatConsumed(totalFat);
     }
   };
+  // Helper function to get default meals
+  const getDefaultMeals = () => ({
+    มื้อเช้า: { calories: 300, protein: 15, carbs: 30, fat: 10 },
+    มื้อเที่ยง: { calories: 500, protein: 25, carbs: 50, fat: 15 },
+    มื้อเย็น: { calories: 400, protein: 20, carbs: 40, fat: 12 },
+  });
 
-  const CalorieInfo = () => {
-    // Ensure values are numbers and provide default values if necessary
-    const caloriesAllowedNumber = Number(caloriesAllowed) || 0;
-    const caloriesConsumedNumber = Number(caloriesConsumed) || 0;
-    const proteinConsumedNumber = Number(proteinConsumed) || 0;
-    const carbsConsumedNumber = Number(carbsConsumed) || 0;
-    const fatConsumedNumber = Number(fatConsumed) || 0;
-  
-    // Calculate the remaining amounts and percentages
-    const caloriesLeft = Math.max(caloriesAllowedNumber - caloriesConsumedNumber, 0);
-    const proteinLeft = Math.max(proteinGoal - proteinConsumedNumber, 0);
-    const carbsLeft = Math.max(carbsGoal - carbsConsumedNumber, 0);
-    const fatLeft = Math.max(fatGoal - fatConsumedNumber, 0);
-  
-    const caloriesPercentage = caloriesAllowedNumber > 0 ? Math.min(caloriesConsumedNumber / caloriesAllowedNumber, 1) : 0;
-    const proteinPercentage = proteinGoal > 0 ? Math.min(proteinConsumedNumber / proteinGoal, 1) : 0;
-    const carbsPercentage = carbsGoal > 0 ? Math.min(carbsConsumedNumber / carbsGoal, 1) : 0;
-    const fatPercentage = fatGoal > 0 ? Math.min(fatConsumedNumber / fatGoal, 1) : 0;
-  
+  // Helper function to calculate totals
+  const calculateTotals = (meals) => {
+    return Object.values(meals).reduce(
+      (totals, meal) => ({
+        totalCalories: totals.totalCalories + (meal.calories || 0),
+        totalProtein: totals.totalProtein + (meal.protein || 0),
+        totalCarbs: totals.totalCarbs + (meal.carbs || 0),
+        totalFat: totals.totalFat + (meal.fat || 0),
+      }),
+      { totalCalories: 0, totalProtein: 0, totalCarbs: 0, totalFat: 0 }
+    );
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    const user = firebaseAuth.currentUser;
+    if (user) {
+      await fetchUserData(user.uid);
+      await loadLatestData();
+    }
+    setRefreshing(false);
+  };
+
+  const SimplePieChart = ({ data, hasRealData }) => {
+    const total = data.reduce((sum, item) => sum + item.value, 0);
+    let startAngle = 0;
+
     return (
-      <View style={styles.calorieInfoContainer}>
-        <Text style={styles.calorieInfoTitle}>Today's Nutrition</Text>
-  
-        <Text style={styles.calorieInfoText}>Calories: {caloriesConsumedNumber} / {caloriesAllowedNumber} kcal</Text>
-        <ProgressBar progress={caloriesPercentage} color="#4CAF50" style={styles.progressBar} />
-        <Text style={styles.calorieInfoTextSmall}>{caloriesLeft} kcal left</Text>
-  
-        <Text style={styles.calorieInfoText}>Protein: {proteinConsumedNumber} / {proteinGoal} g</Text>
-        <ProgressBar progress={proteinPercentage} color="#8BC34A" style={styles.progressBar} />
-        <Text style={styles.calorieInfoTextSmall}>{proteinLeft}g left</Text>
-  
-        <Text style={styles.calorieInfoText}>Carbs: {carbsConsumedNumber} / {carbsGoal} g</Text>
-        <ProgressBar progress={carbsPercentage} color="#CDDC39" style={styles.progressBar} />
-        <Text style={styles.calorieInfoTextSmall}>{carbsLeft}g left</Text>
-  
-        <Text style={styles.calorieInfoText}>Fat: {fatConsumedNumber} / {fatGoal} g</Text>
-        <ProgressBar progress={fatPercentage} color="#FFC107" style={styles.progressBar} />
-        <Text style={styles.calorieInfoTextSmall}>{fatLeft}g left</Text>
+      <View style={styles.pieChartContainer}>
+        <Svg height="160" width="160" viewBox="-100 -100 200 200">
+          {data.map((item, index) => {
+            const percentage = item.value / total;
+            const angle = percentage * 2 * Math.PI;
+            const radius = 80;
+            const midAngle = startAngle + angle / 2;
+            const x = Math.round(Math.cos(midAngle) * radius);
+            const y = Math.round(Math.sin(midAngle) * radius);
+
+            const path = `
+              M 0 0
+              L ${Math.cos(startAngle) * 100} ${Math.sin(startAngle) * 100}
+              A 100 100 0 ${angle > Math.PI ? 1 : 0} 1 ${
+              Math.cos(startAngle + angle) * 100
+            } ${Math.sin(startAngle + angle) * 100}
+              Z
+            `;
+            startAngle += angle;
+
+            return (
+              <G key={index}>
+                <Path
+                  d={path}
+                  fill={hasRealData ? item.color : "#E0E0E0"}
+                  stroke="#FFFFFF"
+                  strokeWidth="2"
+                />
+                {!isNaN(x) && !isNaN(y) && (
+                  <SvgText
+                    x={x}
+                    y={y}
+                    textAnchor="middle"
+                    alignmentBaseline="middle"
+                    fill={hasRealData ? "#FFFFFF" : "#777777"}
+                    fontSize="12"
+                    fontWeight="bold"
+                  >
+                    {`${Math.round(percentage * 100)}%`}
+                  </SvgText>
+                )}
+              </G>
+            );
+          })}
+        </Svg>
+        <View style={styles.legendContainer}>
+          {data.map((item, index) => (
+            <View key={index} style={styles.legendItem}>
+              <View
+                style={[
+                  styles.legendIconContainer,
+                  { backgroundColor: hasRealData ? item.color : "#E0E0E0" },
+                ]}
+              >
+                <Icon
+                  name={item.icon}
+                  size={24}
+                  color={hasRealData ? "#FFF" : "#777777"}
+                />
+              </View>
+              <Text
+                style={[
+                  styles.legendText,
+                  { color: hasRealData ? "#333" : "#777777" },
+                ]}
+              >
+                {item.label}
+              </Text>
+              <Text
+                style={[
+                  styles.legendValue,
+                  { color: hasRealData ? "#333" : "#777777" },
+                ]}
+              >
+                {item.value.toFixed(1)}g
+              </Text>
+            </View>
+          ))}
+        </View>
+        {!hasRealData && (
+          <Text style={styles.noDataText}>
+            ยังไม่มีข้อมูลอาหาร กรุณาเพิ่มอาหารเพื่อดูข้อมูลจริง
+          </Text>
+        )}
       </View>
     );
   };
-  
+
+  const CalorieInfo = ({
+    meals,
+    caloriesAllowed,
+    proteinGoal,
+    carbsGoal,
+    fatGoal,
+  }) => {
+    const [pages, setPages] = useState([]);
+    const [activePage, setActivePage] = useState(0);
+
+    useEffect(() => {
+      const mealOrder = ["มื้อเช้า", "มื้อเที่ยง", "มื้อเย็น"];
+      const orderedMeals = mealOrder.map((mealName) => ({
+        name: mealName,
+        calories: Number(meals[mealName]?.calories) || 0,
+        protein: Number(meals[mealName]?.protein) || 0,
+        carbs: Number(meals[mealName]?.carbs) || 0,
+        fat: Number(meals[mealName]?.fat) || 0,
+      }));
+
+      const totalNutrition = orderedMeals.reduce(
+        (total, meal) => ({
+          calories: total.calories + meal.calories,
+          protein: total.protein + meal.protein,
+          carbs: total.carbs + meal.carbs,
+          fat: total.fat + meal.fat,
+        }),
+        { calories: 0, protein: 0, carbs: 0, fat: 0 }
+      );
+
+      setPages([
+        { name: "สารอาหารวันนี้", ...totalNutrition },
+        ...orderedMeals,
+      ]);
+    }, [meals]);
+
+    const renderNutritionInfo = (data, goals) => (
+      <View style={styles.nutritionInfoContainer}>
+        <NutritionRow
+          label="แคลอรี่"
+          value={data.calories}
+          goal={goals.calories}
+          unit="กิโลแคลอรี่"
+          color="#FF6347"
+          icon="fire"
+        />
+        <NutritionRow
+          label="โปรตีน"
+          value={data.protein}
+          goal={goals.protein}
+          unit="กรัม"
+          color="#1E90FF"
+          icon="egg-fried"
+        />
+        <NutritionRow
+          label="คาร์บ"
+          value={data.carbs}
+          goal={goals.carbs}
+          unit="กรัม"
+          color="#32CD32"
+          icon="bread-slice"
+        />
+        <NutritionRow
+          label="ไขมัน"
+          value={data.fat}
+          goal={goals.fat}
+          unit="กรัม"
+          color="#FFD700"
+          icon="oil"
+        />
+      </View>
+    );
+
+    const NutritionRow = ({ label, value, goal, unit, color, icon }) => {
+      const isCalories = label.toLowerCase().includes('แคลอรี่');
+      const isExceeded = value > goal;
+      const exceedAmount = isExceeded ? value - goal : 0;
+      const remaining = isExceeded ? 0 : goal - value;
+    
+      return (
+        <View style={styles.nutritionRow}>
+          <View style={styles.nutritionLabelContainer}>
+            <Icon name={icon} size={24} color={color} style={styles.nutritionIcon} />
+            <Text style={styles.nutritionLabel}>{label}</Text>
+          </View>
+          <View style={styles.nutritionValueContainer}>
+            <Text style={styles.nutritionValue}>
+              {value.toFixed(1)} / {goal.toFixed(1)} {unit}
+            </Text>
+            <ProgressBar 
+              progress={Math.min(value / goal, 1)} 
+              color={isExceeded ? '#FF0000' : color} 
+              style={styles.progressBar} 
+            />
+            {isCalories && (
+              <Text style={[
+                styles.nutritionLeft,
+                isExceeded ? styles.exceededText : null
+              ]}>
+                {isExceeded
+                  ? `เกิน ${exceedAmount.toFixed(1)} ${unit}`
+                  : `เหลือ ${remaining.toFixed(1)} ${unit}`
+                }
+              </Text>
+            )}
+          </View>
+        </View>
+      );
+    };
+
+    const renderPieChart = (data, goals) => {
+      const pieData = [
+        {
+          value: data.protein,
+          color: "#1E90FF",
+          label: "โปรตีน",
+          icon: "egg-fried",
+        },
+        {
+          value: data.carbs,
+          color: "#32CD32",
+          label: "คาร์บ",
+          icon: "bread-slice",
+        },
+        { value: data.fat, color: "#FFD700", label: "ไขมัน", icon: "oil" },
+      ].filter((item) => item.value > 0);
+
+      const hasRealData = Object.values(meals).some(
+        (meal) =>
+          meal.calories > 0 ||
+          meal.protein > 0 ||
+          meal.carbs > 0 ||
+          meal.fat > 0
+      );
+
+      return (
+        <View style={styles.pieChartContainer}>
+          <SimplePieChart data={pieData} hasRealData={hasRealData} />
+          <Text style={styles.caloriesSummary}>
+            แคลอรี่ทั้งหมด: {data.calories.toFixed(1)} /{" "}
+            {goals.calories.toFixed(1)} กิโลแคลอรี่
+          </Text>
+        </View>
+      );
+    };
+
+    return (
+      <View style={styles.calorieInfoContainer}>
+        <PagerView
+          style={styles.pagerView}
+          initialPage={0}
+          onPageSelected={(e) => setActivePage(e.nativeEvent.position)}
+        >
+          {pages.map((page, index) => (
+            <View key={index} style={styles.pageContainer}>
+              <Text style={styles.pageTitleText}>{page.name}</Text>
+              {index === 0
+                ? renderPieChart(page, {
+                    calories: Number(caloriesAllowed) || 2000, // Default value if not set
+                    protein: Number(proteinGoal) || 50,
+                    carbs: Number(carbsGoal) || 250,
+                    fat: Number(fatGoal) || 70,
+                  })
+                : renderNutritionInfo(page, {
+                    calories: Number(caloriesAllowed) || 2000,
+                    protein: Number(proteinGoal) || 50,
+                    carbs: Number(carbsGoal) || 250,
+                    fat: Number(fatGoal) || 70,
+                  })}
+            </View>
+          ))}
+        </PagerView>
+        <View style={styles.paginationDots}>
+          {pages.map((_, index) => (
+            <View
+              key={index}
+              style={[
+                styles.paginationDot,
+                { backgroundColor: index === activePage ? "#333" : "#CCC" },
+              ]}
+            />
+          ))}
+        </View>
+      </View>
+    );
+  };
+
+  const HealthCard = ({ title, value, icon, color, onPress }) => (
+    <TouchableOpacity
+      style={[styles.card, { backgroundColor: color }]}
+      onPress={onPress}
+    >
+      <View style={styles.cardContent}>
+        <Icon name={icon} size={32} color="#FFF" />
+        <View style={styles.cardTextContent}>
+          <Text style={styles.cardTitle}>{title}</Text>
+          <Text style={styles.cardValue}>{value}</Text>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollView}>
-        <View style={styles.header}>
-          <Text style={styles.headerText}>สวัสดี, คุณสมชาย</Text>
-          <TouchableOpacity
-            style={[
-              styles.notificationIcon,
-              unreadNotifications > 0 ? styles.notificationIconWithBadge : null,
-            ]}
-            onPress={() => navigation.navigate('NotificationListScreen')}
-          >
-            <Icon name="bell" size={24} color="#4CAF50" />
-            {unreadNotifications > 0 && (
-              <View style={styles.notificationBadge}>
-                <Text style={styles.notificationBadgeText}>{unreadNotifications}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
+    <LinearGradient colors={["#4A90E2", "#50E3C2"]} style={styles.container}>
+      <SafeAreaView style={styles.safeArea}>
+        <ScrollView
+          contentContainerStyle={styles.scrollView}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={["#1E88E5"]}
+            />
+          }
+        >
+          <View style={styles.header}>
+            <Text style={styles.headerText}>
+              สวัสดี, {userData?.fullName || "ผู้ใช้"}
+            </Text>
+            <TouchableOpacity
+              style={[
+                styles.notificationIcon,
+                unreadNotifications > 0
+                  ? styles.notificationIconWithBadge
+                  : null,
+              ]}
+              onPress={() => navigation.navigate("NotificationListScreen")}
+            >
+              <Icon name="bell" size={24} color="#FFF" />
+              {unreadNotifications > 0 && (
+                <View style={styles.notificationBadge}>
+                  <Text style={styles.notificationBadgeText}>
+                    {unreadNotifications}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
 
-        <CalorieInfo />
+          <View style={styles.mainContent}>
+            <CalorieInfo
+              meals={meals}
+              caloriesAllowed={caloriesAllowed}
+              proteinGoal={proteinGoal}
+              carbsGoal={carbsGoal}
+              fatGoal={fatGoal}
+            />
 
-        <View style={styles.cardContainer}>
-          <HealthCard
-            title="ระดับน้ำตาลในเลือด"
-            value={latestBloodSugar !== null ? `${latestBloodSugar} mg/dL` : 'ไม่มีข้อมูล'}
-            icon="blood-bag"
-            color="#4CAF50"
-            onPress={() => navigation.navigate('BloodSugar')}
-          />
-          <HealthCard
-            title="ค่าเฉลี่ยน้ำตาลในเลือดวันนี้"
-            value={averageBloodSugar !== null ? `${averageBloodSugar.toFixed(1)} mg/dL` : 'ไม่มีข้อมูล'}
-            icon="chart-line"
-            color="#8BC34A"
-            onPress={() => navigation.navigate('BloodSugar')}
-          />
-          <HealthCard
-            title="น้ำหนัก"
-            value={latestWeight !== null ? `${latestWeight} KG` : 'ไม่มีข้อมูล'}
-            icon="weight"
-            color="#CDDC39"
-            onPress={() => navigation.navigate('WeightProgress')}
-          />
-          <HealthCard
-            title="คาร์โบไฮเดรต"
-            value={carbIntake !== null ? `${carbIntake} g` : 'ไม่มีข้อมูล'}
-            icon="pasta"
-            color="#FFC107"
-            onPress={() => navigation.navigate('DiaryPage')}
-          />
-          <HealthCard
-            title="ออกกำลังกาย"
-            value={exerciseMinutes !== null ? `${exerciseMinutes} นาที` : 'ไม่มีข้อมูล'}
-            icon="run"
-            color="#4CAF50"
-            onPress={() => navigation.navigate('DiaryPage')}
-          />
-          <HealthCard
-            title="ดื่มน้ำ"
-            value={waterIntake !== null ? `${waterIntake} ml` : 'ไม่มีข้อมูล'}
-            icon="cup-water"
-            color="#03A9F4"
-            onPress={() => navigation.navigate('WaterIntake')}
-          />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+            <View style={styles.cardContainer}>
+              <HealthCard
+                title="ระดับน้ำตาลในเลือด"
+                value={
+                  latestBloodSugar !== null
+                    ? `${latestBloodSugar} mg/dL`
+                    : "ไม่มีข้อมูล"
+                }
+                icon="blood-bag"
+                color="#FF6B6B"
+                onPress={() => navigation.navigate("BloodSugar")}
+              />
+              <HealthCard
+                title="ค่าเฉลี่ยน้ำตาลในเลือดวันนี้"
+                value={
+                  averageBloodSugar !== null
+                    ? `${averageBloodSugar.toFixed(1)} mg/dL`
+                    : "ไม่มีข้อมูล"
+                }
+                icon="chart-line"
+                color="#9D84B7"
+                onPress={() => navigation.navigate("BloodSugar")}
+              />
+              <HealthCard
+                title="น้ำหนัก"
+                value={
+                  latestWeight !== null ? `${latestWeight} KG` : "ไม่มีข้อมูล"
+                }
+                icon="weight"
+                color="#4ECDC4"
+                onPress={() => navigation.navigate("WeightProgress")}
+              />
+              <HealthCard
+                title="คาร์โบไฮเดรต"
+                value={carbIntake !== null ? `${carbIntake} g` : "ไม่มีข้อมูล"}
+                icon="pasta"
+                color="#FFD93D"
+                onPress={() => navigation.navigate("DiaryPage")}
+              />
+              <HealthCard
+                title="ออกกำลังกาย"
+                value={
+                  exerciseMinutes !== null
+                    ? `${exerciseMinutes} นาที`
+                    : "ไม่มีข้อมูล"
+                }
+                icon="run"
+                color="#6BCB77"
+                onPress={() => navigation.navigate("DiaryPage")}
+              />
+              <HealthCard
+                title="ดื่มน้ำ"
+                value={
+                  waterIntake !== null ? `${waterIntake} ml` : "ไม่มีข้อมูล"
+                }
+                icon="cup-water"
+                color="#4D96FF"
+                onPress={() => navigation.navigate("WaterIntake")}
+              />
+            </View>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 };
-
-const HealthCard = ({ title, value, icon, color, onPress }) => (
-  <TouchableOpacity
-    style={[styles.card, { borderLeftColor: color }]}
-    onPress={onPress}>
-    <View style={styles.cardContent}>
-      <Icon name={icon} size={32} color={color} />
-      <View style={styles.cardTextContent}>
-        <Text style={styles.cardTitle}>{title}</Text>
-        <Text style={styles.cardValue}>{value}</Text>
-      </View>
-    </View>
-  </TouchableOpacity>
-);
-
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#E8F5E9',
+  },
+  safeArea: {
+    flex: 1,
   },
   scrollView: {
-    paddingVertical: 20,
-    paddingHorizontal: 15,
+    flexGrow: 1,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 15,
   },
   headerText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#2E7D32',
+    fontSize: 28,
+    fontFamily: "Kanit-Bold",
+    color: "#FFF",
+    textShadowColor: "rgba(0, 0, 0, 0.1)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   notificationIcon: {
-    padding: 8,
-    backgroundColor: '#FFF',
+    padding: 10,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
     borderRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 1,
-    elevation: 2,
   },
   notificationIconWithBadge: {
-    position: 'relative',
+    position: "relative",
   },
   notificationBadge: {
-    position: 'absolute',
+    position: "absolute",
     top: -5,
     right: -5,
-    backgroundColor: '#FF5722',
+    backgroundColor: "#FF4136",
     borderRadius: 10,
-    padding: 5,
+    width: 20,
+    height: 20,
+    justifyContent: "center",
+    alignItems: "center",
   },
   notificationBadgeText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 12,
+    fontFamily: "Kanit-Bold",
+  },
+  mainContent: {
+    flex: 1,
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    paddingTop: 20,
+    paddingHorizontal: 15,
   },
   cardContainer: {
-    padding: 15,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    marginTop: 20,
   },
   card: {
-    backgroundColor: '#FFF',
-    borderRadius: 10,
-    padding: 15,
+    width: "48%",
     marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
+    borderRadius: 15,
+    overflow: "hidden",
     elevation: 5,
-    borderLeftWidth: 5,
   },
   cardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    padding: 15,
+    alignItems: "center",
   },
   cardTextContent: {
-    marginLeft: 15,
+    marginTop: 10,
+    alignItems: "center",
   },
   cardTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#2E7D32',
+    fontSize: 14,
+    fontFamily: "Kanit-Bold",
+    color: "#FFF",
     marginBottom: 5,
+    textAlign: "center",
   },
   cardValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1B5E20',
+    fontSize: 16,
+    fontFamily: "Kanit-Bold",
+    color: "#FFF",
   },
   calorieInfoContainer: {
-    marginBottom: 20,
-    backgroundColor: '#FFF',
-    borderRadius: 8,
+    backgroundColor: "#FFF",
+    borderRadius: 15,
     padding: 15,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 3,
   },
-  calorieInfoTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#2E7D32',
+  pagerView: {
+    height: 380,
   },
-  calorieInfoText: {
+  pieChartContainer: {
+    alignItems: "center",
+    marginTop: 10,
+  },
+  pageTitleText: {
+    fontSize: 20,
+    fontFamily: "Kanit-Bold",
+    marginBottom: 15,
+    textAlign: "center",
+    color: "#333",
+  },
+  nutritionInfoContainer: {
+    marginTop: 10,
+  },
+  nutritionRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  nutritionLabelContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "30%",
+  },
+  nutritionIcon: {
+    marginRight: 5,
+  },
+  nutritionLabel: {
     fontSize: 16,
-    color: '#1B5E20',
-    marginBottom: 5,
+    fontFamily: "Kanit-Bold",
+    color: "#333",
   },
-  calorieInfoTextSmall: {
-    fontSize: 14,
-    color: '#388E3C',
-    marginBottom: 10,
+  nutritionValueContainer: {
+    width: "70%",
+  },
+  nutritionValue: {
+    fontSize: 16,
+    fontFamily: "Kanit-Regular",
+    marginBottom: 5,
+    color: "#333",
   },
   progressBar: {
     height: 10,
     borderRadius: 5,
-    marginBottom: 15,
+    marginBottom: 5,
+  },
+  nutritionLeft: {
+    fontSize: 14,
+    fontFamily: "Kanit-Regular",
+    color: "#666",
+  },
+  exceededText: {
+    color: '#FF0000',
+    fontFamily: 'Kanit-Bold',
+  },
+  paginationDots: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 10,
+  },
+  paginationDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginHorizontal: 4,
+  },
+  legendContainer: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    width: "100%",
+    marginTop: 15,
+  },
+  legendItem: {
+    alignItems: "center",
+    width: "30%",
+  },
+  legendIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 5,
+  },
+  legendText: {
+    fontSize: 12,
+    fontFamily: "Kanit-Regular",
+    textAlign: "center",
+  },
+  legendValue: {
+    fontSize: 14,
+    fontFamily: "Kanit-Bold",
+    marginTop: 2,
+  },
+  caloriesSummary: {
+    fontSize: 16,
+    fontFamily: "Kanit-Bold",
+    marginTop: 15,
+    color: "#333",
+  },
+  noDataText: {
+    marginTop: 10,
+    fontSize: 14,
+    fontFamily: "Kanit-Regular",
+    color: "#777777",
+    textAlign: "center",
   },
 });
 

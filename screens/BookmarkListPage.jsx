@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Image, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { getFirestore, collection, doc, getDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { app } from "../config/firebase.config";
+import { LinearGradient } from 'expo-linear-gradient';
 
 const BookmarkListPage = () => {
   const navigation = useNavigation();
@@ -22,8 +23,6 @@ const BookmarkListPage = () => {
 
         if (userDoc.exists()) {
           const bookmarks = userDoc.data().bookmarks || [];
-
-          // Fetch the full blog details for each bookmarked blog
           const blogPromises = bookmarks.map(async bookmark => {
             const blogRef = doc(db, 'blogs', bookmark.blogId);
             const blogDoc = await getDoc(blogRef);
@@ -40,119 +39,145 @@ const BookmarkListPage = () => {
     fetchBookmarkedBlogs();
   }, []);
 
-  const renderBlogItem = (item) => {
-    return (
-      <TouchableOpacity
-        key={item.id}
-        style={styles.blogItem}
-        onPress={() => navigation.navigate('BlogDetail', { blogId: item.id })}
-      >
-        {item.photo && <Image source={{ uri: item.photo }} style={styles.blogImage} />}
-        <View style={styles.blogContent}>
-          <Text style={styles.blogTitle}>{item.title}</Text>
-          <View style={styles.blogInfo}>
-            <Text style={styles.blogAuthor}>By {item.author}</Text>
+  const renderBlogItem = ({ item }) => (
+    <TouchableOpacity
+      style={styles.blogItem}
+      onPress={() => navigation.navigate('BlogDetail', { blogId: item.id })}
+    >
+      <Image source={{ uri: item.photo || 'https://via.placeholder.com/120' }} style={styles.blogImage} />
+      <View style={styles.blogContent}>
+        <Text style={styles.blogTitle} numberOfLines={2}>{item.title}</Text>
+        <View style={styles.blogInfo}>
+          <Text style={styles.blogAuthor}>โดย {item.author}</Text>
+          <View style={styles.categoryContainer}>
             <Text style={styles.blogCategory}>{item.category}</Text>
           </View>
         </View>
-      </TouchableOpacity>
-    );
-  };
+      </View>
+    </TouchableOpacity>
+  );
 
   return (
-    <View style={styles.container}>
+    <LinearGradient colors={['#4A6D7C', '#2C3E50']} style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Icon name="arrow-back" size={24} color="#FFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Bookmarked Blogs</Text>
+        <Text style={styles.headerTitle}>บทความที่บันทึกไว้</Text>
       </View>
 
       {loading ? (
-        <ActivityIndicator size="large" color="#8FBC8F" style={styles.loader} />
+        <ActivityIndicator size="large" color="#FFFFFF" style={styles.loader} />
       ) : (
-        <ScrollView style={styles.blogList}>
-          {bookmarkedBlogs.map(renderBlogItem)}
-        </ScrollView>
+        <FlatList
+          data={bookmarkedBlogs}
+          renderItem={renderBlogItem}
+          keyExtractor={item => item.id}
+          contentContainerStyle={styles.blogList}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Icon name="bookmarks-outline" size={64} color="#FFFFFF" />
+              <Text style={styles.emptyText}>ยังไม่มีบทความที่บันทึกไว้</Text>
+            </View>
+          }
+        />
       )}
-    </View>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFAD2',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 30,
+    paddingTop: 50,
+    paddingBottom: 20,
     paddingHorizontal: 16,
-    backgroundColor: '#8FBC8F',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    marginBottom: 16,
+  },
+  backButton: {
+    padding: 8,
   },
   headerTitle: {
     flex: 1,
     textAlign: 'center',
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#FFF',
+    marginRight: 32,
+    fontFamily: 'Kanit-Bold',
   },
   blogList: {
-    flex: 1,
+    padding: 16,
   },
   blogItem: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF8DC',
-    padding: 16,
-    marginHorizontal: 16,
-    marginVertical: 8,
-    borderRadius: 10,
-    elevation: 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 12,
+    marginBottom: 16,
+    overflow: 'hidden',
+    elevation: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.3,
     shadowRadius: 4,
   },
   blogImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 10,
-    marginRight: 16,
+    width: 120,
+    height: 120,
   },
   blogContent: {
     flex: 1,
+    padding: 16,
   },
   blogTitle: {
     fontWeight: 'bold',
-    fontSize: 16,
-    color: '#556B2F',
+    fontSize: 18,
+    color: '#2C3E50',
+    marginBottom: 8,
+    fontFamily: 'Kanit-Bold',
   },
   blogInfo: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 8,
+    alignItems: 'center',
   },
   blogAuthor: {
     fontSize: 14,
-    color: '#666',
+    color: '#7F8C8D',
+    fontFamily: 'Kanit-Regular',
+  },
+  categoryContainer: {
+    backgroundColor: '#E9F2F9',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
   },
   blogCategory: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: 'bold',
-    color: '#8FBC8F',
+    color: '#4A6D7C',
+    fontFamily: 'Kanit-Bold',
   },
   loader: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 100,
+  },
+  emptyText: {
+    fontSize: 18,
+    color: '#FFFFFF',
+    marginTop: 16,
+    fontFamily: 'Kanit-Regular',
   },
 });
 

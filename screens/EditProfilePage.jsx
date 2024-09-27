@@ -11,117 +11,79 @@ import {
 } from "react-native";
 import { firebaseDB, firebaseAuth } from "../config/firebase.config";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
-import Icon from "react-native-vector-icons/Ionicons";
-import {
-  EmailAuthProvider,
-  updateEmail,
-  reauthenticateWithCredential,
-} from "firebase/auth";
+import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { useNavigation } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
-import { avatars } from "../utils/supports";
+import { LinearGradient } from 'expo-linear-gradient';
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const EditProfilePage = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [fullName, setFullName] = useState("");
-  const [avatar, setAvatar] = useState(null);
-  const [weight, setWeight] = useState("");
-  const [height, setHeight] = useState("");
+  const [userData, setUserData] = useState({
+    fullName: "",
+    email: "",
+    weight: "",
+    height: "",
+    avatar: null,
+  });
   const [bmi, setBmi] = useState("");
-  const [isAvatarMenu, setIsAvatarMenu] = useState(false);
   const navigation = useNavigation();
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const user = firebaseAuth.currentUser;
-        if (user) {
-          const userDocRef = doc(firebaseDB, "users", user.uid);
-          const userDoc = await getDoc(userDocRef);
-
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            setEmail(user.email || "");
-            setFullName(userData.fullName || "");
-            setAvatar(userData.profilePic || avatars[0]?.image.asset.url);
-            setWeight(userData.weight?.toString() || "0");
-            setHeight(userData.height?.toString() || "0");
-          } else {
-            console.error("No such document!");
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-      }
-    };
-
     fetchUserData();
   }, []);
 
   useEffect(() => {
-    // Calculate BMI whenever weight or height changes
-    if (weight && height) {
-      const weightKg = parseFloat(weight);
-      const heightM = parseFloat(height) / 100; // Convert cm to meters
-      if (heightM > 0) {
-        const calculatedBmi = (weightKg / (heightM * heightM)).toFixed(2);
-        setBmi(calculatedBmi);
+    calculateBMI();
+  }, [userData.weight, userData.height]);
+
+  const fetchUserData = async () => {
+    try {
+      const user = firebaseAuth.currentUser;
+      if (user) {
+        const userDocRef = doc(firebaseDB, "users", user.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          setUserData({
+            fullName: data.fullName || "",
+            email: user.email || "",
+            weight: data.weight?.toString() || "",
+            height: data.height?.toString() || "",
+            avatar: data.profilePic || null,
+          });
+        }
       }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+      Alert.alert("Error", "Failed to load user data. Please try again.");
     }
-  }, [weight, height]);
+  };
+
+  const calculateBMI = () => {
+    const weight = parseFloat(userData.weight);
+    const height = parseFloat(userData.height) / 100; // Convert cm to meters
+    if (weight > 0 && height > 0) {
+      const calculatedBmi = (weight / (height * height)).toFixed(2);
+      setBmi(calculatedBmi);
+    } else {
+      setBmi("");
+    }
+  };
 
   const handleSave = async () => {
     try {
       const user = firebaseAuth.currentUser;
       if (!user) return;
 
-      let calculatedBmi = "";
-      if (weight && height) {
-        const weightKg = parseFloat(weight);
-        const heightM = parseFloat(height) / 100; // Convert cm to meters
-        if (heightM > 0) {
-          calculatedBmi = (weightKg / (heightM * heightM)).toFixed(2);
-        }
-      }
-
-      let avatarUrl = avatar;
-      if (avatar && avatar.startsWith('http')) {
-        const imageUri = await handleImagePickAndUpload();
-        avatarUrl = imageUri;
-      }
-
       const userDocRef = doc(firebaseDB, "users", user.uid);
-
       await updateDoc(userDocRef, {
-        fullName,
-        profilePic: avatarUrl,
-        weight: parseFloat(weight) || 0,
-        height: parseFloat(height) || 0,
-        bmi: parseFloat(calculatedBmi) || 0,
+        fullName: userData.fullName,
+        weight: parseFloat(userData.weight) || 0,
+        height: parseFloat(userData.height) || 0,
+        profilePic: userData.avatar,
+        bmi: parseFloat(bmi) || 0,
       });
-
-      if (email !== user.email) {
-        if (!currentPassword) {
-          Alert.alert("Error", "Please enter your current password to update the email.");
-          return;
-        }
-        const credential = EmailAuthProvider.credential(user.email, currentPassword);
-        await reauthenticateWithCredential(user, credential);
-        await updateEmail(user, email);
-      }
-
-      if (password) {
-        if (!currentPassword) {
-          Alert.alert("Error", "Please enter your current password to update your password.");
-          return;
-        }
-        const credential = EmailAuthProvider.credential(user.email, currentPassword);
-        await reauthenticateWithCredential(user, credential);
-        await user.updatePassword(password);
-      }
 
       Alert.alert("Success", "Your profile has been updated.");
       navigation.goBack();
@@ -131,256 +93,203 @@ const EditProfilePage = () => {
     }
   };
 
-  const handleImagePickAndUpload = async () => {
+  const handleImagePick = async () => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        alert('Sorry, we need camera roll permissions to make this work!');
-        return null;
-      }
-
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
-        aspect: [4, 3],
+        aspect: [1, 1],
         quality: 1,
       });
 
       if (!result.canceled) {
         const { uri } = result.assets[0];
-
-        const response = await fetch(uri);
-        const blob = await response.blob();
-        const filename = uri.split('/').pop();
-        const storage = getStorage();
-        const storageRef = ref(storage, `avatars/${filename}`);
-        await uploadBytes(storageRef, blob);
-
-        const downloadURL = await getDownloadURL(storageRef);
-
-        return downloadURL;
+        const downloadURL = await uploadImage(uri);
+        setUserData(prev => ({ ...prev, avatar: downloadURL }));
       }
-      return null;
     } catch (error) {
-      console.error('Error picking or uploading image:', error);
-      return null;
+      console.error('Error picking image:', error);
+      Alert.alert("Error", "Failed to pick image. Please try again.");
     }
   };
 
-  const handleAvatarSelection = (item) => {
-    setAvatar(item?.image.asset.url);
-    setIsAvatarMenu(false);
+  const uploadImage = async (uri) => {
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    const filename = uri.substring(uri.lastIndexOf('/') + 1);
+    const storage = getStorage();
+    const storageRef = ref(storage, `avatars/${filename}`);
+    await uploadBytes(storageRef, blob);
+    return await getDownloadURL(storageRef);
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
-          <Icon name="arrow-back" size={24} color="#FFF" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Edit Profile</Text>
-        <TouchableOpacity onPress={handleSave} style={styles.iconButton}>
-          <Icon name="checkmark" size={24} color="#FFF" />
-        </TouchableOpacity>
-      </View>
+    <LinearGradient colors={['#4A90E2', '#50E3C2']} style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollViewContent}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
+            <Icon name="arrow-left" size={24} color="#FFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>แก้ไขโปรไฟล์</Text>
+          <TouchableOpacity onPress={handleSave} style={styles.iconButton}>
+            <Icon name="check" size={24} color="#FFF" />
+          </TouchableOpacity>
+        </View>
 
-      <View style={styles.formSection}>
-        <TouchableOpacity
-          onPress={() => setIsAvatarMenu(true)}
-          style={styles.avatarContainer}
-        >
-          <Image source={{ uri: avatar }} style={styles.avatar} />
-          <View style={styles.editIconContainer}>
-            <Icon name="camera" size={20} color="#FFF" />
-          </View>
-        </TouchableOpacity>
-        {isAvatarMenu && (
-          <View style={styles.avatarMenu}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {avatars.map((item) => (
-                <TouchableOpacity key={item._id} onPress={() => handleAvatarSelection(item)}>
-                  <Image source={{ uri: item?.image.asset.url }} style={styles.avatarOption} />
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-            <TouchableOpacity onPress={handleImagePickAndUpload} style={styles.pickImageButton}>
-              <Text style={styles.pickImageText}>Choose and Upload Image</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+        <View style={styles.formSection}>
+          <TouchableOpacity onPress={handleImagePick} style={styles.avatarContainer}>
+            <Image source={{ uri: userData.avatar || "https://via.placeholder.com/150" }} style={styles.avatar} />
+            <View style={styles.editIconContainer}>
+              <Icon name="camera" size={20} color="#FFF" />
+            </View>
+          </TouchableOpacity>
 
-        <Text style={styles.label}>Full Name</Text>
-        <TextInput
-          style={styles.input}
-          value={fullName}
-          onChangeText={setFullName}
-          placeholder="Enter your full name"
-        />
-        <Text style={styles.label}>Email</Text>
-        <Text style={styles.input}>{email}</Text>
+          <InputField
+            label="ชื่อ-นามสกุล"
+            value={userData.fullName}
+            onChangeText={(text) => setUserData(prev => ({ ...prev, fullName: text }))}
+          />
+          <InputField
+            label="อีเมล"
+            value={userData.email}
+            editable={false}
+          />
+          <InputField
+            label="น้ำหนัก (กก.)"
+            value={userData.weight}
+            onChangeText={(text) => setUserData(prev => ({ ...prev, weight: text }))}
+            keyboardType="numeric"
+          />
+          <InputField
+            label="ส่วนสูง (ซม.)"
+            value={userData.height}
+            onChangeText={(text) => setUserData(prev => ({ ...prev, height: text }))}
+            keyboardType="numeric"
+          />
 
-        <Text style={styles.label}>Current Password</Text>
-        <TextInput
-          style={styles.input}
-          value={currentPassword}
-          onChangeText={setCurrentPassword}
-          placeholder="Enter your current password"
-          secureTextEntry
-        />
+          {bmi && <Text style={styles.bmiLabel}>BMI: {bmi}</Text>}
 
-        <Text style={styles.label}>New Password</Text>
-        <TextInput
-          style={styles.input}
-          value={password}
-          onChangeText={setPassword}
-          placeholder="Enter your new password (optional)"
-          secureTextEntry
-        />
-
-        <Text style={styles.label}>Weight (kg)</Text>
-        <TextInput
-          style={styles.input}
-          value={weight}
-          onChangeText={setWeight}
-          placeholder="Enter your weight"
-          keyboardType="numeric"
-        />
-
-        <Text style={styles.label}>Height (cm)</Text>
-        <TextInput
-          style={styles.input}
-          value={height}
-          onChangeText={setHeight}
-          placeholder="Enter your height"
-          keyboardType="numeric"
-        />
-
-        <Text style={styles.bmiLabel}>BMI: {bmi}</Text>
-
-        <TouchableOpacity style={styles.cartoonButton} onPress={handleSave}>
-          <Text style={styles.cartoonButtonText}>Save Changes</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+          <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+            <Text style={styles.saveButtonText}>บันทึกการเปลี่ยนแปลง</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </LinearGradient>
   );
 };
+
+const InputField = ({ label, value, onChangeText, editable, keyboardType }) => (
+  <View style={styles.inputContainer}>
+    <Text style={styles.label}>{label}</Text>
+    <TextInput
+      style={styles.input}
+      value={value}
+      onChangeText={onChangeText}
+      editable={editable !== false}
+      keyboardType={keyboardType || 'default'}
+    />
+  </View>
+);
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#E6F4EA",
+  },
+  scrollViewContent: {
+    flexGrow: 1,
+    paddingBottom: 30,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     padding: 16,
-    backgroundColor: "#004d00",
+    paddingTop: 50,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
+    fontSize: 28,
+    fontFamily: 'Kanit-Bold',
     color: "#FFF",
+    textShadowColor: 'rgba(0, 0, 0, 0.1)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   iconButton: {
     padding: 8,
-    borderRadius: 8,
-    backgroundColor: "#006400",
+    borderRadius: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
   },
   formSection: {
     padding: 16,
-  },
-  label: {
-    fontSize: 16,
-    marginBottom: 8,
-    color: "#004d00",
-  },
-  bmiLabel: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 16,
-    color: "#004d00",
-    alignSelf: "center",
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#004d00",
-    padding: 10,
-    borderRadius: 8,
-    marginBottom: 16,
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    marginTop: 20,
   },
   avatarContainer: {
     alignSelf: "center",
     marginBottom: 20,
   },
   avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 2,
-    borderColor: "#004d00",
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 4,
+    borderColor: "#FFF",
   },
   editIconContainer: {
     position: "absolute",
     bottom: 0,
     right: 0,
-    backgroundColor: "#006400",
+    backgroundColor: "#4A90E2",
     borderRadius: 20,
-    padding: 4,
-  },
-  avatarMenu: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  avatarOption: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginHorizontal: 8,
-  },
-  pickImageButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    backgroundColor: "#004d00",
-    borderRadius: 10,
-    marginLeft: 10,
-  },
-  pickImageText: {
-    color: "#FFF",
-  },
-  cartoonButton: {
-    backgroundColor: "#4CAF50",
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: "#388E3C",
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-  },
-  cartoonButtonText: {
-    fontSize: 18,
-    color: "#FFF",
-    fontWeight: "bold",
-  },
-  editIconContainer: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    backgroundColor: "#50D890",
-    borderRadius: 20,
-    padding: 6,
+    padding: 8,
     shadowColor: "#000",
     shadowOffset: { width: 2, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
-    elevation: 6,
+    elevation: 5,
+  },
+  inputContainer: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 16,
+    marginBottom: 8,
+    color: "#333",
+    fontFamily: 'Kanit-Regular',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#CCC",
+    padding: 12,
+    borderRadius: 8,
+    fontFamily: 'Kanit-Regular',
+    backgroundColor: "#FFF",
+  },
+  bmiLabel: {
+    fontSize: 24,
+    fontFamily: 'Kanit-Bold',
+    marginVertical: 16,
+    color: "#4A90E2",
+    alignSelf: "center",
+  },
+  saveButton: {
+    backgroundColor: "#4CAF50",
+    paddingVertical: 15,
+    borderRadius: 25,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+    elevation: 8,
+  },
+  saveButtonText: {
+    fontSize: 18,
+    color: "#FFF",
+    fontFamily: 'Kanit-Bold',
   },
 });
 

@@ -178,6 +178,7 @@ const BlogDetail = ({ route }) => {
   );
 };
 
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -203,6 +204,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#FFF',
     flex: 1,
+    fontFamily: 'Kanit-Bold',
   },
   contentContainer: {
     flex: 1,
@@ -222,6 +224,7 @@ const styles = StyleSheet.create({
   authorText: {
     fontSize: 14,
     color: '#666',
+    fontFamily: 'Kanit-Regular',
   },
   blogImage: {
     width: '100%',
@@ -234,6 +237,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 24,
     color: '#333',
+    fontFamily: 'Kanit-Regular',
   },
   reportButton: {
     position: 'absolute',
@@ -269,6 +273,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 20,
     color: '#333',
+    fontFamily: 'Kanit-Bold',
   },
   modalOption: {
     width: '100%',
@@ -285,10 +290,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
     textAlign: 'center',
+    fontFamily: 'Kanit-Regular',
   },
   selectedOptionText: {
     color: '#FFF',
     fontWeight: 'bold',
+    fontFamily: 'Kanit-Bold',
   },
   commentsInput: {
     width: '100%',
@@ -300,6 +307,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     textAlignVertical: 'top',
     fontSize: 16,
+    fontFamily: 'Kanit-Regular',
   },
   submitButton: {
     width: '100%',
@@ -317,6 +325,7 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
     fontSize: 18,
+    fontFamily: 'Kanit-Bold',
   },
   cancelButton: {
     marginTop: 10,
@@ -326,6 +335,7 @@ const styles = StyleSheet.create({
     color: '#666',
     fontWeight: 'bold',
     fontSize: 16,
+    fontFamily: 'Kanit-Bold',
   },
 });
 

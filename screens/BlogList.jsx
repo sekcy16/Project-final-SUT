@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, Alert } from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Image, ActivityIndicator, Alert } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { getFirestore, collection, query, orderBy, onSnapshot, deleteDoc, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
@@ -18,24 +18,18 @@ const BlogList = () => {
 
   useEffect(() => {
     const q = query(collection(db, 'blogs'), orderBy('createdAt', 'desc'));
-
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const blogData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const blogData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setBlogs(blogData);
       setLoading(false);
     }, (error) => {
       console.error("Error fetching blogs: ", error);
       setLoading(false);
     });
-
     return () => unsubscribe();
   }, []);
 
   useEffect(() => {
-    // Fetch user's bookmarked blogs
     const fetchBookmarkedBlogs = async () => {
       const user = auth.currentUser;
       if (user) {
@@ -47,28 +41,24 @@ const BlogList = () => {
         }
       }
     };
-
     fetchBookmarkedBlogs();
   }, []);
 
   const handleDeleteBlog = async (blogId) => {
     Alert.alert(
-      "Delete Blog",
-      "Are you sure you want to delete this blog?",
+      "ลบบทความ",
+      "คุณแน่ใจหรือไม่ที่จะลบบทความนี้?",
       [
-        {
-          text: "Cancel",
-          style: "cancel"
-        },
-        {
-          text: "OK",
+        { text: "ยกเลิก", style: "cancel" },
+        { 
+          text: "ตกลง",
           onPress: async () => {
             try {
               await deleteDoc(doc(db, 'blogs', blogId));
-              console.log("Blog deleted successfully");
+              Alert.alert("สำเร็จ", "ลบบทความเรียบร้อยแล้ว");
             } catch (error) {
-              console.error("Error deleting blog: ", error);
-              Alert.alert("Error", "Failed to delete the blog. Please try again.");
+              console.error("เกิดข้อผิดพลาดในการลบบทความ: ", error);
+              Alert.alert("ข้อผิดพลาด", "ไม่สามารถลบบทความได้ กรุณาลองใหม่อีกครั้ง");
             }
           }
         }
@@ -76,271 +66,245 @@ const BlogList = () => {
     );
   };
 
-
   const handleBookmark = async (blogId, blogData) => {
     const user = auth.currentUser;
-
     if (user) {
       const userRef = doc(db, 'users', user.uid);
-
       try {
         const userDoc = await getDoc(userRef);
         const bookmarks = userDoc.exists() ? userDoc.data().bookmarks || [] : [];
-
         if (bookmarkedBlogs.includes(blogId)) {
-          // Unbookmark the blog if it is already bookmarked
           const updatedBookmarks = bookmarks.filter(bookmark => bookmark.blogId !== blogId);
           await updateDoc(userRef, { bookmarks: updatedBookmarks });
-          setBookmarkedBlogs(updatedBookmarks.map(bookmark => bookmark.blogId)); // Update local state
-          Alert.alert('Success', 'Blog unbookmarked successfully!');
+          setBookmarkedBlogs(updatedBookmarks.map(bookmark => bookmark.blogId));
+          Alert.alert('สำเร็จ', 'ยกเลิกการบันทึกบทความแล้ว');
         } else {
-          // Bookmark the blog if it is not already bookmarked
           const newBookmarks = [...bookmarks, { blogId, ...blogData }];
           await updateDoc(userRef, { bookmarks: newBookmarks });
-          setBookmarkedBlogs([...bookmarkedBlogs, blogId]); // Add blog to local state
-          Alert.alert('Success', 'Blog bookmarked successfully!');
+          setBookmarkedBlogs([...bookmarkedBlogs, blogId]);
+          Alert.alert('สำเร็จ', 'บันทึกบทความแล้ว');
         }
       } catch (error) {
-        console.error('Error updating bookmarks:', error);
-        Alert.alert('Error', 'Failed to update bookmarks. Please try again.');
+        console.error('เกิดข้อผิดพลาดในการอัปเดตการบันทึก:', error);
+        Alert.alert('ข้อผิดพลาด', 'ไม่สามารถอัปเดตการบันทึกได้ กรุณาลองใหม่อีกครั้ง');
       }
     }
   };
 
-  const renderBlogItem = (item) => {
+  const renderBlogItem = ({ item }) => {
     const isCurrentUserAuthor = auth.currentUser && auth.currentUser.uid === item.userId;
     const isBookmarked = bookmarkedBlogs.includes(item.id);
 
     return (
       <TouchableOpacity
-        key={item.id}
         style={styles.blogItem}
         onPress={() => navigation.navigate('BlogDetail', { blogId: item.id })}
       >
         <LinearGradient
-          colors={['#7FDBDA', '#AED9E0']}
-          start={{x: 0, y: 0}}
-          end={{x: 1, y: 1}}
+          colors={['#ffffff', '#f0f0f0']}
           style={styles.blogGradient}
         >
           {item.photo && <Image source={{ uri: item.photo }} style={styles.blogImage} />}
           <View style={styles.blogContent}>
-            <Text style={styles.blogTitle}>{item.title}</Text>
+            <Text style={styles.blogTitle} numberOfLines={2}>{item.title}</Text>
+            <Text style={styles.blogExcerpt} numberOfLines={2}>{item.content}</Text>
             <View style={styles.blogInfo}>
-              <Text style={styles.blogAuthor}>By {item.author}</Text>
-              <Text style={styles.blogCategory}>{item.category}</Text>
+              <Text style={styles.blogAuthor}>โดย {item.author}</Text>
+              <View style={[styles.categoryContainer, { backgroundColor: item.category === 'health' ? '#a8e6cf' : '#ffd3b6' }]}>
+                <Text style={styles.blogCategory}>{item.category === 'health' ? 'สุขภาพ' : 'สูตรอาหาร'}</Text>
+              </View>
             </View>
           </View>
-
-          <TouchableOpacity
-            style={styles.bookmarkButton}
-            onPress={() => handleBookmark(item.id, { title: item.title, author: item.author })}
-          >
-            <Icon
-              name={isBookmarked ? "bookmark" : "bookmark-outline"}
-              size={28}
-              color={isBookmarked ? "#5D9C59" : "#FFFFFF"}
-            />        
-          </TouchableOpacity>
-
-          {isCurrentUserAuthor && (
+          <View style={styles.actionButtons}>
             <TouchableOpacity
-              style={styles.deleteButton}
-              onPress={() => handleDeleteBlog(item.id)}
+              style={styles.actionButton}
+              onPress={() => handleBookmark(item.id, { title: item.title, author: item.author })}
             >
-              <Icon name="trash-outline" size={28} color="#FFFFFF" />
+              <Icon name={isBookmarked ? "bookmark" : "bookmark-outline"} size={24} color={isBookmarked ? "#4A90E2" : "#666"} />
             </TouchableOpacity>
-          )}
+            {isCurrentUserAuthor && (
+              <TouchableOpacity style={styles.actionButton} onPress={() => handleDeleteBlog(item.id)}>
+                <Icon name="trash-can-outline" size={24} color="#666" />
+              </TouchableOpacity>
+            )}
+          </View>
         </LinearGradient>
       </TouchableOpacity>
     );
   };
 
   return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={['#B5EAD7', '#7FDBDA']}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}
-        style={styles.header}
-      >
+    <LinearGradient colors={['#4A90E2', '#50E3C2']} style={styles.container}>
+      <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Icon name="arrow-back" size={28} color="#FFF" />
+          <Icon name="arrow-left" size={28} color="#FFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Blogs & Recipes</Text>
-      </LinearGradient>
-
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tab, selectedTab === 'health' && styles.activeTab]}
-          onPress={() => setSelectedTab('health')}
-        >
-          <Text style={[styles.tabText, selectedTab === 'health' && styles.activeTabText]}>Health</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, selectedTab === 'recipe' && styles.activeTab]}
-          onPress={() => setSelectedTab('recipe')}
-        >
-          <Text style={[styles.tabText, selectedTab === 'recipe' && styles.activeTabText]}>Recipe</Text>
-        </TouchableOpacity>
+        <Text style={styles.headerTitle}>บทความและสูตรอาหาร</Text>
       </View>
 
-      {loading ? (
-        <ActivityIndicator size="large" color="#7FDBDA" style={styles.loader} />
-      ) : (
-        <ScrollView style={styles.blogList}>
-          {blogs
-            .filter(blog => blog.category === selectedTab)
-            .map(renderBlogItem)}
-        </ScrollView>
-      )}
+      <View style={styles.content}>
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tab, selectedTab === 'health' && styles.activeTab]}
+            onPress={() => setSelectedTab('health')}
+          >
+            <Text style={[styles.tabText, selectedTab === 'health' && styles.activeTabText]}>สุขภาพ</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, selectedTab === 'recipe' && styles.activeTab]}
+            onPress={() => setSelectedTab('recipe')}
+          >
+            <Text style={[styles.tabText, selectedTab === 'recipe' && styles.activeTabText]}>สูตรอาหาร</Text>
+          </TouchableOpacity>
+        </View>
+
+        {loading ? (
+          <ActivityIndicator size="large" color="#4A90E2" style={styles.loader} />
+        ) : (
+          <FlatList
+            data={blogs.filter(blog => blog.category === selectedTab)}
+            renderItem={renderBlogItem}
+            keyExtractor={item => item.id}
+            contentContainerStyle={styles.blogList}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
+      </View>
 
       <TouchableOpacity
         style={styles.createButton}
         onPress={() => navigation.navigate('CreateBlogScreen')}
       >
         <LinearGradient
-          colors={['#B5EAD7', '#7FDBDA']}
-          start={{x: 0, y: 0}}
-          end={{x: 1, y: 1}}
+          colors={['#4A90E2', '#50E3C2']}
           style={styles.createButtonGradient}
         >
-          <Icon name="add" size={28} color="#FFF" />
-          <Text style={styles.createButtonText}>Create New Blog</Text>
+          <Icon name="plus" size={24} color="#FFF" />
+          <Text style={styles.createButtonText}>สร้างบทความใหม่</Text>
         </LinearGradient>
       </TouchableOpacity>
-    </View>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F0F8FF',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 15,
     paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 16,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    paddingBottom: 15,
   },
   backButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    borderRadius: 20,
-    padding: 8,
+    padding: 5,
   },
   headerTitle: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: 26,
-    fontWeight: 'bold',
+    fontSize: 24,
+    fontFamily: 'Kanit-Bold',
     color: '#FFF',
+    marginLeft: 15,
     textShadowColor: 'rgba(0, 0, 0, 0.1)',
-    textShadowOffset: {width: -1, height: 1},
-    textShadowRadius: 10
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  content: {
+    flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    paddingTop: 20,
   },
   tabContainer: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    marginVertical: 20,
+    justifyContent: 'space-around',
+    paddingVertical: 10,
+    marginBottom: 10,
   },
   tab: {
-    paddingHorizontal: 30,
-    paddingVertical: 12,
-    borderRadius: 25,
-    marginHorizontal: 10,
-    backgroundColor: '#E0E0E0',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+  },
+  activeTab: {
+    backgroundColor: '#4A90E2',
+  },
+  tabText: {
+    fontFamily: 'Kanit-Regular',
+    fontSize: 16,
+    color: '#666',
+  },
+  activeTabText: {
+    color: '#FFF',
+    fontFamily: 'Kanit-Bold',
+  },
+  blogList: {
+    paddingHorizontal: 15,
+  },
+  blogItem: {
+    marginBottom: 15,
+    borderRadius: 10,
+    overflow: 'hidden',
     elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-  activeTab: {
-    backgroundColor: '#7FDBDA',
-  },
-  tabText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#555',
-  },
-  activeTabText: {
-    color: '#FFF',
-  },
-  blogList: {
-    flex: 1,
-    paddingHorizontal: 16,
-  },
-  blogItem: {
-    marginVertical: 10,
-    borderRadius: 20,
-    overflow: 'hidden',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-  },
   blogGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
+    padding: 15,
   },
   blogImage: {
-    width: 90,
-    height: 90,
-    borderRadius: 15,
-    marginRight: 16,
+    width: '100%',
+    height: 150,
+    borderRadius: 10,
+    marginBottom: 10,
   },
   blogContent: {
     flex: 1,
   },
   blogTitle: {
-    fontWeight: 'bold',
-    fontSize: 20,
-    color: '#FFF',
-    marginBottom: 8,
-    textShadowColor: 'rgba(0, 0, 0, 0.1)',
-    textShadowOffset: {width: -1, height: 1},
-    textShadowRadius: 5
+    fontSize: 18,
+    fontFamily: 'Kanit-Bold',
+    color: '#333',
+    marginBottom: 5,
+  },
+  blogExcerpt: {
+    fontSize: 14,
+    fontFamily: 'Kanit-Regular',
+    color: '#666',
+    marginBottom: 10,
   },
   blogInfo: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
   },
   blogAuthor: {
-    fontSize: 16,
-    color: '#FFF',
-    fontWeight: '500',
+    fontSize: 12,
+    fontFamily: 'Kanit-Regular',
+    color: '#666',
+  },
+  categoryContainer: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 15,
   },
   blogCategory: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#5D9C59',
+    fontSize: 12,
+    fontFamily: 'Kanit-Regular',
+    color: '#333',
   },
-  bookmarkButton: {
-    position: 'absolute',
-    right: 16,
-    top: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    borderRadius: 15,
-    padding: 8,
+  actionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 10,
   },
-  deleteButton: {
-    position: 'absolute',
-    top: 16,
-    right: 60,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    borderRadius: 15,
-    padding: 8,
-  },
-  loader: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  actionButton: {
+    padding: 5,
+    marginLeft: 10,
   },
   createButton: {
     position: 'absolute',
@@ -348,23 +312,24 @@ const styles = StyleSheet.create({
     bottom: 20,
     borderRadius: 30,
     elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
   },
   createButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
     paddingVertical: 12,
+    paddingHorizontal: 20,
     borderRadius: 30,
   },
   createButtonText: {
-    marginLeft: 8,
+    fontFamily: 'Kanit-Regular',
+    fontSize: 16,
     color: '#FFF',
-    fontWeight: 'bold',
-    fontSize: 18,
+    marginLeft: 5,
+  },
+  loader: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 
