@@ -15,7 +15,7 @@ const BlogList = () => {
   const [bookmarkedBlogs, setBookmarkedBlogs] = useState([]);
   const auth = getAuth(app);
   const db = getFirestore(app);
-
+  
   useEffect(() => {
     const q = query(collection(db, 'blogs'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -43,7 +43,6 @@ const BlogList = () => {
     };
     fetchBookmarkedBlogs();
   }, []);
-
   const handleDeleteBlog = async (blogId) => {
     Alert.alert(
       "ลบบทความ",
@@ -65,6 +64,7 @@ const BlogList = () => {
       ]
     );
   };
+
 
   const handleBookmark = async (blogId, blogData) => {
     const user = auth.currentUser;
@@ -123,8 +123,11 @@ const BlogList = () => {
               <Icon name={isBookmarked ? "bookmark" : "bookmark-outline"} size={24} color={isBookmarked ? "#4A90E2" : "#666"} />
             </TouchableOpacity>
             {isCurrentUserAuthor && (
-              <TouchableOpacity style={styles.actionButton} onPress={() => handleDeleteBlog(item.id)}>
-                <Icon name="trash-can-outline" size={24} color="#666" />
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => handleDeleteBlog(item.id)}
+              >
+                <Icon name="delete" size={24} color="#FF6B6B" />
               </TouchableOpacity>
             )}
           </View>
@@ -132,7 +135,6 @@ const BlogList = () => {
       </TouchableOpacity>
     );
   };
-
   return (
     <LinearGradient colors={['#4A90E2', '#50E3C2']} style={styles.container}>
       <View style={styles.header}>
@@ -330,6 +332,14 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  deleteButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    borderRadius: 15,
+    padding: 5,
   },
 });
 

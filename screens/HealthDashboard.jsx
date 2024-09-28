@@ -168,12 +168,11 @@ const HealthDashboard = ({ navigation }) => {
     }
   };
   // Helper function to get default meals
-  const getDefaultMeals = () => ({
-    มื้อเช้า: { calories: 300, protein: 15, carbs: 30, fat: 10 },
-    มื้อเที่ยง: { calories: 500, protein: 25, carbs: 50, fat: 15 },
-    มื้อเย็น: { calories: 400, protein: 20, carbs: 40, fat: 12 },
-  });
-
+const getDefaultMeals = () => ({
+  มื้อเช้า: { calories: 0, protein: 0, carbs: 0, fat: 0 },
+  มื้อเที่ยง: { calories: 0, protein: 0, carbs: 0, fat: 0 },
+  มื้อเย็น: { calories: 0, protein: 0, carbs: 0, fat: 0 },
+});
   // Helper function to calculate totals
   const calculateTotals = (meals) => {
     return Object.values(meals).reduce(

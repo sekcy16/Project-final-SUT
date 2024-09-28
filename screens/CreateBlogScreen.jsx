@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native';
 import { getFirestore, collection, addDoc } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getAuth } from 'firebase/auth';
 import { app } from "../config/firebase.config";
 import * as ImagePicker from 'expo-image-picker';
@@ -13,41 +14,9 @@ const CreateBlogScreen = ({ navigation }) => {
 
   const db = getFirestore(app);
   const auth = getAuth(app);
-
-  const handleCreateBlog = async () => {
-    if (!title.trim() || !content.trim()) {
-      Alert.alert('Error', 'Please fill in both title and content');
-      return;
-    }
-
-    try {
-      const user = auth.currentUser;
-      if (!user) {
-        Alert.alert('Error', 'No user logged in');
-        return;
-      }
-
-      const blogData = {
-        title: title.trim(),
-        content: content.trim(),
-        author: user.displayName || user.email,
-        userId: user.uid,
-        createdAt: new Date(),
-        category,
-        photo: photo ? photo.uri : null,
-      };
-
-      await addDoc(collection(db, 'blogs'), blogData);
-      Alert.alert('Success', 'Blog created successfully');
-      navigation.goBack();
-    } catch (error) {
-      console.error('Error creating blog:', error);
-      Alert.alert('Error', 'Failed to create blog. Please try again.');
-    }
-  };
+  const storage = getStorage(app);
 
   const handleChoosePhoto = async () => {
-    // Request permission to access the media library
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permission required', 'Sorry, we need camera roll permissions to make this work!');
@@ -63,6 +32,53 @@ const CreateBlogScreen = ({ navigation }) => {
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
       setPhoto(result.assets[0]);
+    }
+  };
+
+  const uploadImage = async (uri) => {
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    const filename = uri.substring(uri.lastIndexOf('/') + 1);
+    const storageRef = ref(storage, `blog_images/${filename}`);
+    
+    await uploadBytes(storageRef, blob);
+    return await getDownloadURL(storageRef);
+  };
+
+  const handleCreateBlog = async () => {
+    if (!title.trim() || !content.trim()) {
+      Alert.alert('Error', 'Please fill in both title and content');
+      return;
+    }
+
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        Alert.alert('Error', 'No user logged in');
+        return;
+      }
+
+      let photoURL = null;
+      if (photo) {
+        photoURL = await uploadImage(photo.uri);
+      }
+
+      const blogData = {
+        title: title.trim(),
+        content: content.trim(),
+        author: user.displayName || user.email,
+        userId: user.uid,
+        createdAt: new Date(),
+        category,
+        photo: photoURL,
+      };
+
+      await addDoc(collection(db, 'blogs'), blogData);
+      Alert.alert('Success', 'Blog created successfully');
+      navigation.goBack();
+    } catch (error) {
+      console.error('Error creating blog:', error);
+      Alert.alert('Error', 'Failed to create blog. Please try again.');
     }
   };
 
@@ -146,9 +162,6 @@ const styles = StyleSheet.create({
   },
   selectedCategory: {
     backgroundColor: '#8FBC8F',
-    padding: 10,
-    borderRadius: 5,
-    marginRight: 10,
   },
   categoryText: {
     color: '#556B2F',
