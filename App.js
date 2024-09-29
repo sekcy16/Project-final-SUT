@@ -35,13 +35,13 @@ import {
   ProfileDoctor,
   ScheduleScreen,
   AddFood,
-  FoodQRResult,
   FoodQRPage,
   RelativesListScreen,
 } from "./screens";
 
 // Import other components
 import FoodResult from "./components/FoodResult";
+import FoodQRResult from "./components/FoodQRResult";
 import Nutrition from "./components/Nutrition";
 import TotalCalories from "./screens/TotalCalories";
 import ExerciseEntry from "./screens/ExerciseEntry";
