@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   View, 
   Text, 
@@ -8,28 +8,36 @@ import {
   StyleSheet, 
   ActivityIndicator,
   Image,
-  Alert
+  Alert,
+  RefreshControl,
+  Modal
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { firebaseDB, firebaseAuth as auth } from "../../config/firebase.config";
-import { collection, query, where, getDocs, doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
+import { firebaseDB, firebaseAuth } from "../../config/firebase.config";
+import { collection, query, where, getDocs, doc, setDoc, getDoc, deleteDoc, addDoc } from 'firebase/firestore';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect } from '@react-navigation/native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const PatientListScreen = ({ navigation }) => {
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [newPatientEmail, setNewPatientEmail] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [appointmentDate, setAppointmentDate] = useState(new Date());
+  const [appointmentTime, setAppointmentTime] = useState(new Date());
+  const [appointmentNote, setAppointmentNote] = useState('');
 
-  useEffect(() => {
-    fetchPatients();
-  }, []);
-
-  const fetchPatients = async () => {
+  const fetchPatients = useCallback(async () => {
     setLoading(true);
     try {
       const doctorPatientsRef = collection(firebaseDB, 'doctorPatients');
-      const q = query(doctorPatientsRef, where('doctorId', '==', auth.currentUser.uid));
+      const q = query(doctorPatientsRef, where('doctorId', '==', firebaseAuth.currentUser.uid));
       const querySnapshot = await getDocs(q);
 
       const patientPromises = querySnapshot.docs.map(async (docSnapshot) => {
@@ -46,7 +54,19 @@ const PatientListScreen = ({ navigation }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchPatients();
+    }, [fetchPatients])
+  );
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchPatients();
+    setRefreshing(false);
+  }, [fetchPatients]);
 
   const addPatient = async () => {
     if (!newPatientEmail) {
@@ -73,17 +93,15 @@ const PatientListScreen = ({ navigation }) => {
         return;
       }
 
-      const relationId = `${auth.currentUser.uid}_${patientDoc.id}`;
+      const relationId = `${firebaseAuth.currentUser.uid}_${patientDoc.id}`;
       const doctorPatientsRef = doc(firebaseDB, 'doctorPatients', relationId);
       await setDoc(doctorPatientsRef, {
-        doctorId: auth.currentUser.uid,
+        doctorId: firebaseAuth.currentUser.uid,
         patientId: patientDoc.id,
         createdAt: new Date()
       });
 
-      // Add the new patient to the local state
       setPatients(prevPatients => [...prevPatients, { id: patientDoc.id, ...patientData }]);
-
       Alert.alert("Success", "Patient added successfully");
       setNewPatientEmail('');
     } catch (error) {
@@ -94,11 +112,6 @@ const PatientListScreen = ({ navigation }) => {
     }
   };
 
-
-  const filteredPatients = patients.filter(patient =>
-    patient.fullName ? patient.fullName.toLowerCase().includes(searchText.toLowerCase()) : false
-  );
-
   const deletePatient = async (patientId) => {
     Alert.alert(
       "Delete Patient",
@@ -108,11 +121,9 @@ const PatientListScreen = ({ navigation }) => {
         { text: "Delete", style: "destructive", onPress: async () => {
           try {
             setLoading(true);
-            const relationId = `${auth.currentUser.uid}_${patientId}`;
+            const relationId = `${firebaseAuth.currentUser.uid}_${patientId}`;
             const doctorPatientRef = doc(firebaseDB, 'doctorPatients', relationId);
             await deleteDoc(doctorPatientRef);
-
-            // Remove the patient from the local state
             setPatients(prevPatients => prevPatients.filter(patient => patient.id !== patientId));
             Alert.alert("Success", "Patient removed successfully");
           } catch (error) {
@@ -126,6 +137,91 @@ const PatientListScreen = ({ navigation }) => {
     );
   };
 
+  
+  const handleAppointment = (patient) => {
+    setSelectedPatient(patient);
+    setModalVisible(true);
+  };
+
+  const onDateChange = (event, selectedDate) => {
+    setShowDatePicker(false);
+    if (selectedDate) {
+      setAppointmentDate(selectedDate);
+    }
+  };
+
+  const onTimeChange = (event, selectedTime) => {
+    setShowTimePicker(false);
+    if (selectedTime) {
+      setAppointmentTime(selectedTime);
+    }
+  };
+  const checkUserRole = async (userId) => {
+    try {
+      const userRef = doc(firebaseDB, 'users', userId);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        const userData = userSnap.data();
+        console.log("User role:", userData.role);
+        return userData.role;
+      } else {
+        console.log("No such user!");
+        return null;
+      }
+    } catch (error) {
+      console.error("Error checking user role:", error);
+      return null;
+    }
+  };
+  
+
+
+  // ใช้ฟังก์ชันนี้ก่อนที่จะสร้างการนัดหมาย
+  const createAppointment = async () => {
+    if (!selectedPatient) return;
+  
+    try {
+      const currentUser = firebaseAuth.currentUser;
+      if (!currentUser) {
+        throw new Error("ไม่พบข้อมูลผู้ใช้");
+      }
+  
+      const userRole = await checkUserRole(currentUser.uid);
+      console.log("Current user role:", userRole);
+  
+      if (userRole !== 'Doctor') {
+        throw new Error("คุณไม่มีสิทธิ์ในการสร้างนัดหมาย");
+      }
+  
+      const appointmentData = {
+        doctorId: currentUser.uid,
+        patientId: selectedPatient.id,
+        patientName: selectedPatient.fullName,
+        date: appointmentDate.toISOString().split('T')[0],
+        time: appointmentTime.toTimeString().split(' ')[0],
+        note: appointmentNote,
+        createdAt: new Date()
+      };
+  
+      console.log("Attempting to create appointment with data:", appointmentData);
+  
+      // สร้าง collection "appointments" ถ้ายังไม่มี
+      const appointmentsRef = collection(firebaseDB, "users", currentUser.uid, "appointments");
+      const newAppointmentRef = doc(appointmentsRef);
+      await setDoc(newAppointmentRef, appointmentData);
+  
+      console.log("Appointment created with ID: ", newAppointmentRef.id);
+      Alert.alert("สำเร็จ", "สร้างนัดหมายเรียบร้อยแล้ว");
+      setModalVisible(false);
+      setAppointmentNote('');
+      
+      navigation.navigate('DoctorHomePage', { refresh: true });
+    } catch (error) {
+      console.error("Error creating appointment:", error);
+      Alert.alert("ข้อผิดพลาด", "ไม่สามารถสร้างนัดหมายได้: " + error.message);
+    }
+  };
+  
   const renderPatientItem = ({ item }) => (
     <View style={styles.patientItem}>
       <TouchableOpacity
@@ -149,14 +245,27 @@ const PatientListScreen = ({ navigation }) => {
           </View>
         </View>
       </TouchableOpacity>
-      <TouchableOpacity
-        style={styles.deleteButton}
-        onPress={() => deletePatient(item.id)}
-      >
-        <Ionicons name="trash-outline" size={24} color="#FF6B6B" />
-      </TouchableOpacity>
+      <View style={styles.actionButtons}>
+        <TouchableOpacity
+          style={styles.appointmentButton}
+          onPress={() => handleAppointment(item)}
+        >
+          <Ionicons name="calendar-outline" size={24} color="#4A90E2" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={() => deletePatient(item.id)}
+        >
+          <Ionicons name="trash-outline" size={24} color="#FF6B6B" />
+        </TouchableOpacity>
+      </View>
     </View>
   );
+
+  const filteredPatients = patients.filter(patient =>
+    patient.fullName ? patient.fullName.toLowerCase().includes(searchText.toLowerCase()) : false
+  );
+
   return (
     <LinearGradient colors={['#4A90E2', '#50C2C9']} style={styles.container}>
       <View style={styles.header}>
@@ -198,9 +307,66 @@ const PatientListScreen = ({ navigation }) => {
             renderItem={renderPatientItem}
             keyExtractor={item => item.id}
             contentContainerStyle={styles.listContainer}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4A90E2']} />
+            }
           />
         )}
       </View>
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.centeredView}>
+          <View style={styles.modalView}>
+            <Text style={styles.modalTitle}>นัดหมายสำหรับ {selectedPatient?.fullName}</Text>
+            
+            <TouchableOpacity style={styles.datePickerButton} onPress={() => setShowDatePicker(true)}>
+              <Text>วันที่: {appointmentDate.toLocaleDateString()}</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.datePickerButton} onPress={() => setShowTimePicker(true)}>
+              <Text>เวลา: {appointmentTime.toLocaleTimeString()}</Text>
+            </TouchableOpacity>
+            
+            <TextInput
+              style={styles.noteInput}
+              placeholder="บันทึกเพิ่มเติม"
+              value={appointmentNote}
+              onChangeText={setAppointmentNote}
+              multiline
+            />
+            
+            <TouchableOpacity style={styles.submitButton} onPress={createAppointment}>
+              <Text style={styles.submitButtonText}>สร้างนัดหมาย</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)}>
+              <Text style={styles.cancelButtonText}>ยกเลิก</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {showDatePicker && (
+        <DateTimePicker
+          value={appointmentDate}
+          mode="date"
+          display="default"
+          onChange={onDateChange}
+        />
+      )}
+      {showTimePicker && (
+        <DateTimePicker
+          value={appointmentTime}
+          mode="time"
+          display="default"
+          onChange={onTimeChange}
+        />
+      )}
     </LinearGradient>
   );
 };
@@ -216,13 +382,14 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 28,
-    fontWeight: 'bold',
     color: '#FFFFFF',
+    fontFamily: 'Kanit-Bold',
   },
   headerSubtitle: {
     fontSize: 16,
     color: '#FFFFFF',
     marginTop: 5,
+    fontFamily: 'Kanit-Regular',
   },
   content: {
     flex: 1,
@@ -230,79 +397,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     paddingTop: 20,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
-    backgroundColor: 'white',
-    marginHorizontal: 20,
-    borderRadius: 25,
-    elevation: 3,
-    marginBottom: 15,
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: 10,
-    fontSize: 16,
-  },
-  patientItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 15,
-    backgroundColor: 'white',
-    marginHorizontal: 20,
-    marginBottom: 10,
-    borderRadius: 10,
-    elevation: 2,
-  },
-  patientImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginRight: 15,
-  },
-  patientInfo: {
-    flex: 1,
-  },
-  patientName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  patientDetails: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 5,
-  },
-  patientStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 5,
-  },
-  statusIndicator: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 5,
-  },
-  statusText: {
-    fontSize: 12,
-    color: '#666',
-  },
-  listContainer: {
-    paddingTop: 10,
-    paddingBottom: 20,
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyStateText: {
-    marginTop: 10,
-    fontSize: 18,
-    color: '#BDBDBD',
   },
   addPatientContainer: {
     flexDirection: 'row',
@@ -318,6 +412,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     paddingHorizontal: 10,
     marginRight: 10,
+    fontFamily: 'Kanit-Regular',
   },
   addPatientButton: {
     backgroundColor: '#4A90E2',
@@ -327,7 +422,23 @@ const styles = StyleSheet.create({
   },
   addPatientButtonText: {
     color: 'white',
-    fontWeight: 'bold',
+    fontFamily: 'Kanit-Bold',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    backgroundColor: 'white',
+    marginHorizontal: 20,
+    borderRadius: 25,
+    elevation: 3,
+    marginBottom: 15,
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 10,
+    fontSize: 16,
+    fontFamily: 'Kanit-Regular',
   },
   patientItem: {
     flexDirection: 'row',
@@ -344,8 +455,133 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  patientImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    marginRight: 15,
+  },
+  patientInfo: {
+    flex: 1,
+  },
+  patientName: {
+    fontSize: 18,
+    color: '#333',
+    fontFamily: 'Kanit-Bold',
+  },
+  patientDetails: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 5,
+    fontFamily: 'Kanit-Regular',
+  },
+  patientStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 5,
+  },
+  statusIndicator: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 5,
+  },
+  statusText: {
+    fontSize: 12,
+    color: '#666',
+    fontFamily: 'Kanit-Regular',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  appointmentButton: {
+    padding: 10,
+    marginRight: 10,
+  },
   deleteButton: {
     padding: 10,
+  },
+  listContainer: {
+    paddingTop: 10,
+    paddingBottom: 20,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyStateText: {
+    marginTop: 10,
+    fontSize: 18,
+    color: '#BDBDBD',
+    fontFamily: 'Kanit-Regular',
+  },
+  centeredView: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalView: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 35,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+    width: '80%',
+  },
+  modalTitle: {
+    fontSize: 20,
+    marginBottom: 15,
+    textAlign: 'center',
+    fontFamily: 'Kanit-Bold',
+  },
+  datePickerButton: {
+    backgroundColor: '#F0F0F0',
+    padding: 10,
+    borderRadius: 5,
+    width: '100%',
+    marginBottom: 10,
+  },
+  noteInput: {
+    borderWidth: 1,
+    borderColor: '#CCCCCC',
+    width: '100%',
+    padding: 10,
+    borderRadius: 5,
+    marginBottom: 10,
+    fontFamily: 'Kanit-Regular',
+  },
+  submitButton: {
+    backgroundColor: '#4A90E2',
+    padding: 10,
+    borderRadius: 5,
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  submitButtonText: {
+    color: 'white',
+    fontFamily: 'Kanit-Bold',
+  },
+  cancelButton: {
+    backgroundColor: '#FF6B6B',
+    padding: 10,
+    borderRadius: 5,
+    width: '100%',
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    color: 'white',
+    fontFamily: 'Kanit-Bold',
   },
 });
 

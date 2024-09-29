@@ -356,6 +356,7 @@ const App = () => {
       try {
         await SplashScreen.preventAutoHideAsync();
         await Font.loadAsync({
+          'Kanit-Light' : require('./assets/fonts/Kanit-Light.ttf'),
           'Kanit-Regular': require('./assets/fonts/Kanit-Regular.ttf'),
           'Kanit-Bold': require('./assets/fonts/Kanit-Bold.ttf'),
         });

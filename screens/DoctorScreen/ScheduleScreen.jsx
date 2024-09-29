@@ -19,10 +19,9 @@ const ScheduleScreen = ({ navigation }) => {
       fetchTasks();
     }
   }, [user]);
-
   const fetchTasks = async () => {
     if (!user) return;
-
+  
     const tasksRef = collection(db, `users/${user.uid}/TasksByDate`);
     const q = query(tasksRef);
     
@@ -33,17 +32,18 @@ const ScheduleScreen = ({ navigation }) => {
       querySnapshot.forEach((doc) => {
         newMarkedDates[doc.id] = { marked: true, dotColor: '#1E88E5' };
       });
-
+  
       setMarkedDates(newMarkedDates);
       fetchTasksForDate(selectedDate);
     } catch (error) {
       console.error("Error fetching tasks: ", error);
     }
   };
+  
 
   const fetchTasksForDate = async (date) => {
     if (!user) return;
-
+  
     const tasksRef = collection(db, `users/${user.uid}/TasksByDate/${date}/tasks`);
     const q = query(tasksRef);
     

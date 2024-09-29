@@ -10,12 +10,13 @@ import {
   Alert,
   Dimensions,
 } from "react-native";
-import Icon from "react-native-vector-icons/Ionicons";
+import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { useNavigation } from "@react-navigation/native";
 import { firebaseAuth, firebaseDB } from "../../config/firebase.config";
 import { doc, getDoc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width } = Dimensions.get('window');
 
@@ -40,29 +41,31 @@ const DoctorProfilePage = () => {
     try {
       const doctorDocRef = doc(firebaseDB, "users", uid);
       const doctorDoc = await getDoc(doctorDocRef);
-
+  
       if (doctorDoc.exists()) {
-        setDoctorData(doctorDoc.data());
+        const data = doctorDoc.data();
+        setDoctorData({
+          ...data,
+          email: data.providerData?.email || 'ไม่พบอีเมล'
+        });
       } else {
-        console.error("No such document!");
+        console.error("ไม่พบเอกสารดังกล่าว!");
       }
     } catch (error) {
-      console.error("Error fetching doctor data:", error);
+      console.error("เกิดข้อผิดพลาดในการดึงข้อมูลแพทย์:", error);
     }
   };
-
-
   const handleSignOut = () => {
     Alert.alert(
-      "Sign Out",
-      "Are you sure you want to sign out?",
+      "ออกจากระบบ",
+      "คุณแน่ใจหรือไม่ที่ต้องการออกจากระบบ?",
       [
         {
-          text: "Cancel",
+          text: "ยกเลิก",
           style: "cancel"
         },
         { 
-          text: "OK", 
+          text: "ตกลง", 
           onPress: () => {
             firebaseAuth
               .signOut()
@@ -70,8 +73,8 @@ const DoctorProfilePage = () => {
                 navigation.navigate("LoginScreen");
               })
               .catch((error) => {
-                console.error("Sign out error: ", error);
-                Alert.alert("Error", "Failed to sign out. Please try again.");
+                console.error("ข้อผิดพลาดในการออกจากระบบ: ", error);
+                Alert.alert("ข้อผิดพลาด", "ไม่สามารถออกจากระบบได้ กรุณาลองอีกครั้ง");
               });
           }
         }
@@ -88,249 +91,283 @@ const DoctorProfilePage = () => {
     setRefreshing(false);
   };
 
+  const StatItem = ({ icon, label, value, color }) => (
+    <View style={styles.statItem}>
+      <Icon name={icon} size={28} color={color} />
+      <Text style={styles.statLabel}>{label}</Text>
+      <Text style={[styles.statValue, { color: color }]}>{value}</Text>
+    </View>
+  );
+
+  const MenuItem = ({ icon, label, onPress, color }) => (
+    <TouchableOpacity style={styles.menuItem} onPress={onPress}>
+      <View style={[styles.menuIconContainer, { backgroundColor: color }]}>
+        <Icon name={icon} size={24} color="#FFF" />
+      </View>
+      <Text style={styles.menuLabel}>{label}</Text>
+      <Icon name="chevron-right" size={24} color="#999" />
+    </TouchableOpacity>
+  );
+
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          colors={['#1E88E5']}
-        />
-      }
-    >
-      <LinearGradient
-        colors={['#1E88E5', '#1565C0']}
-        style={styles.header}
-      >
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.iconButton}
+    <LinearGradient colors={["#4A90E2", "#50E3C2"]} style={styles.container}>
+      <SafeAreaView style={styles.safeArea}>
+        <ScrollView
+          contentContainerStyle={styles.scrollViewContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={["#1E88E5"]}
+            />
+          }
         >
-          <Icon name="arrow-back" size={24} color="#FFF" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Doctor Profile</Text>
-      </LinearGradient>
+          <View style={styles.header}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={styles.backButton}
+            >
+              <Icon name="arrow-left" size={24} color="#FFF" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>โปรไฟล์แพทย์</Text>
+          </View>
+          
+          <View style={styles.profileCard}>
+            <Image
+              source={{
+                uri: doctorData?.profilePic || "https://via.placeholder.com/100",
+              }}
+              style={styles.profileImage}
+            />
+            <Text style={styles.doctorName}>{doctorData?.fullName || "ชื่อแพทย์"}</Text>
+            <Text style={styles.specialization}>{doctorData?.specialization || "สาขาเชี่ยวชาญ"}</Text>
+            <Text style={styles.doctorEmail}>{doctorData?.email || "กำลังโหลด.."}</Text>
 
-      <View style={styles.profileSection}>
-        <Image
-          source={{
-            uri: doctorData?.profilePic || "https://via.placeholder.com/100",
-          }}
-          style={styles.profileImage}
-        />
-        <Text style={styles.doctorName}>{doctorData?.fullName || "Dr. Name"}</Text>
-        <Text style={styles.specialization}>{doctorData?.specialization || "Specialization"}</Text>
-        <Text style={styles.doctorEmail}>{doctorData?.providerData?.email || "Loading..."}</Text>
+            <TouchableOpacity
+              style={styles.editProfileButton}
+              onPress={() => navigation.navigate("EditDoctorProfilePage")}
+            >
+              <Text style={styles.editProfileButtonText}>แก้ไขโปรไฟล์</Text>
+            </TouchableOpacity>
+          </View>
 
-        <TouchableOpacity style={styles.editProfileButton} onPress={() => navigation.navigate("EditDoctorProfilePage")}>
-          <Text style={styles.editProfileButtonText}>Edit Profile</Text>
-        </TouchableOpacity>
-      </View>
+          {/* <View style={styles.statsSection}>
+            <StatItem
+              icon="account-group"
+              label="ผู้ป่วย"
+              value={doctorData?.patientCount || "0"}
+              color="#FF6B6B"
+            />
+            <StatItem
+              icon="calendar-check"
+              label="นัดหมาย"
+              value={doctorData?.appointmentCount || "0"}
+              color="#4ECDC4"
+            />
+            <StatItem
+              icon="star"
+              label="คะแนน"
+              value={`${doctorData?.rating || "N/A"}`}
+              color="#FFD93D"
+            />
+          </View> */}
 
-      
-      {/* <View style={styles.statsSection}>
-        <StatItem
-          icon="people-outline"
-          label="Patients"
-          value={doctorData?.patientCount || "0"}
-        />
-        <StatItem
-          icon="calendar-outline"
-          label="Appointments"
-          value={doctorData?.appointmentCount || "0"}
-        />
-        <StatItem
-          icon="star-outline"
-          label="Rating"
-          value={`${doctorData?.rating || "N/A"}`}
-        />
-      </View> */}
+          <View style={styles.menuSection}>
+            <MenuItem
+              icon="calendar-clock"
+              label="ตารางนัดหมาย"
+              onPress={() => navigation.navigate("Schedule")}
+              color="#FF6B6B"
+            />
+            <MenuItem
+              icon="account-group"
+              label="รายชื่อผู้ป่วย"
+              onPress={() => navigation.navigate("PatientListScreen")}
+              color="#4ECDC4"
+            />
+            <MenuItem
+              icon="bell-outline"
+              label="การแจ้งเตือน"
+              onPress={() => navigation.navigate("NotificationListScreen")}
+              color="#FFD93D"
+            />
+            <MenuItem
+              icon="cog-outline"
+              label="การตั้งค่า"
+              onPress={() => navigation.navigate("DoctorSettings")}
+              color="#6BCB77"
+            />
+          </View>
 
-      <View style={styles.menuSection}>
-        <MenuItem
-          icon="calendar-outline"
-          label="Schedule"
-          onPress={() => navigation.navigate("Schedule")}
-        />
-        <MenuItem
-          icon="people-outline"
-          label="Patient List"
-          onPress={() => navigation.navigate("PatientListScreen")}
-        />
-        <MenuItem
-          icon="notifications-outline"
-          label="Notifications"
-          onPress={() => navigation.navigate("NotificationListScreen")}
-        />
-        <MenuItem
-          icon="settings-outline"
-          label="Settings"
-          onPress={() => navigation.navigate("DoctorSettings")}
-        />
-      </View>
-
-      <TouchableOpacity style={styles.logoutButton} onPress={handleSignOut}>
-        <Text style={styles.logoutButtonText}>Log Out</Text>
-      </TouchableOpacity>
-    </ScrollView>
+          <TouchableOpacity style={styles.logoutButton} onPress={handleSignOut}>
+            <Text style={styles.logoutButtonText}>ออกจากระบบ</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 };
-
-const StatItem = ({ icon, label, value }) => (
-  <View style={styles.statItem}>
-    <Icon name={icon} size={24} color="#1E88E5" />
-    <Text style={styles.statLabel}>{label}</Text>
-    <Text style={styles.statValue}>{value}</Text>
-  </View>
-);
-
-const MenuItem = ({ icon, label, onPress }) => (
-  <TouchableOpacity style={styles.menuItem} onPress={onPress}>
-    <Icon name={icon} size={24} color="#1E88E5" />
-    <Text style={styles.menuLabel}>{label}</Text>
-    <Icon name="chevron-forward-outline" size={24} color="#999" />
-  </TouchableOpacity>
-);
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5F5F5",
+  },
+  safeArea: {
+    flex: 1,
+  },
+  scrollViewContent: {
+    flexGrow: 1,
+    paddingBottom: 30,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     padding: 16,
-    paddingTop: 40,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    paddingTop: 50,
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#FFF",
-    marginLeft: 16,
-  },
-  iconButton: {
+  backButton: {
     padding: 8,
-    borderRadius: 8,
+    borderRadius: 20,
     backgroundColor: "rgba(255, 255, 255, 0.2)",
   },
-  profileSection: {
+  headerTitle: {
+    fontSize: 28,
+    color: "#FFF",
+    marginLeft: 16,
+    fontFamily: "Kanit-Bold",
+    textShadowColor: "rgba(0, 0, 0, 0.1)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  profileCard: {
     alignItems: "center",
     marginTop: 20,
-    backgroundColor: "#FFFFFF",
-    paddingVertical: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    paddingVertical: 30,
     borderRadius: 20,
     marginHorizontal: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 5,
   },
   profileImage: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    borderWidth: 3,
-    borderColor: "#1E88E5",
+    borderWidth: 4,
+    borderColor: "#4A90E2",
   },
   doctorName: {
     fontSize: 24,
-    fontWeight: "bold",
     color: "#333",
-    marginTop: 10,
+    marginTop: 15,
+    fontFamily: "Kanit-Bold",
   },
   specialization: {
     fontSize: 18,
     color: "#666",
     marginTop: 5,
+    fontFamily: "Kanit-Regular",
   },
   doctorEmail: {
     fontSize: 16,
     color: "#666",
     marginTop: 5,
+    fontFamily: "Kanit-Regular",
   },
   editProfileButton: {
-    marginTop: 15,
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    backgroundColor: "#E3F2FD",
-    borderRadius: 20,
+    marginTop: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 25,
+    backgroundColor: "#4A90E2",
+    borderRadius: 25,
   },
   editProfileButtonText: {
-    color: "#1E88E5",
-    fontWeight: "600",
+    color: "#FFF",
+    fontFamily: "Kanit-Bold",
+    fontSize: 16,
   },
   statsSection: {
     flexDirection: "row",
     justifyContent: "space-around",
     marginTop: 20,
     paddingVertical: 20,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
     borderRadius: 20,
     marginHorizontal: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 5,
   },
   statItem: {
     alignItems: "center",
   },
   statLabel: {
     color: "#666",
-    marginTop: 5,
+    marginTop: 8,
     fontSize: 14,
+    fontFamily: "Kanit-Regular",
   },
   statValue: {
-    fontWeight: "bold",
+    fontFamily: "Kanit-Bold",
     marginTop: 5,
-    color: "#333",
     fontSize: 18,
   },
   menuSection: {
     marginTop: 20,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
     borderRadius: 20,
     marginHorizontal: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 5,
     overflow: "hidden",
+  },
+  menuIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 16,
   },
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
+    borderBottomColor: "#E6E6E6",
   },
   menuLabel: {
     flex: 1,
-    marginLeft: 16,
     fontSize: 16,
     color: "#333",
+    fontFamily: "Kanit-Regular",
   },
   logoutButton: {
     marginTop: 30,
-    marginBottom: 30,
+    marginHorizontal: 16,
     backgroundColor: "#FF3B30",
     paddingVertical: 15,
-    borderRadius: 10,
-    alignSelf: 'center',
-    width: width - 32,
+    borderRadius: 25,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
   },
   logoutButtonText: {
     color: "#FFF",
-    fontWeight: "bold",
     fontSize: 18,
-    textAlign: 'center',
+    textAlign: "center",
+    fontFamily: "Kanit-Bold",
   },
 });
 
