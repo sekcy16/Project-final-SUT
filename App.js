@@ -35,13 +35,13 @@ import {
   ProfileDoctor,
   ScheduleScreen,
   AddFood,
-  FoodQRResult,
   FoodQRPage,
   RelativesListScreen,
 } from "./screens";
 
 // Import other components
 import FoodResult from "./components/FoodResult";
+import FoodQRResult from "./components/FoodQRResult";
 import Nutrition from "./components/Nutrition";
 import TotalCalories from "./screens/TotalCalories";
 import ExerciseEntry from "./screens/ExerciseEntry";
@@ -356,7 +356,7 @@ const App = () => {
       try {
         await SplashScreen.preventAutoHideAsync();
         await Font.loadAsync({
-          'Kanit-Light' : require('./assets/fonts/Kanit-Light.ttf'),
+          'Kanit-Light' : require('./assets/fonts/Kanit-Regular.ttf'),
           'Kanit-Regular': require('./assets/fonts/Kanit-Regular.ttf'),
           'Kanit-Bold': require('./assets/fonts/Kanit-Bold.ttf'),
         });

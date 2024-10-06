@@ -198,7 +198,7 @@ const AddFood = () => {
         <View style={styles.foodItemContainer}>
           <Animated.View style={[styles.deleteButton, { opacity: deleteOpacity }]}>
             <TouchableOpacity onPress={() => handleDeleteFood(food)}>
-              <Icon name="trash-outline" size={24} color="#FFFFFF" />
+              <Icon name="trash-can-outline" size={24} color="#FFFFFF" />
             </TouchableOpacity>
           </Animated.View>
   
@@ -215,7 +215,7 @@ const AddFood = () => {
             {/* Use TouchableWithoutFeedback to avoid gesture conflicts */}
             <TouchableWithoutFeedback onPress={() => handleAddFood(food)}>
               <View style={styles.addButton}>
-                <Icon name="add" size={24} color="#FFFFFF" />
+                <Icon name="plus" size={24} color="#FFFFFF" />
               </View>
             </TouchableWithoutFeedback>
           </Animated.View>

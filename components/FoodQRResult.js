@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { firebaseDB, firebaseAuth } from '../config/firebase.config'; // Adjust the import path if needed
+import { firebaseDB, firebaseAuth } from '../config/firebase.config';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 const FoodQRResult = ({ route }) => {
@@ -28,15 +28,9 @@ const FoodQRResult = ({ route }) => {
         </View>
     );
 
-    // Safely access nutriments
     const nutriments = product.nutriments || {};
 
-    // Function to convert kJ to kcal
-    const kJToKcal = (kJ) => {
-        return (kJ / 4.184).toFixed(1);
-    };
-
-    // Function to get energy value, checking multiple possible keys
+    
     const getEnergyKj = () => {
         const possibleKeys = ['energy-kj_100g', 'energy-kj', 'energy_kj', 'energy_kj_100g'];
         for (let key of possibleKeys) {
@@ -44,24 +38,50 @@ const FoodQRResult = ({ route }) => {
                 return nutriments[key];
             }
         }
-        return 0; // Default to 0 if no energy value is found
+        return null;
     };
 
-    const energyKj = getEnergyKj();
-    const energyKcal = parseFloat(kJToKcal(energyKj));
+    
+    const getEnergyKcal = () => {
+        const possibleKeys = ['energy-kcal_100g', 'energy-kcal', 'energy_kcal', 'energy_kcal_100g'];
+        for (let key of possibleKeys) {
+            if (nutriments[key] !== undefined) {
+                return nutriments[key];
+            }
+        }
+        return null;
+    };
+
+    // Function to convert kJ to kcal
+    const kJToKcal = (kJ) => {
+        return (kJ / 4.184).toFixed(1);
+    };
+
+    let energyKj = getEnergyKj();
+    let energyKcal = getEnergyKcal();
+
+    // If we have kJ but not kcal, calculate kcal
+    if (energyKj !== null && energyKcal === null) {
+        energyKcal = kJToKcal(energyKj);
+    }
+    // If we have kcal but not kJ, calculate kJ
+    else if (energyKcal !== null && energyKj === null) {
+        energyKj = (energyKcal * 4.184).toFixed(1);
+    }
+
+    // If we still don't have values, default to 0
+    energyKj = energyKj !== null ? energyKj : 0;
+    energyKcal = energyKcal !== null ? energyKcal : 0;
 
     const handleAddFood = async () => {
-        const userId = firebaseAuth.currentUser?.uid; // Get the authenticated user's ID
-
-        // Check if product name exists, if not, return a default value like 'Unknown Product'
+        const userId = firebaseAuth.currentUser?.uid;
         const productName = product.product_name ? product.product_name : 'Unknown Product';
 
-        // Check if productName is defined before adding it to foodData
         if (productName !== undefined) {
             const foodData = {
                 name: productName,
-                energy_kcal: energyKcal,
-                calories: energyKcal,
+                energy_kcal: parseFloat(energyKcal),
+                calories: parseFloat(energyKcal),
                 amount: (product.product_quantity || 1) + 'g',
                 fat: nutriments.fat_100g || 0,
                 carbs: nutriments.carbohydrates_100g || 0,
@@ -69,16 +89,11 @@ const FoodQRResult = ({ route }) => {
                 userId: userId,
                 createdAt: serverTimestamp(),
             };
-            
-
 
             try {
-                // Add the food data to the Firestore collection "foodHistory"
                 const docRef = await addDoc(collection(firebaseDB, 'foodHistory'), foodData);
-                foodData.id = docRef.id; // Add the document ID to foodData
+                foodData.id = docRef.id;
                 console.log('Food added to history successfully');
-
-                // Navigate to the AddFood screen with the newly added food details
                 navigation.navigate('AddFood', { newFood: foodData });
             } catch (error) {
                 console.error('Error adding food to history:', error);
@@ -118,7 +133,7 @@ const FoodQRResult = ({ route }) => {
                 </View>
                 <TouchableOpacity style={styles.addButton} onPress={handleAddFood}>
                     <Icon name="add-circle-outline" size={24} color="#FFFFFF" />
-                    <Text style={styles.addButtonText}>Add to Meal</Text>
+                    <Text style={styles.addButtonText}>Add to History</Text>
                 </TouchableOpacity>
             </ScrollView>
         </SafeAreaView>
