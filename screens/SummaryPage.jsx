@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, SafeAreaView, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, SafeAreaView, TouchableOpacity, Dimensions } from 'react-native';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { LinearGradient } from 'expo-linear-gradient';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
-const SummaryPage = ({ route }) => {
+const { width } = Dimensions.get('window');
+
+const SummaryPage = ({ route, navigation }) => {
   const { date } = route.params;
   const [diary, setDiary] = useState({
     totalCalories: 0,
@@ -122,13 +124,14 @@ const SummaryPage = ({ route }) => {
     );
   }
 
+
   const renderExerciseItem = ({ item }) => (
     <View style={styles.exerciseItem}>
-      <Icon name="fitness-outline" size={24} color="#4caf50" style={styles.exerciseIcon} />
+      <Icon name="run" size={24} color="#4A90E2" style={styles.exerciseIcon} />
       <View style={styles.exerciseDetails}>
         <Text style={styles.exerciseName}>{item.name}</Text>
-        <Text style={styles.exerciseText}>Calories Burned: {item.calories} kcal</Text>
-        <Text style={styles.exerciseText}>Duration: {item.duration} minutes</Text>
+        <Text style={styles.exerciseText}>แคลอรี่ที่เผาผลาญ: {item.calories} กิโลแคลอรี่</Text>
+        <Text style={styles.exerciseText}>ระยะเวลา: {item.duration} นาที</Text>
       </View>
     </View>
   );
@@ -139,64 +142,63 @@ const SummaryPage = ({ route }) => {
       <View style={styles.progressBarContainer}>
         <View style={[styles.progressBar, { width: `${Math.min((current / goal) * 100, 100)}%`, backgroundColor: color }]} />
       </View>
-      <Text style={styles.macroText}>{current}g / {goal}g</Text>
+      <Text style={styles.macroText}>{current}ก. / {goal}ก.</Text>
     </View>
   );
 
   const HeaderComponent = () => (
     <>
-      <LinearGradient colors={['#4caf50', '#45a049']} style={styles.header}>
-        <Text style={styles.headerText}>Summary for {new Date(date).toLocaleDateString()}</Text>
-      </LinearGradient>
-
-      <View style={styles.card}>
-        <Text style={styles.cardHeader}>Nutrition Summary</Text>
-        <View style={styles.caloriesSummary}>
-          <Text style={styles.caloriesText}>{diary.totalCalories}</Text>
-          <Text style={styles.caloriesLabel}>calories consumed</Text>
-        </View>
-        <Text style={styles.goalText}>Goal: {goals.tdee || 0} calories</Text>
-
-        <MacroProgressBar title="Carbs" current={diary.totalCarbs} goal={goals.carbs || 0} color="#FFB300" />
-        <MacroProgressBar title="Protein" current={diary.totalProtein} goal={goals.protein || 0} color="#2196F3" />
-        <MacroProgressBar title="Fat" current={diary.totalFat} goal={goals.fat || 0} color="#FF5722" />
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Icon name="arrow-left" size={24} color="#FFF" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>สรุปข้อมูล</Text>
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.cardHeader}>Exercise Summary</Text>
+        <Text style={styles.cardHeader}>สรุปโภชนาการ {new Date(date).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}</Text>
+        <View style={styles.caloriesSummary}>
+          <Text style={styles.caloriesText}>{diary.totalCalories}</Text>
+          <Text style={styles.caloriesLabel}>แคลอรี่ที่บริโภค</Text>
+        </View>
+        <Text style={styles.goalText}>เป้าหมาย: {goals.tdee || 0} แคลอรี่</Text>
+
+        <MacroProgressBar title="คาร์โบไฮเดรต" current={diary.totalCarbs} goal={goals.carbs || 0} color="#FFB300" />
+        <MacroProgressBar title="โปรตีน" current={diary.totalProtein} goal={goals.protein || 0} color="#4ECDC4" />
+        <MacroProgressBar title="ไขมัน" current={diary.totalFat} goal={goals.fat || 0} color="#FF7F50" />
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.cardHeader}>สรุปการออกกำลังกาย</Text>
         <View style={styles.exerciseSummary}>
           <View style={styles.exerciseSummaryItem}>
-            <Icon name="flame-outline" size={24} color="#4caf50" />
-            <Text style={styles.exerciseSummaryText}>{diary.exercises.totalCaloriesBurned} kcal burned</Text>
+            <Icon name="fire" size={24} color="#FF6B6B" />
+            <Text style={styles.exerciseSummaryText}>{diary.exercises.totalCaloriesBurned} กิโลแคลอรี่</Text>
+            <Text style={styles.exerciseSummaryLabel}>แคลอรี่ที่เผาผลาญ</Text>
           </View>
           <View style={styles.exerciseSummaryItem}>
-            <Icon name="time-outline" size={24} color="#4caf50" />
-            <Text style={styles.exerciseSummaryText}>{diary.exercises.totalDuration} minutes</Text>
+            <Icon name="clock-outline" size={24} color="#4ECDC4" />
+            <Text style={styles.exerciseSummaryText}>{diary.exercises.totalDuration} นาที</Text>
+            <Text style={styles.exerciseSummaryLabel}>เวลาทั้งหมด</Text>
           </View>
         </View>
       </View>
     </>
   );
 
-  if (!diary || !goals) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Loading...</Text>
-      </View>
-    );
-  }
-
   return (
-    <SafeAreaView style={styles.container}>
-      <FlatList
-        ListHeaderComponent={HeaderComponent}
-        data={diary.exercises.list}
-        keyExtractor={(item, index) => index.toString()}
-        renderItem={renderExerciseItem}
-        ListEmptyComponent={<Text style={styles.emptyListText}>No exercises recorded for this day.</Text>}
-        contentContainerStyle={styles.flatListContent}
-      />
-    </SafeAreaView>
+    <LinearGradient colors={["#4A90E2", "#50E3C2"]} style={styles.container}>
+      <SafeAreaView style={styles.safeArea}>
+        <FlatList
+          ListHeaderComponent={HeaderComponent}
+          data={diary.exercises.list}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={renderExerciseItem}
+          ListEmptyComponent={<Text style={styles.emptyListText}>ไม่มีการบันทึกการออกกำลังกายในวันนี้</Text>}
+          contentContainerStyle={styles.flatListContent}
+        />
+      </SafeAreaView>
+    </LinearGradient>
   );
 };
 
@@ -204,34 +206,46 @@ const SummaryPage = ({ route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+  },
+  safeArea: {
+    flex: 1,
   },
   header: {
-    padding: 20,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    paddingTop: 50,
   },
-  headerText: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#fff',
+  backButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  headerTitle: {
+    fontSize: 28,
+    color: '#FFF',
+    marginLeft: 16,
+    fontFamily: 'Kanit-Bold',
+    textShadowColor: 'rgba(0, 0, 0, 0.1)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    margin: 10,
-    padding: 15,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 20,
+    margin: 16,
+    padding: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 5,
   },
   cardHeader: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#4caf50',
+    color: '#4A90E2',
     marginBottom: 15,
+    fontFamily: 'Kanit-Bold',
   },
   caloriesSummary: {
     alignItems: 'center',
@@ -239,26 +253,28 @@ const styles = StyleSheet.create({
   },
   caloriesText: {
     fontSize: 36,
-    fontWeight: 'bold',
-    color: '#4caf50',
+    color: '#4A90E2',
+    fontFamily: 'Kanit-Bold',
   },
   caloriesLabel: {
     fontSize: 16,
     color: '#666',
+    fontFamily: 'Kanit-Regular',
   },
   goalText: {
     fontSize: 16,
     color: '#666',
     textAlign: 'center',
     marginBottom: 20,
+    fontFamily: 'Kanit-Regular',
   },
   macroProgressContainer: {
     marginBottom: 15,
   },
   macroTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
     marginBottom: 5,
+    fontFamily: 'Kanit-Bold',
   },
   progressBarContainer: {
     height: 10,
@@ -273,6 +289,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginTop: 5,
+    fontFamily: 'Kanit-Regular',
   },
   exerciseSummary: {
     flexDirection: 'row',
@@ -283,48 +300,48 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   exerciseSummaryText: {
-    fontSize: 16,
-    color: '#4caf50',
+    fontSize: 18,
+    color: '#4A90E2',
     marginTop: 5,
+    fontFamily: 'Kanit-Bold',
+  },
+  exerciseSummaryLabel: {
+    fontSize: 14,
+    color: '#666',
+    fontFamily: 'Kanit-Regular',
   },
   exerciseItem: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 15,
-    padding: 10,
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
+    padding: 15,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    borderRadius: 12,
+    marginHorizontal: 16,
   },
   exerciseIcon: {
-    marginRight: 10,
+    marginRight: 15,
   },
   exerciseDetails: {
     flex: 1,
   },
   exerciseName: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#4caf50',
+    color: '#4A90E2',
+    fontFamily: 'Kanit-Bold',
   },
   exerciseText: {
     fontSize: 14,
     color: '#666',
+    fontFamily: 'Kanit-Regular',
   },
   emptyListText: {
     fontSize: 16,
     color: '#666',
     textAlign: 'center',
     fontStyle: 'italic',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-  },
-  loadingText: {
-    fontSize: 18,
-    color: '#4caf50',
+    marginTop: 20,
+    fontFamily: 'Kanit-Regular',
   },
   flatListContent: {
     paddingBottom: 20,

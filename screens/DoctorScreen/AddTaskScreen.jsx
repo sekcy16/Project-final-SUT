@@ -73,10 +73,12 @@ const AddTaskScreen = () => {
             userId: currentUser.uid,
             createdAt: new Date(),
           });
-
+  
           Alert.alert('สำเร็จ', 'เพิ่มงานเรียบร้อยแล้ว');
           setTask('');
           setDescription('');
+          // นำทางกลับไปยัง DoctorHomePage
+          navigation.navigate('DoctorHomePage');
         } catch (error) {
           console.error('Error adding task: ', error);
           Alert.alert('ข้อผิดพลาด', 'ไม่สามารถเพิ่มงานได้');
@@ -88,7 +90,7 @@ const AddTaskScreen = () => {
       Alert.alert('ข้อผิดพลาด', 'กรุณากรอกข้อมูลให้ครบถ้วน');
     }
   };
-
+  
   return (
     <ScrollView style={styles.container}>
       <Animated.View style={[styles.content, { opacity: fadeAnim }]}>

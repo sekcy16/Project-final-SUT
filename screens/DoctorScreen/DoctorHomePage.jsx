@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
   RefreshControl,
   Modal,
-  FlatList,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { useNavigation } from "@react-navigation/native";
@@ -24,7 +23,7 @@ import {
   getDoc,
   where,
 } from "firebase/firestore";
-import { app, firebaseAuth } from "../../config/firebase.config";
+import { firebaseAuth } from "../../config/firebase.config";
 import { onAuthStateChanged } from "firebase/auth";
 import moment from "moment";
 import { LinearGradient } from "expo-linear-gradient";
@@ -39,24 +38,25 @@ const DoctorHomePage = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [userId, setUserId] = useState(null);
   const [error, setError] = useState(null);
-  const [modalVisible, setModalVisible] = useState(false);
   const [summaryData, setSummaryData] = useState({
     totalPatients: 0,
     appointmentsToday: 0,
     tasksToday: 0,
   });
-  const db = getFirestore(app);
-  const [allTasks, setAllTasks] = useState([]);
-  const [taskModalVisible, setTaskModalVisible] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [isLoading, setIsLoading] = useState({
+    userData: true,
+    tasks: true,
+    appointments: true,
+    summary: true,
+  });
+  const db = getFirestore();
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(firebaseAuth, (user) => {
       if (user) {
         setUserId(user.uid);
-        fetchUserData(user.uid);
-        fetchTasks(user.uid);
-        fetchAppointments(user.uid);
-        fetchSummaryData(user.uid);
       } else {
         setUserData(null);
         setUserId(null);
@@ -66,6 +66,20 @@ const DoctorHomePage = () => {
 
     return () => unsubscribeAuth();
   }, []);
+
+  useEffect(() => {
+    if (userId) {
+      fetchUserData(userId);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    if (userId) {
+      fetchTasks(userId);
+      fetchAppointments(userId);
+      fetchSummaryData(userId);
+    }
+  }, [userId]);
 
   const fetchUserData = async (uid) => {
     try {
@@ -78,10 +92,13 @@ const DoctorHomePage = () => {
         setError("ไม่พบข้อมูลผู้ใช้");
       }
     } catch (error) {
+      console.error("Error fetching user data:", error);
       setError("เกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้");
+    } finally {
+      setIsLoading(prev => ({ ...prev, userData: false }));
     }
   };
-
+  
   const fetchTasks = async (uid) => {
     try {
       const now = new Date();
@@ -100,20 +117,26 @@ const DoctorHomePage = () => {
         ...doc.data(),
       }));
       setTasks(tasksData);
+
+      // อัพเดท tasksToday ใน summaryData
+      setSummaryData((prevData) => ({
+        ...prevData,
+        tasksToday: tasksData.length,
+      }));
     } catch (error) {
+      console.error("Error fetching tasks:", error);
       setError("เกิดข้อผิดพลาดในการดึงข้อมูลตาราง");
     } finally {
       setLoading(false);
     }
   };
-  // Fetching appointments
+
   const fetchAppointments = async (uid) => {
     try {
       const today = new Date().toISOString().split("T")[0];
-      const appointmentsRef = collection(db, "appointments");
+      const appointmentsRef = collection(db, `users/${uid}/appointments`);
       const q = query(
         appointmentsRef,
-        where("doctorId", "==", uid),
         where("date", "==", today),
         orderBy("time", "asc")
       );
@@ -124,7 +147,7 @@ const DoctorHomePage = () => {
       }));
       setAppointments(appointmentsData);
     } catch (error) {
-      console.error("Error fetching appointments: ", error);
+      console.error("Error fetching appointments:", error);
     }
   };
 
@@ -142,16 +165,15 @@ const DoctorHomePage = () => {
       const totalPatients = patientSnapshot.size;
 
       // Count appointments today
-      const appointmentsRef = collection(db, "appointments");
+      const appointmentsRef = collection(db, `users/${uid}/appointments`);
       const appointmentQuery = query(
         appointmentsRef,
-        where("doctorId", "==", uid),
         where("date", "==", today)
       );
       const appointmentSnapshot = await getDocs(appointmentQuery);
       const appointmentsToday = appointmentSnapshot.size;
 
-      // Count tasks today
+      // Count tasks today (ใช้วิธีเดียวกับ fetchTasks)
       const tasksRef = collection(
         db,
         `users/${uid}/TasksByDate/${today}/tasks`
@@ -161,7 +183,7 @@ const DoctorHomePage = () => {
 
       setSummaryData({ totalPatients, appointmentsToday, tasksToday });
     } catch (error) {
-      console.error("Error fetching summary data: ", error);
+      console.error("Error fetching summary data:", error);
     }
   };
 
@@ -187,75 +209,51 @@ const DoctorHomePage = () => {
       await deleteDoc(
         doc(db, `users/${userId}/TasksByDate/${currentDate}/tasks`, taskId)
       );
-      fetchTasks(userId);
+      await fetchTasks(userId);
+      // อัพเดท summaryData หลังจากลบงาน
+      setSummaryData((prevData) => ({
+        ...prevData,
+        tasksToday: prevData.tasksToday - 1,
+      }));
     } catch (error) {
-      console.error("Error deleting task: ", error);
+      console.error("Error deleting task:", error);
     }
   };
-
-  const handleViewAllAppointments = () => {
+  const handleViewAppointmentDetails = (appointment) => {
+    setSelectedAppointment(appointment);
     setModalVisible(true);
   };
-  const fetchAllTasks = async (uid) => {
-    try {
-      const now = new Date();
-      const currentDate = `${now.getFullYear()}-${String(
-        now.getMonth() + 1
-      ).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
-      const tasksRef = collection(
-        db,
-        `users/${uid}/TasksByDate/${currentDate}/tasks`
-      );
-      const q = query(tasksRef, orderBy("time", "asc"));
-      const snapshot = await getDocs(q);
-      const tasksData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setAllTasks(tasksData);
-    } catch (error) {
-      console.error("Error fetching all tasks:", error);
-    }
-  };
-
-  const handleViewAllTasks = () => {
-    fetchAllTasks(userId);
-    setTaskModalVisible(true);
-  };
-
-  const TaskCard = ({ task, onDelete }) => (
-    <View style={styles.miniTaskCard}>
-      <View style={styles.miniTaskTimeContainer}>
-        <Text style={styles.miniTaskTime}>
-          {moment(task.time, "HH:mm:ss").format("hh:mm A")}
+  const TaskCard = ({ task }) => (
+    <View style={styles.taskCard}>
+      <View style={styles.taskTimeContainer}>
+        <Icon name="clock-outline" size={24} color="#1E88E5" />
+        <Text style={styles.taskTime}>
+          {moment(task.time, "HH:mm:ss").format("HH:mm")}
         </Text>
       </View>
-      <View style={styles.miniTaskContent}>
-        <Text
-          style={styles.miniTaskTitle}
-          numberOfLines={1}
-          ellipsizeMode="tail"
-        >
+      <View style={styles.taskContent}>
+        <Text style={styles.taskTitle} numberOfLines={1}>
           {task.task}
         </Text>
-        <Text
-          style={styles.miniTaskDescription}
-          numberOfLines={1}
-          ellipsizeMode="tail"
-        >
+        <Text style={styles.taskDescription} numberOfLines={2}>
           {task.description || "ไม่มีรายละเอียด"}
         </Text>
       </View>
-      <TouchableOpacity onPress={() => onDelete(task.id)} style={styles.deleteButton}>
+      <TouchableOpacity
+        onPress={() => handleDeleteTask(task.id)}
+        style={styles.deleteButton}
+      >
         <Icon name="delete" size={24} color="#FF5252" />
       </TouchableOpacity>
     </View>
   );
-  
-  // Appointment Card component
+
   const AppointmentCard = ({ appointment }) => (
-    <View style={styles.appointmentCard}>
+    <TouchableOpacity
+      style={styles.appointmentCard}
+      onPress={() => handleViewAppointmentDetails(appointment)}
+    >
       <Icon
         name="account-clock"
         size={24}
@@ -264,11 +262,15 @@ const DoctorHomePage = () => {
       />
       <View style={styles.appointmentContent}>
         <Text style={styles.appointmentTime}>
-          {moment(appointment.time, "HH:mm:ss").format("hh:mm A")}
+          {moment(appointment.time, "HH:mm:ss").format("HH:mm")}
         </Text>
         <Text style={styles.appointmentPatient}>{appointment.patientName}</Text>
+        <Text style={styles.appointmentNote} numberOfLines={1}>
+          {appointment.note || "ไม่มีบันทึกเพิ่มเติม"}
+        </Text>
       </View>
-    </View>
+      <Icon name="chevron-right" size={24} color="#BDBDBD" />
+    </TouchableOpacity>
   );
 
   const SummaryCard = ({ icon, title, value }) => (
@@ -279,6 +281,7 @@ const DoctorHomePage = () => {
     </View>
   );
 
+  
   return (
     <LinearGradient colors={["#4A90E2", "#50E3C2"]} style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
@@ -290,16 +293,21 @@ const DoctorHomePage = () => {
               }}
               style={styles.profileImage}
             />
-            <View>
+            <View style={styles.userInfoContainer}>
               <Text style={styles.greeting}>สวัสดี,</Text>
               <Text style={styles.userName}>
                 {userData?.fullName || "คุณหมอ"}
               </Text>
+              <Text style={styles.userRole}>แพทย์</Text>
             </View>
           </View>
-          <TouchableOpacity style={styles.addIcon} onPress={handleAddTask}>
-            <Icon name="plus" size={28} color="#FFF" />
-          </TouchableOpacity>
+          <View style={styles.addTaskContainer}>
+            <TouchableOpacity style={styles.addTaskButton} onPress={handleAddTask}>
+              <Icon name="plus" size={24} color="#FFF" />
+              <Text style={styles.addTaskButtonText}>เพิ่มงาน</Text>
+            </TouchableOpacity>
+            <Text style={styles.addTaskHint}>เพิ่มงานใหม่ของคุณ</Text>
+          </View>
         </View>
         <ScrollView
           style={styles.content}
@@ -337,68 +345,58 @@ const DoctorHomePage = () => {
                 {loading ? (
                   <ActivityIndicator size="large" color="#1E88E5" />
                 ) : tasks.length > 0 ? (
-                  <View style={styles.taskCardContainer}>
-                    {tasks.slice(0, 3).map((task) => (
-                      <TaskCard key={task.id} task={task} />
-                    ))}
-                    {tasks.length > 3 && (
-                      <TouchableOpacity
-                        style={styles.viewMoreButton}
-                        onPress={handleViewAllTasks}
-                      >
-                        <Text style={styles.viewMoreButtonText}>ดูทั้งหมด</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
+                  tasks.map((task) => <TaskCard key={task.id} task={task} />)
                 ) : (
-                  <Text style={styles.noTaskText}>คุณไม่มีงานสำหรับวันนี้</Text>
+                  <Text style={styles.noDataText}>คุณไม่มีงานสำหรับวันนี้</Text>
                 )}
               </View>
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>นัดหมายวันนี้</Text>
                 {appointments.length > 0 ? (
-                  appointments
-                    .slice(0, 3)
-                    .map((appointment) => (
-                      <AppointmentCard
-                        key={appointment.id}
-                        appointment={appointment}
-                      />
-                    ))
+                  appointments.map((appointment) => (
+                    <AppointmentCard
+                      key={appointment.id}
+                      appointment={appointment}
+                    />
+                  ))
                 ) : (
-                  <Text style={styles.noAppointmentText}>
+                  <Text style={styles.noDataText}>
                     ไม่มีนัดหมายสำหรับวันนี้
                   </Text>
                 )}
-                <TouchableOpacity
-                  style={styles.viewMoreButton}
-                  onPress={handleViewAllAppointments}
-                >
-                  <Text style={styles.viewMoreButtonText}>
-                    ดูนัดหมายทั้งหมด
-                  </Text>
-                </TouchableOpacity>
               </View>
             </>
           )}
         </ScrollView>
+
         <Modal
           animationType="slide"
           transparent={true}
-          visible={taskModalVisible}
-          onRequestClose={() => setTaskModalVisible(false)}
+          visible={modalVisible}
+          onRequestClose={() => setModalVisible(false)}
         >
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>ตารางงานทั้งหมดของวันนี้</Text>
-              <FlatList
-                data={allTasks}
-                renderItem={({ item }) => <TaskCard task={item} />}
-                keyExtractor={(item) => item.id}
-              />
+              <Text style={styles.modalTitle}>รายละเอียดการนัดหมาย</Text>
+              {selectedAppointment && (
+                <>
+                  <Text style={styles.modalText}>
+                    เวลา:{" "}
+                    {moment(selectedAppointment.time, "HH:mm:ss").format(
+                      "HH:mm"
+                    )}
+                  </Text>
+                  <Text style={styles.modalText}>
+                    ผู้ป่วย: {selectedAppointment.patientName}
+                  </Text>
+                  <Text style={styles.modalText}>
+                    บันทึก: {selectedAppointment.note || "ไม่มีบันทึกเพิ่มเติม"}
+                  </Text>
+                </>
+              )}
               <TouchableOpacity
                 style={styles.closeButton}
-                onPress={() => setTaskModalVisible(false)}
+                onPress={() => setModalVisible(false)}
               >
                 <Text style={styles.closeButtonText}>ปิด</Text>
               </TouchableOpacity>
@@ -420,32 +418,44 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start", // Changed from 'center' to 'flex-start'
     padding: 20,
     paddingTop: 10,
   },
   profileContainer: {
     flexDirection: "row",
     alignItems: "center",
+    flex: 1, // Added flex to take up more space
   },
   profileImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginRight: 15,
+    width: 80, // Increased size
+    height: 80, // Increased size
+    borderRadius: 40, // Adjusted for new size
+    marginRight: 20, // Increased margin
     borderWidth: 3,
     borderColor: "#FFFFFF",
   },
+  userInfoContainer: {
+    flex: 1, // Added to allow text to take up remaining space
+  },
   greeting: {
-    fontSize: 16,
+    fontSize: 18, // Increased size
     fontFamily: "Kanit-Regular",
     color: "#FFF",
-    opacity: 0.8,
+    opacity: 0.9,
   },
   userName: {
-    fontSize: 24,
+    fontSize: 28, // Increased size
     fontFamily: "Kanit-Bold",
     color: "#FFF",
+    marginTop: 5, // Added some spacing
+  },
+  userRole: {
+    fontSize: 16, // Added new style for role
+    fontFamily: "Kanit-Medium",
+    color: "#FFF",
+    opacity: 0.8,
+    marginTop: 5,
   },
   addIcon: {
     backgroundColor: "rgba(255, 255, 255, 0.2)",
@@ -499,70 +509,14 @@ const styles = StyleSheet.create({
     color: "#1E88E5",
     marginBottom: 15,
   },
-  taskCardContainer: {
-    backgroundColor: "#FFF",
-    borderRadius: 12,
-    padding: 15,
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  miniTaskCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
-  },
-  miniTaskTimeContainer: {
-    width: 70,
-    marginRight: 10,
-  },
-  miniTaskTime: {
-    fontSize: 14,
-    fontFamily: "Kanit-Bold",
-    color: "#1E88E5",
-  },
-  miniTaskContent: {
-    flex: 1,
-  },
-  miniTaskTitle: {
-    fontSize: 16,
-    fontFamily: "Kanit-Regular",
-    color: "#333",
-  },
-  miniTaskDescription: {
-    fontSize: 14,
-    fontFamily: "Kanit-Light",
-    color: "#666",
-    marginTop: 2,
-  },
-  viewMoreButton: {
-    backgroundColor: "#1E88E5",
-    padding: 10,
-    borderRadius: 5,
-    alignItems: "center",
-    marginTop: 10,
-  },
-  viewMoreButtonText: {
-    color: "#1E88E5",
-    fontFamily: "Kanit-Regular",
-    fontSize: 14,
-  },
   taskCard: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 15,
-    marginBottom: 15,
     backgroundColor: "#FFF",
-    borderRadius: 12,
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 10,
+    elevation: 2,
   },
   taskTimeContainer: {
     alignItems: "center",
@@ -578,26 +532,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   taskTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: "Kanit-Bold",
     color: "#333",
-    marginBottom: 5,
   },
   taskDescription: {
     fontSize: 14,
     fontFamily: "Kanit-Regular",
-    color: "#757575",
+    color: "#666",
+    marginTop: 5,
   },
   deleteButton: {
     padding: 8,
-  },
-  noTaskText: {
-    fontSize: 16,
-    fontFamily: "Kanit-Regular",
-    color: "#757575",
-    textAlign: "center",
-    marginTop: 20,
-    fontStyle: "italic",
   },
   appointmentCard: {
     flexDirection: "row",
@@ -624,13 +570,26 @@ const styles = StyleSheet.create({
     fontFamily: "Kanit-Regular",
     color: "#666",
   },
-  noAppointmentText: {
+  appointmentNote: {
+    fontSize: 12,
+    fontFamily: "Kanit-Light",
+    color: "#888",
+    marginTop: 5,
+  },
+  noDataText: {
     fontSize: 16,
     fontFamily: "Kanit-Regular",
     color: "#757575",
     textAlign: "center",
-    marginTop: 10,
+    marginTop: 20,
     fontStyle: "italic",
+  },
+  errorText: {
+    fontSize: 16,
+    fontFamily: "Kanit-Regular",
+    color: "#FF0000",
+    textAlign: "center",
+    marginTop: 20,
   },
   modalOverlay: {
     flex: 1,
@@ -642,7 +601,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFF",
     borderRadius: 10,
     padding: 20,
-    width: "90%",
+    width: "80%",
     maxHeight: "80%",
   },
   modalTitle: {
@@ -651,62 +610,48 @@ const styles = StyleSheet.create({
     color: "#333",
     marginBottom: 15,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: "#DDD",
-    borderRadius: 5,
-    padding: 10,
-    marginBottom: 15,
-    fontFamily: "Kanit-Regular",
-  },
-  datePickerButton: {
-    backgroundColor: "#F0F0F0",
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 15,
-  },
-  addButton: {
-    backgroundColor: "#4CAF50",
-    padding: 10,
-    borderRadius: 5,
-    alignItems: "center",
-    marginTop: 10,
-  },
-  addButtonText: {
-    color: "#FFF",
-    fontFamily: "Kanit-Regular",
+  modalText: {
     fontSize: 16,
+    fontFamily: "Kanit-Regular",
+    color: "#333",
+    marginBottom: 10,
   },
   closeButton: {
-    backgroundColor: "#FF5252",
-    padding: 10,
-    borderRadius: 5,
-    alignItems: "center",
-    marginTop: 10,
-  },
-  closeButtonText: {
-    color: "#FFF",
-    fontFamily: "Kanit-Regular",
-    fontSize: 16,
-  },
-  errorText: {
-    fontSize: 16,
-    fontFamily: "Kanit-Regular",
-    color: "#FF0000",
-    textAlign: "center",
-    marginTop: 20,
-  },
-  viewMoreButton: {
     backgroundColor: "#1E88E5",
     padding: 10,
     borderRadius: 5,
     alignItems: "center",
-    marginTop: 10,
+    marginTop: 20,
   },
-  viewMoreButtonText: {
+  closeButtonText: {
     color: "#FFF",
-    fontFamily: "Kanit-Regular",
+    fontFamily: "Kanit-Bold",
     fontSize: 16,
+  },  
+  addTaskContainer: {
+    alignItems: 'center',
+    marginTop: 10, // Added top margin to align with larger profile section
+  },
+  addTaskButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  addTaskButtonText: {
+    color: '#FFF',
+    fontFamily: 'Kanit-Bold',
+    fontSize: 16,
+    marginLeft: 5,
+  },
+  addTaskHint: {
+    color: '#FFF',
+    fontFamily: 'Kanit-Regular',
+    fontSize: 12,
+    marginTop: 5,
+    opacity: 0.8,
   },
 });
 
