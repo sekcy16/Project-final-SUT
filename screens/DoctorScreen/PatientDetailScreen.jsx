@@ -213,46 +213,46 @@ const PatientDetailScreen = ({ route, navigation }) => {
             )}
           </View>
         );
-        case "weight":
-          return (
-            <View>
-              <Text style={styles.statsText}>น้ำหนัก</Text>
-              {weightHistory && weightHistory.length > 0 ? (
-                <LineChart
-                  data={{
-                    labels: weightHistory.map((entry) => entry.date),
-                    datasets: [
-                      {
-                        data: weightHistory.map((entry) => entry.weight),
-                        color: (opacity = 1) => `rgba(0, 0, 255, ${opacity})`,
-                        strokeWidth: 2,
-                      },
-                    ],
-                  }}
-                  width={350}
-                  height={220}
-                  chartConfig={{
-                    backgroundColor: "#fff",
-                    backgroundGradientFrom: "#fff",
-                    backgroundGradientTo: "#fff",
-                    decimalPlaces: 1,
-                    color: (opacity = 1) => `rgba(0, 123, 255, ${opacity})`,
-                    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                    style: {
-                      borderRadius: 16
+      case "weight":
+        return (
+          <View>
+            <Text style={styles.statsText}>น้ำหนัก</Text>
+            {weightHistory && weightHistory.length > 0 ? (
+              <LineChart
+                data={{
+                  labels: weightHistory.map((entry) => entry.date),
+                  datasets: [
+                    {
+                      data: weightHistory.map((entry) => entry.weight),
+                      color: (opacity = 1) => `rgba(0, 0, 255, ${opacity})`,
+                      strokeWidth: 2,
                     },
-                    propsForDots: {
-                      r: "6",
-                      strokeWidth: "2",
-                      stroke: "#0000FF"
-                    }
-                  }}
-                  bezier
-                  style={styles.chart}
-                />
-              ) : (
-                <Text style={styles.noDataText}>ไม่มีข้อมูลน้ำหนัก</Text>
-              )}
+                  ],
+                }}
+                width={350}
+                height={220}
+                chartConfig={{
+                  backgroundColor: "#fff",
+                  backgroundGradientFrom: "#fff",
+                  backgroundGradientTo: "#fff",
+                  decimalPlaces: 1,
+                  color: (opacity = 1) => `rgba(0, 123, 255, ${opacity})`,
+                  labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                  style: {
+                    borderRadius: 16
+                  },
+                  propsForDots: {
+                    r: "6",
+                    strokeWidth: "2",
+                    stroke: "#0000FF"
+                  }
+                }}
+                bezier
+                style={styles.chart}
+              />
+            ) : (
+              <Text style={styles.noDataText}>ไม่มีข้อมูลน้ำหนัก</Text>
+            )}
             <Text style={styles.historyTitle}>ประวัติ</Text>
             {weightHistory && weightHistory.length > 0 ? (
               weightHistory.map((entry, index) => (
@@ -267,74 +267,74 @@ const PatientDetailScreen = ({ route, navigation }) => {
             )}
           </View>
         );
-        case "diary":
-          return (
-            <View style={styles.diaryContainer}>
-              <Text style={styles.diaryTitle}>ไดอารี่อาหารและการออกกำลังกาย</Text>
-              {diaryEntries.length > 0 ? (
-                diaryEntries.map((entry, index) => (
-                  <View key={index} style={styles.diaryEntry}>
-                    <View style={styles.diaryHeader}>
-                      <Text style={styles.diaryDate}>{new Date(entry.date).toLocaleDateString('th-TH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</Text>  
-                    </View>
-                    <View><Text style={styles.diaryCalories}>แคลอรี่รวม: {calculateTotalCalories(entry)} kcal</Text>
-                    </View>
-                    <View style={styles.macrosContainer}>
-                      <View style={styles.macroItem}>
-                        <MaterialCommunityIcons name="bread-slice" size={24} color="#FF9800" />
-                        <Text style={styles.macroValue}>{calculateTotalMacro(entry, 'carbs')}g</Text>
-                        <Text style={styles.macroLabel}>คาร์โบไฮเดรต</Text>
-                      </View>
-                      <View style={styles.macroItem}>
-                        <MaterialCommunityIcons name="food-steak" size={24} color="#4CAF50" />
-                        <Text style={styles.macroValue}>{calculateTotalMacro(entry, 'protein')}g</Text>
-                        <Text style={styles.macroLabel}>โปรตีน</Text>
-                      </View>
-                      <View style={styles.macroItem}>
-                        <MaterialCommunityIcons name="oil" size={24} color="#2196F3" />
-                        <Text style={styles.macroValue}>{calculateTotalMacro(entry, 'fat')}g</Text>
-                        <Text style={styles.macroLabel}>ไขมัน</Text>
-                      </View>
-                    </View>
-                    <Text style={styles.sectionTitle}>มื้ออาหาร</Text>
-                    {Object.entries(entry.meals).map(([mealName, mealData], mealIndex) => (
-                      <View key={mealIndex} style={styles.meal}>
-                        <Text style={styles.mealName}>{mealName}</Text>
-                        {mealData.items.map((item, itemIndex) => (
-                          <View key={itemIndex} style={styles.mealItem}>
-                            <Text style={styles.itemName}>{item.name}</Text>
-                            <Text style={styles.itemDetails}>{item.amount} • {item.calories} kcal</Text>
-                          </View>
-                        ))}
-                      </View>
-                    ))}
-                    {entry.exercises && entry.exercises.length > 0 && (
-                      <View>
-                        <Text style={styles.sectionTitle}>การออกกำลังกาย</Text>
-                        {entry.exercises.map((exercise, exerciseIndex) => (
-                          <View key={exerciseIndex} style={styles.exerciseItem}>
-                            <MaterialCommunityIcons name="run" size={24} color="#E91E63" />
-                            <View style={styles.exerciseDetails}>
-                              <Text style={styles.exerciseName}>{exercise.name}</Text>
-                              <Text style={styles.exerciseInfo}>{exercise.duration} นาที • {exercise.calories} kcal</Text>
-                            </View>
-                          </View>
-                        ))}
-                      </View>
-                    )}
+      case "diary":
+        return (
+          <View style={styles.diaryContainer}>
+            <Text style={styles.diaryTitle}>ไดอารี่อาหารและการออกกำลังกาย</Text>
+            {diaryEntries.length > 0 ? (
+              diaryEntries.map((entry, index) => (
+                <View key={index} style={styles.diaryEntry}>
+                  <View style={styles.diaryHeader}>
+                    <Text style={styles.diaryDate}>{new Date(entry.date).toLocaleDateString('th-TH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</Text>
                   </View>
-                ))
-              ) : (
-                <Text style={styles.noDataText}>ไม่มีข้อมูลไดอารี่</Text>
-              )}
-            </View>
-          );
-        default:
-          return null;
-      }
-    };
+                  <View><Text style={styles.diaryCalories}>แคลอรี่รวม: {calculateTotalCalories(entry)} kcal</Text>
+                  </View>
+                  <View style={styles.macrosContainer}>
+                    <View style={styles.macroItem}>
+                      <MaterialCommunityIcons name="bread-slice" size={24} color="#FF9800" />
+                      <Text style={styles.macroValue}>{calculateTotalMacro(entry, 'carbs')}g</Text>
+                      <Text style={styles.macroLabel}>คาร์โบไฮเดรต</Text>
+                    </View>
+                    <View style={styles.macroItem}>
+                      <MaterialCommunityIcons name="food-steak" size={24} color="#4CAF50" />
+                      <Text style={styles.macroValue}>{calculateTotalMacro(entry, 'protein')}g</Text>
+                      <Text style={styles.macroLabel}>โปรตีน</Text>
+                    </View>
+                    <View style={styles.macroItem}>
+                      <MaterialCommunityIcons name="oil" size={24} color="#2196F3" />
+                      <Text style={styles.macroValue}>{calculateTotalMacro(entry, 'fat')}g</Text>
+                      <Text style={styles.macroLabel}>ไขมัน</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.sectionTitle}>มื้ออาหาร</Text>
+                  {Object.entries(entry.meals).map(([mealName, mealData], mealIndex) => (
+                    <View key={mealIndex} style={styles.meal}>
+                      <Text style={styles.mealName}>{mealName}</Text>
+                      {mealData.items.map((item, itemIndex) => (
+                        <View key={itemIndex} style={styles.mealItem}>
+                          <Text style={styles.itemName}>{item.name}</Text>
+                          <Text style={styles.itemDetails}>{item.amount} • {item.calories} kcal</Text>
+                        </View>
+                      ))}
+                    </View>
+                  ))}
+                  {entry.exercises && entry.exercises.length > 0 && (
+                    <View>
+                      <Text style={styles.sectionTitle}>การออกกำลังกาย</Text>
+                      {entry.exercises.map((exercise, exerciseIndex) => (
+                        <View key={exerciseIndex} style={styles.exerciseItem}>
+                          <MaterialCommunityIcons name="run" size={24} color="#E91E63" />
+                          <View style={styles.exerciseDetails}>
+                            <Text style={styles.exerciseName}>{exercise.name}</Text>
+                            <Text style={styles.exerciseInfo}>{exercise.duration} นาที • {exercise.calories} kcal</Text>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              ))
+            ) : (
+              <Text style={styles.noDataText}>ไม่มีข้อมูลไดอารี่</Text>
+            )}
+          </View>
+        );
+      default:
+        return null;
+    }
+  };
 
-    
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'ต่ำ':
@@ -370,7 +370,7 @@ const PatientDetailScreen = ({ route, navigation }) => {
     return total.toFixed(1);
   };
 
-  
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -385,10 +385,10 @@ const PatientDetailScreen = ({ route, navigation }) => {
           style={[styles.tab, selectedTab === "bloodSugar" && styles.activeTab]}
           onPress={() => setSelectedTab("bloodSugar")}
         >
-          <MaterialCommunityIcons 
-            name="water" 
-            size={24} 
-            color={selectedTab === "bloodSugar" ? "#2196F3" : "#757575"} 
+          <MaterialCommunityIcons
+            name="water"
+            size={24}
+            color={selectedTab === "bloodSugar" ? "#2196F3" : "#757575"}
           />
           <Text style={[styles.tabText, selectedTab === "bloodSugar" && styles.activeTabText]}>
             น้ำตาล
@@ -398,10 +398,10 @@ const PatientDetailScreen = ({ route, navigation }) => {
           style={[styles.tab, selectedTab === "weight" && styles.activeTab]}
           onPress={() => setSelectedTab("weight")}
         >
-          <MaterialCommunityIcons 
-            name="scale-bathroom" 
-            size={24} 
-            color={selectedTab === "weight" ? "#2196F3" : "#757575"} 
+          <MaterialCommunityIcons
+            name="scale-bathroom"
+            size={24}
+            color={selectedTab === "weight" ? "#2196F3" : "#757575"}
           />
           <Text style={[styles.tabText, selectedTab === "weight" && styles.activeTabText]}>
             น้ำหนัก
@@ -411,10 +411,10 @@ const PatientDetailScreen = ({ route, navigation }) => {
           style={[styles.tab, selectedTab === "diary" && styles.activeTab]}
           onPress={() => setSelectedTab("diary")}
         >
-          <MaterialCommunityIcons 
-            name="book-open-variant" 
-            size={24} 
-            color={selectedTab === "diary" ? "#2196F3" : "#757575"} 
+          <MaterialCommunityIcons
+            name="book-open-variant"
+            size={24}
+            color={selectedTab === "diary" ? "#2196F3" : "#757575"}
           />
           <Text style={[styles.tabText, selectedTab === "diary" && styles.activeTabText]}>
             ไดอารี่
@@ -427,12 +427,18 @@ const PatientDetailScreen = ({ route, navigation }) => {
       </ScrollView>
       <TouchableOpacity
         style={styles.adviceButton}
-        onPress={() => navigation.navigate("AdvicePage", {
-          patientName: patientData.fullName,
-          patientAge: patientData.age,
-          patientLevel: patientData.diabetesType,
-          userId: patientData.id, // Add this line to pass the patient's ID
-        })}
+        onPress={() => {
+          // Add this console.log to verify the ID
+          console.log("Patient ID being passed:", patientId);
+
+          navigation.navigate("AdvicePage", {
+            patientName: patientData.fullName,
+            patientAge: patientData.age,
+            patientLevel: patientData.diabetesType,
+            patientId: patientId, // Make sure this matches the ID from route.params
+            userId: patientId,    // Add this as a backup
+          });
+        }}
       >
         <MaterialCommunityIcons name="lightbulb-on" size={24} color="white" />
         <Text style={styles.adviceButtonText}>ให้คำแนะนำ</Text>
@@ -441,9 +447,9 @@ const PatientDetailScreen = ({ route, navigation }) => {
   );
 };
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: "#F5F5F5" 
+  container: {
+    flex: 1,
+    backgroundColor: "#F5F5F5"
   },
   header: {
     padding: 20,
@@ -452,15 +458,15 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 20,
     elevation: 4,
   },
-  name: { 
-    fontSize: 26, 
-    fontWeight: "bold", 
-    color: "white" 
+  name: {
+    fontSize: 26,
+    fontWeight: "bold",
+    color: "white"
   },
-  age: { 
-    fontSize: 18, 
-    color: "white", 
-    marginTop: 5 
+  age: {
+    fontSize: 18,
+    color: "white",
+    marginTop: 5
   },
   tabContainer: {
     flexDirection: "row",
@@ -469,18 +475,18 @@ const styles = StyleSheet.create({
     margin: 15,
     elevation: 2,
   },
-  tab: { 
-    flex: 1, 
-    padding: 15, 
+  tab: {
+    flex: 1,
+    padding: 15,
     alignItems: "center",
     justifyContent: "center",
   },
-  activeTab: { 
-    borderBottomWidth: 3, 
-    borderBottomColor: "#2196F3" 
+  activeTab: {
+    borderBottomWidth: 3,
+    borderBottomColor: "#2196F3"
   },
-  tabText: { 
-    fontSize: 14, 
+  tabText: {
+    fontSize: 14,
     color: "#757575",
     marginTop: 5,
   },
@@ -500,8 +506,8 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     color: "#333",
   },
-  chart: { 
-    borderRadius: 16, 
+  chart: {
+    borderRadius: 16,
     marginVertical: 20,
     alignItems: "center",
   },
@@ -527,20 +533,20 @@ const styles = StyleSheet.create({
   historyItemRight: {
     alignItems: "flex-end",
   },
-  historyDate: { 
-    fontSize: 16, 
+  historyDate: {
+    fontSize: 16,
     color: "#333",
     fontWeight: "bold",
   },
-  historyTime: { 
-    fontSize: 14, 
+  historyTime: {
+    fontSize: 14,
     color: "#757575",
     marginTop: 4,
   },
-  historyValue: { 
-    fontSize: 18, 
-    fontWeight: "bold", 
-    color: "#2196F3" 
+  historyValue: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#2196F3"
   },
   historyStatus: {
     fontSize: 14,
@@ -562,9 +568,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     elevation: 4,
   },
-  adviceButtonText: { 
-    color: "white", 
-    fontSize: 18, 
+  adviceButtonText: {
+    color: "white",
+    fontSize: 18,
     fontWeight: "bold",
     marginLeft: 10,
   },

@@ -8,6 +8,7 @@ import {
   TextInput,
   ScrollView,
   Alert,
+  Switch,
 } from "react-native";
 import { addDoc, collection, doc, setDoc } from "firebase/firestore";
 import { firebaseDB } from "../../config/firebase.config";
@@ -17,61 +18,112 @@ const AdvicePage = ({ route, navigation }) => {
     patientName = "Unknown",
     patientAge = "Unknown",
     patientLevel = "Unknown",
-    userId,
+    patientId, 
   } = route.params || {};
 
-  const [eatingAdvice, setEatingAdvice] = useState("");
-  const [exerciseAdvice, setExerciseAdvice] = useState("");
-  const [additionalAdvice, setAdditionalAdvice] = useState("");
-  const [notificationTitle, setNotificationTitle] = useState("");
-  const [notificationMessage, setNotificationMessage] = useState("");
+  // State for advice sections
+  const [adviceTypes, setAdviceTypes] = useState({
+    eating: { enabled: false, content: "" },
+    exercise: { enabled: false, content: "" },
+    additional: { enabled: false, content: "" },
+  });
+  
+  // State for notification
+  const [notification, setNotification] = useState({
+    title: "",
+    message: "",
+  });
+
+  const toggleAdviceType = (type) => {
+    setAdviceTypes(prev => ({
+      ...prev,
+      [type]: { ...prev[type], enabled: !prev[type].enabled }
+    }));
+  };
+
+  const updateAdviceContent = (type, content) => {
+    setAdviceTypes(prev => ({
+      ...prev,
+      [type]: { ...prev[type], content }
+    }));
+  };
 
   const handleConfirm = async () => {
-    if (!notificationTitle.trim() || !notificationMessage.trim()) {
-      Alert.alert(
-        "Error",
-        "Both title and message are required for the notification."
-      );
-      return;
-    }
-
-    if (!userId) {
-      Alert.alert("Error", "User ID is missing. Cannot send notification.");
+    if (!patientId) {
+      Alert.alert("Error", "Patient ID is missing. Cannot send advice.");
       return;
     }
 
     try {
-      // Add notification
-      await addDoc(collection(firebaseDB, "Notidetails"), {
-        title: notificationTitle,
-        message: notificationMessage,
-        userId: userId,
+      // Prepare advice data
+      const adviceData = {
+        date: new Date().toISOString(),
         sentBy: "Doctor",
-        date: new Date().toISOString(),
-        read: false,
+      };
+
+      // Only include enabled advice types
+      Object.entries(adviceTypes).forEach(([type, data]) => {
+        if (data.enabled && data.content.trim()) {
+          adviceData[`${type}Advice`] = data.content.trim();
+        }
       });
 
-      // Add advice to patient's document
-      const patientAdviceRef = doc(firebaseDB, "users", userId, "advice", new Date().toISOString());
-      await setDoc(patientAdviceRef, {
-        eatingAdvice,
-        exerciseAdvice,
-        additionalAdvice,
-        date: new Date().toISOString(),
-      });
-
-      console.log("Advice and notification sent successfully!");
-
-      Alert.alert(
-        "Success",
-        "Advice confirmed and notification sent successfully!"
+      // Check if any advice is enabled and has content
+      const hasAdvice = Object.values(adviceTypes).some(
+        type => type.enabled && type.content.trim()
       );
+
+      if (!hasAdvice) {
+        Alert.alert("Error", "Please enable and fill at least one advice type.");
+        return;
+      }
+
+      
+      const patientAdviceRef = doc(firebaseDB, "users", patientId, "advice", new Date().toISOString());
+      await setDoc(patientAdviceRef, adviceData);
+
+      
+      if (notification.title.trim() && notification.message.trim()) {
+        await addDoc(collection(firebaseDB, "Notidetails"), {
+          title: notification.title,
+          message: notification.message,
+          userId: patientId, 
+          sentBy: "Doctor",
+          date: new Date().toISOString(),
+          read: false,
+        });
+      }
+
+      Alert.alert("Success", "Advice sent successfully!");
       navigation.goBack();
     } catch (error) {
-      console.error("Error sending advice and notification:", error);
-      Alert.alert("Error", "Failed to send advice and notification.");
+      console.error("Error sending advice:", error);
+      Alert.alert("Error", "Failed to send advice.");
     }
   };
+
+  const renderAdviceSection = (type, title) => (
+    <View style={styles.adviceSection}>
+      <View style={styles.adviceHeader}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        <Switch
+          value={adviceTypes[type].enabled}
+          onValueChange={() => toggleAdviceType(type)}
+        />
+      </View>
+      {adviceTypes[type].enabled && (
+        <TextInput
+          style={styles.input}
+          multiline
+          numberOfLines={4}
+          onChangeText={(content) => updateAdviceContent(type, content)}
+          value={adviceTypes[type].content}
+          placeholder={`Provide ${type} advice`}
+        />
+      )}
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>
@@ -83,56 +135,24 @@ const AdvicePage = ({ route, navigation }) => {
         </View>
 
         <View style={styles.contentContainer}>
-          <View style={styles.adviceSection}>
-            <Text style={styles.sectionTitle}>Eating Advice</Text>
-            <TextInput
-              style={styles.input}
-              multiline
-              numberOfLines={4}
-              onChangeText={setEatingAdvice}
-              value={eatingAdvice}
-              placeholder="Provide advice on eating"
-            />
-          </View>
+          {renderAdviceSection("eating", "Eating Advice")}
+          {renderAdviceSection("exercise", "Exercise Advice")}
+          {renderAdviceSection("additional", "Additional Advice")}
 
           <View style={styles.adviceSection}>
-            <Text style={styles.sectionTitle}>Exercise Advice</Text>
+            <Text style={styles.sectionTitle}>Notification (Optional)</Text>
             <TextInput
               style={styles.input}
-              multiline
-              numberOfLines={4}
-              onChangeText={setExerciseAdvice}
-              value={exerciseAdvice}
-              placeholder="Provide advice on exercise"
-            />
-          </View>
-
-          <View style={styles.adviceSection}>
-            <Text style={styles.sectionTitle}>Additional Advice</Text>
-            <TextInput
-              style={styles.input}
-              multiline
-              numberOfLines={4}
-              onChangeText={setAdditionalAdvice}
-              value={additionalAdvice}
-              placeholder="Provide additional advice"
-            />
-          </View>
-
-          <View style={styles.adviceSection}>
-            <Text style={styles.sectionTitle}>Notification</Text>
-            <TextInput
-              style={styles.input}
-              onChangeText={setNotificationTitle}
-              value={notificationTitle}
+              onChangeText={(title) => setNotification(prev => ({ ...prev, title }))}
+              value={notification.title}
               placeholder="Notification Title"
             />
             <TextInput
               style={[styles.input, { marginTop: 10 }]}
               multiline
               numberOfLines={4}
-              onChangeText={setNotificationMessage}
-              value={notificationMessage}
+              onChangeText={(message) => setNotification(prev => ({ ...prev, message }))}
+              value={notification.message}
               placeholder="Notification Message"
             />
           </View>
@@ -147,12 +167,13 @@ const AdvicePage = ({ route, navigation }) => {
           <Text style={styles.buttonText}>Back</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm}>
-          <Text style={styles.buttonText}>Confirm &amp; Send</Text>
+          <Text style={styles.buttonText}>Confirm & Send</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 };
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -181,10 +202,15 @@ const styles = StyleSheet.create({
     padding: 15,
     marginBottom: 20,
   },
+  adviceHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    marginBottom: 10,
     color: "#007BFF",
   },
   input: {
