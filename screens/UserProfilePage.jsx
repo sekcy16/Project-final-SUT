@@ -13,7 +13,7 @@ import {
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { useNavigation } from "@react-navigation/native";
 import { firebaseAuth, firebaseDB } from "../config/firebase.config";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { LinearGradient } from "expo-linear-gradient";
 
@@ -23,33 +23,52 @@ const ProfilePage = () => {
   const navigation = useNavigation();
   const [userData, setUserData] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(firebaseAuth, (user) => {
-      if (user) {
-        fetchUserData(user.uid);
-      } else {
-        setUserData(null);
-      }
-    });
+    let unsubscribeAuth;
+    let unsubscribeFirestore;
 
-    return () => unsubscribe();
-  }, []);
+    const setupSubscriptions = async () => {
+      unsubscribeAuth = onAuthStateChanged(firebaseAuth, (user) => {
+        if (user) {
+          setIsAuthenticated(true);
+          const userDocRef = doc(firebaseDB, "users", user.uid);
+          unsubscribeFirestore = onSnapshot(userDocRef, 
+            (doc) => {
+              if (doc.exists()) {
+                setUserData(doc.data());
+              } else {
+                console.error("ไม่พบเอกสารดังกล่าว!");
+              }
+            }, 
+            (error) => {
+              console.error("เกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้:", error);
+              if (error.code === 'permission-denied') {
+                // Handle permission denied error
+                setIsAuthenticated(false);
+                setUserData(null);
+                navigation.navigate("LoginScreen");
+              }
+            }
+          );
+        } else {
+          setIsAuthenticated(false);
+          setUserData(null);
+          if (unsubscribeFirestore) {
+            unsubscribeFirestore();
+          }
+        }
+      });
+    };
 
-  const fetchUserData = async (uid) => {
-    try {
-      const userDocRef = doc(firebaseDB, "users", uid);
-      const userDoc = await getDoc(userDocRef);
+    setupSubscriptions();
 
-      if (userDoc.exists()) {
-        setUserData(userDoc.data());
-      } else {
-        console.error("ไม่พบเอกสารดังกล่าว!");
-      }
-    } catch (error) {
-      console.error("เกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้:", error);
-    }
-  };
+    return () => {
+      if (unsubscribeAuth) unsubscribeAuth();
+      if (unsubscribeFirestore) unsubscribeFirestore();
+    };
+  }, [navigation]);
 
   const handleSignOut = () => {
     Alert.alert("ออกจากระบบ", "คุณแน่ใจหรือไม่ที่ต้องการออกจากระบบ?", [
@@ -59,29 +78,40 @@ const ProfilePage = () => {
       },
       {
         text: "ตกลง",
-        onPress: () => {
-          firebaseAuth
-            .signOut()
-            .then(() => {
-              navigation.navigate("LoginScreen");
-            })
-            .catch((error) => {
-              console.error("ข้อผิดพลาดในการออกจากระบบ: ", error);
-              Alert.alert(
-                "ข้อผิดพลาด",
-                "ไม่สามารถออกจากระบบได้ กรุณาลองอีกครั้ง"
-              );
-            });
+        onPress: async () => {
+          try {
+            await firebaseAuth.signOut();
+            setIsAuthenticated(false);
+            setUserData(null);
+            navigation.navigate("LoginScreen");
+          } catch (error) {
+            console.error("ข้อผิดพลาดในการออกจากระบบ: ", error);
+            Alert.alert(
+              "ข้อผิดพลาด",
+              "ไม่สามารถออกจากระบบได้ กรุณาลองอีกครั้ง"
+            );
+          }
         },
       },
     ]);
   };
 
   const onRefresh = async () => {
+    if (!isAuthenticated) {
+      return;
+    }
     setRefreshing(true);
     const user = firebaseAuth.currentUser;
     if (user) {
-      await fetchUserData(user.uid);
+      try {
+        const userDocRef = doc(firebaseDB, "users", user.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+          setUserData(userDoc.data());
+        }
+      } catch (error) {
+        console.error("เกิดข้อผิดพลาดในการรีเฟรชข้อมูล:", error);
+      }
     }
     setRefreshing(false);
   };

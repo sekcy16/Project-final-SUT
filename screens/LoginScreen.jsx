@@ -5,7 +5,7 @@ import { UserTextinput } from "../components";
 import { useNavigation, useIsFocused } from "@react-navigation/native";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { firebaseAuth, firebaseDB } from "../config/firebase.config";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { useDispatch } from "react-redux";
 import { SET_USER } from "../context/actions/userActions";
 
@@ -20,13 +20,13 @@ const LoginScreen = () => {
 
   const navigation = useNavigation();
   const dispatch = useDispatch();
-  const isFocused = useIsFocused(); // Hook to detect if the screen is focused
+  const isFocused = useIsFocused();
 
   useEffect(() => {
     const backAction = () => {
       if (isFocused) {
-        BackHandler.exitApp(); // Exit the app only if on LoginScreen
-        return true; // Prevent the default back action
+        BackHandler.exitApp();
+        return true;
       }
       return false;
     };
@@ -36,53 +36,43 @@ const LoginScreen = () => {
       backAction
     );
 
-    return () => backHandler.remove(); // Clean up the event listener when the component unmounts
+    return () => backHandler.remove();
   }, [isFocused]);
 
   const handleLogin = async () => {
     if (getEmailValidationStatus && email !== "") {
-      console.log("Attempting login...");
-      await signInWithEmailAndPassword(firebaseAuth, email, password)
-        .then((useCred) => {
-          if (useCred) {
-            console.log("User Id :", useCred?.user.uid);
-            const userDocRef = doc(firebaseDB, "users", useCred?.user.uid);
+      try {
+        const userCred = await signInWithEmailAndPassword(firebaseAuth, email, password);
+        if (userCred) {
+          const userDocRef = doc(firebaseDB, "users", userCred.user.uid);
+          const docSnap = await getDoc(userDocRef);
+          
+          if (docSnap.exists()) {
+            const userData = docSnap.data();
             
-            getDoc(userDocRef).then(async (docSnap) => {
-              if (docSnap.exists()) {
-                const userData = docSnap.data();
-                console.log("User Data :", userData);
-                
-                // Update Last Active Timestamp
-                await updateDoc(userDocRef, {
-                  lastActive: new Date().toISOString(),
-                });
-                
-                // Dispatch user data to Redux store
-                dispatch(SET_USER(userData));
-                
-                // Check user role and navigate accordingly
-                if (userData.role === "Doctor") {
-                  console.log("Navigating to Doctor Home Page");
-                  navigation.navigate('Main', { screen: 'DoctorHomePage' });
-                } else {
-                  console.log("Navigating to HealthDashboard");
-                  navigation.navigate('Main', { screen: 'HealthDashboard' });
-                }
-              }
+            // Update Last Active Timestamp
+            await updateDoc(userDocRef, {
+              lastActive: new Date().toISOString(),
             });
+            
+            dispatch(SET_USER(userData));
+            
+            if (userData.role === "Doctor") {
+              navigation.navigate('Main', { screen: 'DoctorHomePage' });
+            } else {
+              navigation.navigate('Main', { screen: 'HealthDashboard' });
+            }
           }
-        })
-        .catch((err) => {
-          console.log("Error :", err.message);
-          handleFirebaseError(err.code);
-        });
+        }
+      } catch (err) {
+        console.error("Login error:", err);
+        handleFirebaseError(err.code);
+      }
     } else {
       console.log("Email validation failed or email is empty");
       showAlert("Invalid Email Address");
     }
   };
-  
 
   const handleFirebaseError = (errorCode) => {
     switch (errorCode) {
@@ -96,7 +86,7 @@ const LoginScreen = () => {
         showAlert("Invalid Email Address");
         break;
       default:
-        showAlert("Authentication Failed. Check if your E-Mail or password is correct.");
+        showAlert("Authentication Failed. Please check your credentials.");
         break;
     }
   };

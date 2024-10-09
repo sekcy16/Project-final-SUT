@@ -18,10 +18,13 @@ import { firebaseAuth, firebaseDB } from "../config/firebase.config";
 import {
   doc,
   getDoc,
+  getDocs,
   collection,
   query,
   where,
   onSnapshot,
+  orderBy,
+  limit,
 } from "firebase/firestore";
 import { Svg, Circle, Path, G, Text as SvgText } from "react-native-svg";
 
@@ -38,6 +41,8 @@ const HealthDashboard = ({ navigation }) => {
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
 
+  const [bloodSugarHistory, setBloodSugarHistory] = useState([]);
+
   // New state variables for calorie and macronutrient tracking
   const [caloriesAllowed, setCaloriesAllowed] = useState(0);
   const [caloriesConsumed, setCaloriesConsumed] = useState(0);
@@ -53,8 +58,10 @@ const HealthDashboard = ({ navigation }) => {
     const unsubscribeAuth = firebaseAuth.onAuthStateChanged((user) => {
       if (user) {
         fetchUserData(user.uid);
+        fetchLatestBloodSugar(user.uid);  // Replace fetchLatestBloodSugar with this
       } else {
         setUserData(null);
+        setLatestBloodSugar(null);
       }
     });
 
@@ -104,30 +111,40 @@ const HealthDashboard = ({ navigation }) => {
     }
   };
 
+  const fetchLatestBloodSugar = async (uid) => {
+    try {
+      const bloodSugarRef = collection(firebaseDB, "users", uid, "bloodSugarHistory");
+      const q = query(bloodSugarRef, orderBy("date", "desc"), orderBy("time", "desc"), limit(1));
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        const latestReading = querySnapshot.docs[0].data();
+        setLatestBloodSugar(latestReading.level);
+        console.log("Latest blood sugar reading:", latestReading);
+      } else {
+        console.log("No blood sugar readings found");
+        setLatestBloodSugar(null);
+      }
+    } catch (error) {
+      console.error("Error fetching blood sugar history:", error);
+      Alert.alert("Error", "เกิดข้อผิดพลาดในการดึงข้อมูลระดับน้ำตาลในเลือด");
+      setLatestBloodSugar(null);
+    }
+  };
+
   const loadLatestData = async () => {
     try {
-      // Load latest blood sugar
-      const savedBloodSugarHistory = await AsyncStorage.getItem(
-        "bloodSugarHistory"
-      );
-      if (savedBloodSugarHistory) {
-        const bloodSugarHistory = JSON.parse(savedBloodSugarHistory);
-        if (bloodSugarHistory.length > 0) {
-          setLatestBloodSugar(bloodSugarHistory[0].level);
-        }
-      }
-
-      // Load average blood sugar
-      const savedAverageBloodSugar = await AsyncStorage.getItem(
-        "averageBloodSugarToday"
-      );
-      if (savedAverageBloodSugar) {
-        setAverageBloodSugar(parseFloat(savedAverageBloodSugar));
-      }
-
-      // Fetch diary entries
       const user = firebaseAuth.currentUser;
       if (user) {
+        await fetchLatestBloodSugar(user.uid);
+        
+        // Load average blood sugar
+        const savedAverageBloodSugar = await AsyncStorage.getItem("averageBloodSugarToday");
+        if (savedAverageBloodSugar) {
+          setAverageBloodSugar(parseFloat(savedAverageBloodSugar));
+        }
+
+        // Fetch diary entries
         const diaryRef = doc(
           firebaseDB,
           "users",
@@ -148,8 +165,7 @@ const HealthDashboard = ({ navigation }) => {
       }
 
       // Calculate totals
-      const { totalCalories, totalProtein, totalCarbs, totalFat } =
-        calculateTotals(meals);
+      const { totalCalories, totalProtein, totalCarbs, totalFat } = calculateTotals(meals);
 
       setCaloriesConsumed(totalCalories);
       setProteinConsumed(totalProtein);
@@ -159,14 +175,14 @@ const HealthDashboard = ({ navigation }) => {
       console.error("เกิดข้อผิดพลาดในการโหลดข้อมูลล่าสุด:", error);
       // Use default data in case of error
       setMeals(getDefaultMeals());
-      const { totalCalories, totalProtein, totalCarbs, totalFat } =
-        calculateTotals(getDefaultMeals());
+      const { totalCalories, totalProtein, totalCarbs, totalFat } = calculateTotals(getDefaultMeals());
       setCaloriesConsumed(totalCalories);
       setProteinConsumed(totalProtein);
       setCarbsConsumed(totalCarbs);
       setFatConsumed(totalFat);
     }
   };
+
   // Helper function to get default meals
 const getDefaultMeals = () => ({
   มื้อเช้า: { calories: 0, protein: 0, carbs: 0, fat: 0 },
@@ -549,17 +565,7 @@ const getDefaultMeals = () => ({
                 color="#FF6B6B"
                 onPress={() => navigation.navigate("BloodSugar")}
               />
-              <HealthCard
-                title="ค่าเฉลี่ยน้ำตาลในเลือดวันนี้"
-                value={
-                  averageBloodSugar !== null
-                    ? `${averageBloodSugar.toFixed(1)} mg/dL`
-                    : "ไม่มีข้อมูล"
-                }
-                icon="chart-line"
-                color="#9D84B7"
-                onPress={() => navigation.navigate("BloodSugar")}
-              />
+              
               <HealthCard
                 title="น้ำหนัก"
                 value={
@@ -569,33 +575,7 @@ const getDefaultMeals = () => ({
                 color="#4ECDC4"
                 onPress={() => navigation.navigate("WeightProgress")}
               />
-              <HealthCard
-                title="คาร์โบไฮเดรต"
-                value={carbIntake !== null ? `${carbIntake} g` : "ไม่มีข้อมูล"}
-                icon="pasta"
-                color="#FFD93D"
-                onPress={() => navigation.navigate("DiaryPage")}
-              />
-              <HealthCard
-                title="ออกกำลังกาย"
-                value={
-                  exerciseMinutes !== null
-                    ? `${exerciseMinutes} นาที`
-                    : "ไม่มีข้อมูล"
-                }
-                icon="run"
-                color="#6BCB77"
-                onPress={() => navigation.navigate("DiaryPage")}
-              />
-              <HealthCard
-                title="ดื่มน้ำ"
-                value={
-                  waterIntake !== null ? `${waterIntake} ml` : "ไม่มีข้อมูล"
-                }
-                icon="cup-water"
-                color="#4D96FF"
-                onPress={() => navigation.navigate("WaterIntake")}
-              />
+              
             </View>
           </View>
         </ScrollView>

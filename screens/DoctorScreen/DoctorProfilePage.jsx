@@ -55,6 +55,7 @@ const DoctorProfilePage = () => {
       console.error("เกิดข้อผิดพลาดในการดึงข้อมูลแพทย์:", error);
     }
   };
+
   const handleSignOut = () => {
     Alert.alert(
       "ออกจากระบบ",
@@ -192,10 +193,16 @@ const DoctorProfilePage = () => {
               color="#FFD93D"
             />
             <MenuItem
+              icon="bookmark-outline"
+              label="บุ๊กมาร์ก"
+              onPress={() => navigation.navigate("BookmarkListPage")}
+              color="#6BCB77"
+            />
+            <MenuItem
               icon="cog-outline"
               label="การตั้งค่า"
               onPress={() => navigation.navigate("DoctorSettings")}
-              color="#6BCB77"
+              color="#FF7F50"
             />
           </View>
 
