@@ -46,10 +46,9 @@ const DiaryPage = () => {
 
   const db = getFirestore(app);
   const auth = getAuth(app);
-
   const navigateToSummary = () => {
     navigation.navigate("SummaryPage", {
-      date: currentDate.toISOString(),
+      date: formatDate(currentDate), // ใช้ฟังก์ชัน formatDate ที่มีอยู่แล้ว
       meals,
       exercises,
       totalFoodCalories,
@@ -58,6 +57,8 @@ const DiaryPage = () => {
       tdee,
     });
   };
+
+
   const fetchUserData = useCallback(async () => {
     try {
       const userId = auth.currentUser.uid;
@@ -225,7 +226,8 @@ const DiaryPage = () => {
   };
 
   const formatDate = (date) => {
-    return date.toISOString().split("T")[0];
+    const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    return localDate.toISOString().split('T')[0];
   };
 
   const deleteFoodItem = async (mealType, index) => {

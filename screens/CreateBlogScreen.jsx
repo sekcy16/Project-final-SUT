@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert, SafeAreaView, ScrollView } from 'react-native';
 import { getFirestore, collection, addDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getAuth } from 'firebase/auth';
 import { app } from "../config/firebase.config";
 import * as ImagePicker from 'expo-image-picker';
+import { LinearGradient } from 'expo-linear-gradient';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 const CreateBlogScreen = ({ navigation }) => {
   const [title, setTitle] = useState('');
@@ -83,115 +85,171 @@ const CreateBlogScreen = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>Create New Blog</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Blog Title"
-        value={title}
-        onChangeText={setTitle}
-        maxLength={100}
-      />
-      <TextInput
-        style={[styles.input, styles.contentInput]}
-        placeholder="Blog Content"
-        value={content}
-        onChangeText={setContent}
-        multiline
-      />
-      <Text style={styles.label}>Category:</Text>
-      <View style={styles.categoryContainer}>
-        {['health', 'recipe'].map((cat) => (
-          <TouchableOpacity
-            key={cat}
-            style={[styles.category, category === cat && styles.selectedCategory]}
-            onPress={() => setCategory(cat)}
-          >
-            <Text style={styles.categoryText}>{cat.charAt(0).toUpperCase() + cat.slice(1)}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-      <TouchableOpacity style={styles.photoButton} onPress={handleChoosePhoto}>
-        <Text style={styles.photoButtonText}>Choose Photo</Text>
-      </TouchableOpacity>
-      {photo && <Image source={{ uri: photo.uri }} style={styles.photoPreview} />}
-      <TouchableOpacity style={styles.button} onPress={handleCreateBlog}>
-        <Text style={styles.buttonText}>Create Blog</Text>
-      </TouchableOpacity>
-    </View>
+    <SafeAreaView style={styles.container}>
+      <LinearGradient colors={['#4A90E2', '#50E3C2']} style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Icon name="arrow-left" size={24} color="#FFF" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>สร้างบทความใหม่</Text>
+      </LinearGradient>
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="หัวข้อบทความ"
+          value={title}
+          onChangeText={setTitle}
+          maxLength={100}
+          placeholderTextColor="#999"
+        />
+        <TextInput
+          style={[styles.input, styles.contentInput]}
+          placeholder="เนื้อหาบทความ"
+          value={content}
+          onChangeText={setContent}
+          multiline
+          placeholderTextColor="#999"
+        />
+        <Text style={styles.label}>หมวดหมู่:</Text>
+        <View style={styles.categoryContainer}>
+          {['health', 'recipe'].map((cat) => (
+            <TouchableOpacity
+              key={cat}
+              style={[styles.category, category === cat && styles.selectedCategory]}
+              onPress={() => setCategory(cat)}
+            >
+              <Text style={[styles.categoryText, category === cat && styles.selectedCategoryText]}>
+                {cat === 'health' ? 'สุขภาพ' : 'สูตรอาหาร'}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <TouchableOpacity style={styles.photoButton} onPress={handleChoosePhoto}>
+          <LinearGradient colors={['#4A90E2', '#50E3C2']} style={styles.photoButtonGradient}>
+            <Icon name="image-plus" size={24} color="#FFF" />
+            <Text style={styles.photoButtonText}>เลือกรูปภาพ</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+        {photo && <Image source={{ uri: photo.uri }} style={styles.photoPreview} />}
+        <TouchableOpacity style={styles.createButton} onPress={handleCreateBlog}>
+          <LinearGradient colors={['#4A90E2', '#50E3C2']} style={styles.createButtonGradient}>
+            <Text style={styles.createButtonText}>สร้างบทความ</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-    backgroundColor: '#FAFAD2',
+    backgroundColor: '#F6FFF5',
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    paddingTop: 50,
+  },
+  backButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  headerTitle: {
+    marginLeft: 16,
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 20,
-    color: '#556B2F',
+    color: '#FFF',
+    flex: 1,
+    fontFamily: 'Kanit-Bold',
+  },
+  scrollContainer: {
+    padding: 20,
   },
   input: {
-    backgroundColor: '#FFF8DC',
-    padding: 10,
-    borderRadius: 5,
+    backgroundColor: '#FFF',
+    padding: 15,
+    borderRadius: 10,
     marginBottom: 15,
+    fontSize: 16,
+    fontFamily: 'Kanit-Regular',
+    elevation: 2,
   },
   contentInput: {
     height: 150,
     textAlignVertical: 'top',
   },
   label: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 10,
-    color: '#556B2F',
+    color: '#333',
+    fontFamily: 'Kanit-Bold',
   },
   categoryContainer: {
     flexDirection: 'row',
     marginBottom: 15,
   },
   category: {
-    backgroundColor: '#FFF8DC',
-    padding: 10,
-    borderRadius: 5,
+    flex: 1,
+    backgroundColor: '#FFF',
+    padding: 15,
+    borderRadius: 10,
     marginRight: 10,
+    alignItems: 'center',
+    elevation: 2,
   },
   selectedCategory: {
-    backgroundColor: '#8FBC8F',
+    backgroundColor: '#4A90E2',
   },
   categoryText: {
-    color: '#556B2F',
+    color: '#333',
     fontWeight: 'bold',
+    fontFamily: 'Kanit-Regular',
+  },
+  selectedCategoryText: {
+    color: '#FFF',
   },
   photoButton: {
-    backgroundColor: '#8FBC8F',
-    padding: 10,
-    borderRadius: 5,
-    alignItems: 'center',
     marginBottom: 15,
+    borderRadius: 10,
+    overflow: 'hidden',
+    elevation: 2,
+  },
+  photoButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 15,
   },
   photoButtonText: {
     color: '#FFF',
     fontWeight: 'bold',
+    marginLeft: 10,
+    fontSize: 16,
+    fontFamily: 'Kanit-Regular',
   },
   photoPreview: {
-    width: 100,
-    height: 100,
+    width: '100%',
+    height: 200,
+    borderRadius: 10,
     marginBottom: 15,
   },
-  button: {
-    backgroundColor: '#8FBC8F',
+  createButton: {
+    borderRadius: 10,
+    overflow: 'hidden',
+    elevation: 2,
+  },
+  createButtonGradient: {
     padding: 15,
-    borderRadius: 5,
     alignItems: 'center',
   },
-  buttonText: {
+  createButtonText: {
     color: '#FFF',
     fontWeight: 'bold',
+    fontSize: 18,
+    fontFamily: 'Kanit-Bold',
   },
 });
 

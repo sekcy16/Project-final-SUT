@@ -45,7 +45,7 @@ const BlogDetail = ({ route }) => {
     }
 
     try {
-      const auth = getAuth();  // ดึงข้อมูลการ authenticate ของผู้ใช้
+      const auth = getAuth();
       const user = auth.currentUser;
 
       if (!user) {
@@ -58,15 +58,15 @@ const BlogDetail = ({ route }) => {
 
       await addDoc(reportRef, {
         blogId: blogId,
-        reportedAt: Timestamp.now(),  // ใช้ Firestore Timestamp
-        reason: selectedReportType,  // ใช้ประเภทการรายงานที่เลือก
-        comments: additionalComments, // เพิ่มคำอธิบายเพิ่มเติม
-        reporter: user.uid,  // ใช้ uid ของผู้ใช้ที่ล็อกอิน
+        reportedAt: Timestamp.now(),
+        reason: selectedReportType,
+        comments: additionalComments,
+        reporter: user.uid,
       });
 
       Alert.alert('รายงานเสร็จสิ้น', 'การรายงานของคุณถูกส่งเรียบร้อยแล้ว');
-      setModalVisible(false);  // ปิดโมดัลหลังจากรายงานเสร็จ
-      setAdditionalComments('');  // รีเซ็ตข้อความเพิ่มเติม
+      setModalVisible(false);
+      setAdditionalComments('');
     } catch (error) {
       console.error('Error reporting blog:', error);
       Alert.alert('ไม่สามารถส่งรายงานได้', 'กรุณาลองอีกครั้ง');
@@ -76,7 +76,7 @@ const BlogDetail = ({ route }) => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#8FBC8F" />
+        <ActivityIndicator size="large" color="#4A90E2" />
       </View>
     );
   }
@@ -94,20 +94,17 @@ const BlogDetail = ({ route }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <LinearGradient
-          colors={['#8FBC8F', '#F6FFF5']}
-          style={styles.header}
-        >
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Icon name="arrow-back" size={24} color="#FFF" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>{blogData.title}</Text>
-        </LinearGradient>
+      <LinearGradient colors={['#4A90E2', '#50E3C2']} style={styles.headerGradient}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Icon name="arrow-back" size={24} color="#FFF" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{blogData.title}</Text>
+      </LinearGradient>
 
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.contentContainer}>
           <View style={styles.authorContainer}>
-            <View style={[styles.authorIndicator, { backgroundColor: blogData.color || '#8FBC8F' }]} />
+            <View style={[styles.authorIndicator, { backgroundColor: blogData.category === 'health' ? '#a8e6cf' : '#ffd3b6' }]} />
             <Text style={styles.authorText}>โดย {blogData.author}</Text>
           </View>
           {blogData.photo && (
@@ -162,7 +159,7 @@ const BlogDetail = ({ route }) => {
             />
             <TouchableOpacity style={styles.submitButton} onPress={handleReport}>
               <LinearGradient
-                colors={['#8FBC8F', '#6B8E23']}
+                colors={['#4A90E2', '#50E3C2']}
                 style={styles.submitButtonGradient}
               >
                 <Text style={styles.submitButtonText}>ส่งรายงาน</Text>
@@ -178,20 +175,16 @@ const BlogDetail = ({ route }) => {
   );
 };
 
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F6FFF5',
   },
-  scrollContainer: {
-    flexGrow: 1,
-  },
-  header: {
+  headerGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    paddingTop: 40,
+    paddingTop: 50,
   },
   backButton: {
     padding: 8,
@@ -205,6 +198,9 @@ const styles = StyleSheet.create({
     color: '#FFF',
     flex: 1,
     fontFamily: 'Kanit-Bold',
+  },
+  scrollContainer: {
+    flexGrow: 1,
   },
   contentContainer: {
     flex: 1,
@@ -284,7 +280,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   selectedOption: {
-    backgroundColor: '#8FBC8F',
+    backgroundColor: '#4A90E2',
   },
   modalOptionText: {
     fontSize: 16,
@@ -336,6 +332,22 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
     fontFamily: 'Kanit-Bold',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    fontSize: 18,
+    color: '#FF6B6B',
+    marginBottom: 20,
+    fontFamily: 'Kanit-Regular',
   },
 });
 
