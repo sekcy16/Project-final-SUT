@@ -3,97 +3,129 @@ import {
   View,
   Text,
   StyleSheet,
+  ScrollView,
+  Dimensions,
   TextInput,
   TouchableOpacity,
-  ScrollView,
   Alert,
-  Dimensions,
 } from "react-native";
-import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { LineChart } from "react-native-chart-kit";
-import { LinearGradient } from 'expo-linear-gradient';
+import {
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  orderBy,
+  deleteDoc,
+  doc,
+  updateDoc,
+} from "firebase/firestore";
 import { firebaseDB, firebaseAuth } from "../config/firebase.config";
-import { collection, addDoc, getDocs, query, orderBy, deleteDoc, doc, limit } from "firebase/firestore";
+import { LinearGradient } from 'expo-linear-gradient';
+import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 
 const WeightProgress = ({ navigation }) => {
   const [weight, setWeight] = useState("");
-  const [weightHistory, setWeightHistory] = useState([]);
-  const [todayWeight, setTodayWeight] = useState(null);
+  const [history, setHistory] = useState([]);
   const [chartData, setChartData] = useState([]);
 
   useEffect(() => {
-    loadWeightHistory();
+    loadHistory();
   }, []);
 
-  const loadWeightHistory = async () => {
-    try {
-      const user = firebaseAuth.currentUser;
-      if (user) {
+  const loadHistory = async () => {
+    const user = firebaseAuth.currentUser;
+    if (user) {
+      try {
         const weightHistoryRef = collection(firebaseDB, "users", user.uid, "weightHistory");
-        const q = query(weightHistoryRef, orderBy("timestamp", "desc"));
+        const q = query(weightHistoryRef, orderBy("date", "desc"), orderBy("time", "desc"));
         const querySnapshot = await getDocs(q);
-        const history = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        setWeightHistory(history);
-        updateTodayWeight(history);
-        updateChartData(history);
+
+        const fetchedHistory = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+        setHistory(fetchedHistory);
+        updateChartData(fetchedHistory);
+      } catch (error) {
+        console.error("Error loading history from Firestore:", error);
+        Alert.alert("Error", "Failed to load weight history.");
       }
-    } catch (error) {
-      console.error("Error loading weight history:", error);
-      Alert.alert("Error", "Failed to load weight history. Please try again.");
+    } else {
+      Alert.alert("Error", "No user is logged in.");
     }
   };
 
-  const updateTodayWeight = (history) => {
-    const today = new Date().toDateString();
-    const todayEntry = history.find(entry => new Date(entry.timestamp).toDateString() === today);
-    setTodayWeight(todayEntry ? todayEntry.weight : null);
-  };
-
-  const updateChartData = (history) => {
-    const last7Days = history.slice(0, 7).map(item => item.weight).reverse();
+  const updateChartData = (historyData) => {
+    const last7Days = historyData.slice(0, 7).map(item => parseFloat(item.weight)).filter(weight => !isNaN(weight)).reverse();
     setChartData(last7Days);
   };
 
   const addWeightEntry = async () => {
-    if (weight && !isNaN(parseFloat(weight))) {
-      const user = firebaseAuth.currentUser;
-      if (user) {
+    const weightValue = parseFloat(weight);
+    if (isNaN(weightValue) || weightValue <= 0) {
+      Alert.alert("Invalid Input", "Please enter a valid weight.");
+      return;
+    }
+
+    const user = firebaseAuth.currentUser;
+    if (user) {
+      try {
+        const now = new Date();
         const newEntry = {
-          weight: parseFloat(weight),
-          timestamp: new Date().toISOString(),
+          date: now.toLocaleDateString(),
+          time: now.toLocaleTimeString(),
+          weight: weightValue,
         };
-        try {
-          const weightHistoryRef = collection(firebaseDB, "users", user.uid, "weightHistory");
-          await addDoc(weightHistoryRef, newEntry);
-          setWeight("");
-          loadWeightHistory(); // Reload the history after adding a new entry
-          Alert.alert("Success", "Weight entry added successfully.");
-        } catch (error) {
-          console.error("Error adding weight entry:", error);
-          Alert.alert("Error", "Failed to add weight entry. Please try again.");
-        }
+
+        const weightHistoryRef = collection(firebaseDB, "users", user.uid, "weightHistory");
+        await addDoc(weightHistoryRef, newEntry);
+
+        setHistory([newEntry, ...history]);
+        updateChartData([newEntry, ...history]);
+        setWeight("");
+        Alert.alert("เสร็จสิ้น", "เพิ่มข้อมูลน้ำหนักแล้ว");
+
+        // Update the profile with the new weight
+        await updateProfile(weightValue);
+      } catch (error) {
+        console.error("Error saving to Firestore:", error);
+        Alert.alert("Error", "Failed to save weight entry.");
       }
     } else {
-      Alert.alert("Invalid Input", "Please enter a valid weight.");
+      Alert.alert("Error", "No user is logged in.");
     }
   };
 
-  const deleteEntry = async (docId) => {
+  const deleteEntry = async (index, docId) => {
     const user = firebaseAuth.currentUser;
     if (user && docId) {
       try {
         await deleteDoc(doc(firebaseDB, "users", user.uid, "weightHistory", docId));
-        loadWeightHistory(); // Reload the history after deleting an entry
-        Alert.alert("Success", "Entry deleted successfully.");
+        const updatedHistory = history.filter((_, i) => i !== index);
+        setHistory(updatedHistory);
+        updateChartData(updatedHistory);
+        Alert.alert("เสร็จสิ้น", "ลบข้อมูลแล้ว");
       } catch (error) {
         console.error("Error deleting from Firestore:", error);
         Alert.alert("Error", "Failed to delete entry.");
       }
     } else {
       Alert.alert("Error", "Unable to delete entry.");
+    }
+  };
+
+  const updateProfile = async (weight) => {
+    const user = firebaseAuth.currentUser;
+    if (user) {
+      try {
+        const userProfileRef = doc(firebaseDB, "users", user.uid);
+        await updateDoc(userProfileRef, {
+          weight: weight,
+          lastActive: new Date().toISOString()
+        });
+      } catch (error) {
+        console.error("Error updating profile in Firestore:", error);
+      }
+    } else {
+      console.error("No user is logged in");
     }
   };
 
@@ -122,11 +154,9 @@ const WeightProgress = ({ navigation }) => {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.todayContainer}>
-            <Text style={styles.todayLabel}>น้ำหนักวันนี้</Text>
-            <Text style={styles.todayValue}>
-              {todayWeight ? `${todayWeight} kg` : "ยังไม่มีข้อมูล"}
-            </Text>
+          <View style={styles.today}>
+            <Text style={styles.todayText}>วันนี้</Text>
+            <Text style={styles.todayValue}>{history[0]?.weight || "-"} kg</Text>
           </View>
 
           {chartData.length > 0 && (
@@ -160,16 +190,18 @@ const WeightProgress = ({ navigation }) => {
 
           <View style={styles.history}>
             <Text style={styles.historyTitle}>ประวัติ</Text>
-            {weightHistory.map((item) => (
+            {history.map((item, index) => (
               <View key={item.id} style={styles.historyItem}>
                 <View>
-                  <Text style={styles.historyDate}>{new Date(item.timestamp).toLocaleDateString()}</Text>
-                  <Text style={styles.historyTime}>{new Date(item.timestamp).toLocaleTimeString()}</Text>
+                  <Text style={styles.historyDate}>{item.date}</Text>
+                  <Text style={styles.historyTime}>{item.time}</Text>
                 </View>
-                <Text style={styles.historyValue}>{item.weight} kg</Text>
+                <View style={styles.historyValueContainer}>
+                  <Text style={styles.historyValue}>{item.weight} kg</Text>
+                </View>
                 <TouchableOpacity
                   style={styles.deleteButton}
-                  onPress={() => deleteEntry(item.id)}
+                  onPress={() => deleteEntry(index, item.id)}
                 >
                   <Icon name="delete-outline" size={24} color="#FF3B30" />
                 </TouchableOpacity>
@@ -235,17 +267,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginLeft: 10,
   },
-  todayContainer: {
-    alignItems: 'center',
+  today: {
     marginBottom: 20,
   },
-  todayLabel: {
+  todayText: {
     fontSize: 18,
-    color: "#666",
+    marginBottom: 5,
     fontFamily: 'Kanit-Regular',
   },
   todayValue: {
-    fontSize: 36,
+    fontSize: 32,
     fontWeight: "bold",
     color: "#4A90E2",
     fontFamily: 'Kanit-Bold',
@@ -281,11 +312,14 @@ const styles = StyleSheet.create({
     color: "#666",
     fontFamily: 'Kanit-Regular',
   },
+  historyValueContainer: {
+    alignItems: 'center',
+  },
   historyValue: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#4A90E2",
     fontFamily: 'Kanit-Bold',
+    color: "#4A90E2",
   },
   deleteButton: {
     padding: 5,

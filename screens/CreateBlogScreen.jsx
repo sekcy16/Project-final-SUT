@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert, SafeAreaView, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert, SafeAreaView, ScrollView, Platform, StatusBar } from 'react-native';
 import { getFirestore, collection, addDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getAuth } from 'firebase/auth';
@@ -85,86 +85,98 @@ const CreateBlogScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <LinearGradient colors={['#4A90E2', '#50E3C2']} style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Icon name="arrow-left" size={24} color="#FFF" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>สร้างบทความใหม่</Text>
-      </LinearGradient>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="หัวข้อบทความ"
-          value={title}
-          onChangeText={setTitle}
-          maxLength={100}
-          placeholderTextColor="#999"
-        />
-        <TextInput
-          style={[styles.input, styles.contentInput]}
-          placeholder="เนื้อหาบทความ"
-          value={content}
-          onChangeText={setContent}
-          multiline
-          placeholderTextColor="#999"
-        />
-        <Text style={styles.label}>หมวดหมู่:</Text>
-        <View style={styles.categoryContainer}>
-          {['health', 'recipe'].map((cat) => (
-            <TouchableOpacity
-              key={cat}
-              style={[styles.category, category === cat && styles.selectedCategory]}
-              onPress={() => setCategory(cat)}
-            >
-              <Text style={[styles.categoryText, category === cat && styles.selectedCategoryText]}>
-                {cat === 'health' ? 'สุขภาพ' : 'สูตรอาหาร'}
-              </Text>
-            </TouchableOpacity>
-          ))}
+    <LinearGradient colors={['#4A90E2', '#50E3C2']} style={styles.container}>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Icon name="arrow-left" size={28} color="#FFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>สร้างบทความใหม่</Text>
         </View>
-        <TouchableOpacity style={styles.photoButton} onPress={handleChoosePhoto}>
-          <LinearGradient colors={['#4A90E2', '#50E3C2']} style={styles.photoButtonGradient}>
-            <Icon name="image-plus" size={24} color="#FFF" />
-            <Text style={styles.photoButtonText}>เลือกรูปภาพ</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-        {photo && <Image source={{ uri: photo.uri }} style={styles.photoPreview} />}
+        <ScrollView style={styles.content}>
+          <View style={styles.formContainer}>
+            <TextInput
+              style={styles.input}
+              placeholder="หัวข้อบทความ"
+              value={title}
+              onChangeText={setTitle}
+              maxLength={100}
+              placeholderTextColor="#999"
+            />
+            <TextInput
+              style={[styles.input, styles.contentInput]}
+              placeholder="เนื้อหาบทความ"
+              value={content}
+              onChangeText={setContent}
+              multiline
+              placeholderTextColor="#999"
+            />
+            <Text style={styles.label}>หมวดหมู่:</Text>
+            <View style={styles.categoryContainer}>
+              {['health', 'recipe'].map((cat) => (
+                <TouchableOpacity
+                  key={cat}
+                  style={[styles.category, category === cat && styles.selectedCategory]}
+                  onPress={() => setCategory(cat)}
+                >
+                  <Text style={[styles.categoryText, category === cat && styles.selectedCategoryText]}>
+                    {cat === 'health' ? 'สุขภาพ' : 'สูตรอาหาร'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TouchableOpacity style={styles.photoButton} onPress={handleChoosePhoto}>
+              <Icon name="image-plus" size={24} color="#4A90E2" />
+              <Text style={styles.photoButtonText}>เลือกรูปภาพ</Text>
+            </TouchableOpacity>
+            {photo && <Image source={{ uri: photo.uri }} style={styles.photoPreview} />}
+          </View>
+        </ScrollView>
         <TouchableOpacity style={styles.createButton} onPress={handleCreateBlog}>
           <LinearGradient colors={['#4A90E2', '#50E3C2']} style={styles.createButtonGradient}>
             <Text style={styles.createButtonText}>สร้างบทความ</Text>
           </LinearGradient>
         </TouchableOpacity>
-      </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F6FFF5',
+  },
+  safeArea: {
+    flex: 1,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    paddingHorizontal: 15,
     paddingTop: 50,
+    paddingBottom: 15,
   },
   backButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    padding: 5,
   },
   headerTitle: {
-    marginLeft: 16,
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFF',
-    flex: 1,
     fontFamily: 'Kanit-Bold',
+    color: '#FFF',
+    marginLeft: 15,
+    textShadowColor: 'rgba(0, 0, 0, 0.1)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
-  scrollContainer: {
+  content: {
+    flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    paddingTop: 20,
+  },
+  formContainer: {
     padding: 20,
   },
   input: {
@@ -175,6 +187,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Kanit-Regular',
     elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   contentInput: {
     height: 150,
@@ -199,6 +215,10 @@ const styles = StyleSheet.create({
     marginRight: 10,
     alignItems: 'center',
     elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   selectedCategory: {
     backgroundColor: '#4A90E2',
@@ -212,19 +232,21 @@ const styles = StyleSheet.create({
     color: '#FFF',
   },
   photoButton: {
-    marginBottom: 15,
-    borderRadius: 10,
-    overflow: 'hidden',
-    elevation: 2,
-  },
-  photoButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#FFF',
     padding: 15,
+    borderRadius: 10,
+    marginBottom: 15,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   photoButtonText: {
-    color: '#FFF',
+    color: '#4A90E2',
     fontWeight: 'bold',
     marginLeft: 10,
     fontSize: 16,
@@ -237,19 +259,28 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   createButton: {
-    borderRadius: 10,
-    overflow: 'hidden',
-    elevation: 2,
+    position: 'absolute',
+    right: 20,
+    bottom: 20,
+    borderRadius: 30,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
   createButtonGradient: {
-    padding: 15,
+    flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 30,
   },
   createButtonText: {
+    fontFamily: 'Kanit-Regular',
+    fontSize: 16,
     color: '#FFF',
-    fontWeight: 'bold',
-    fontSize: 18,
-    fontFamily: 'Kanit-Bold',
+    marginLeft: 5,
   },
 });
 

@@ -329,8 +329,27 @@ const PatientDetailScreen = ({ route, navigation }) => {
             )}
           </View>
         );
-      default:
-        return null;
+        case "relatives":
+          return (
+            <View style={styles.relativesContainer}>
+              <Text style={styles.relativesTitle}>ข้อมูลญาติ</Text>
+              {patientData.relatives && patientData.relatives.length > 0 ? (
+                patientData.relatives.map((relative, index) => (
+                  <View key={index} style={styles.relativeItem}>
+                    <MaterialCommunityIcons name="account" size={24} color="#2196F3" />
+                    <View style={styles.relativeInfo}>
+                      <Text style={styles.relativeName}>{relative.name}</Text>
+                      <Text style={styles.relativePhone}>{relative.phoneNumber}</Text>
+                    </View>
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.noDataText}>ไม่มีข้อมูลญาติ</Text>
+              )}
+            </View>
+          );
+        default:
+          return null;
     }
   };
 
@@ -418,6 +437,19 @@ const PatientDetailScreen = ({ route, navigation }) => {
           />
           <Text style={[styles.tabText, selectedTab === "diary" && styles.activeTabText]}>
             ไดอารี่
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, selectedTab === "relatives" && styles.activeTab]}
+          onPress={() => setSelectedTab("relatives")}
+        >
+          <MaterialCommunityIcons
+            name="account-group"
+            size={24}
+            color={selectedTab === "relatives" ? "#2196F3" : "#757575"}
+          />
+          <Text style={[styles.tabText, selectedTab === "relatives" && styles.activeTabText]}>
+            ญาติ
           </Text>
         </TouchableOpacity>
       </View>
@@ -674,6 +706,42 @@ const styles = StyleSheet.create({
   exerciseInfo: {
     fontSize: 14,
     color: "#757575",
+  },
+  relativesContainer: {
+    padding: 15,
+  },
+  relativesTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 15,
+    color: "#333",
+  },
+  relativeItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "white",
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 10,
+    elevation: 2,
+  },
+  relativeInfo: {
+    marginLeft: 15,
+  },
+  relativeName: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#333",
+  },
+  relativePhone: {
+    fontSize: 16,
+    color: "#757575",
+    marginTop: 5,
+  },
+  relativeRole: {
+    fontSize: 14,
+    color: "#2196F3",
+    marginTop: 5,
   },
 });
 

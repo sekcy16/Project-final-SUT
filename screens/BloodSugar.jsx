@@ -81,7 +81,7 @@ const BloodSugar = ({ navigation }) => {
         setHistory([newEntry, ...history]);
         updateChartData([newEntry, ...history]);
         setBloodSugarLevel("");
-        Alert.alert("Success", "Blood sugar level added successfully.");
+        Alert.alert("เสร็จสิ้น", "เพิ่มข้อมูลเรียบร้อย");
       } catch (error) {
         console.error("Error saving to Firestore:", error);
         Alert.alert("Error", "Failed to save blood sugar level.");
@@ -99,7 +99,7 @@ const BloodSugar = ({ navigation }) => {
         const updatedHistory = history.filter((_, i) => i !== index);
         setHistory(updatedHistory);
         updateChartData(updatedHistory);
-        Alert.alert("Success", "Entry deleted successfully.");
+        Alert.alert("เสร็จสิ้น", "ลบข้อมูลเรียบร้อย");
       } catch (error) {
         console.error("Error deleting from Firestore:", error);
         Alert.alert("Error", "Failed to delete entry.");

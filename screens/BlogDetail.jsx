@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Modal, Pressable, TextInput, ScrollView, SafeAreaView, Image } from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Modal, TextInput, ScrollView, SafeAreaView, Image } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { getFirestore, doc, getDoc, collection, addDoc, Timestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
@@ -86,136 +86,152 @@ const BlogDetail = ({ route }) => {
       <SafeAreaView style={styles.errorContainer}>
         <Text style={styles.errorText}>Blog not found.</Text>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Icon name="arrow-back" size={24} color="#000" />
+          <Icon name="arrow-left" size={24} color="#000" />
         </TouchableOpacity>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <LinearGradient colors={['#4A90E2', '#50E3C2']} style={styles.headerGradient}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Icon name="arrow-back" size={24} color="#FFF" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{blogData.title}</Text>
-      </LinearGradient>
-
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.contentContainer}>
-          <View style={styles.authorContainer}>
-            <View style={[styles.authorIndicator, { backgroundColor: blogData.category === 'health' ? '#a8e6cf' : '#ffd3b6' }]} />
-            <Text style={styles.authorText}>โดย {blogData.author}</Text>
-          </View>
-          {blogData.photo && (
-            <Image source={{ uri: blogData.photo }} style={styles.blogImage} />
-          )}
-          <Text style={styles.contentText}>{blogData.content}</Text>
+    <LinearGradient colors={['#4A90E2', '#50E3C2']} style={styles.container}>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Icon name="arrow-left" size={28} color="#FFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{blogData.title}</Text>
         </View>
-      </ScrollView>
 
-      <TouchableOpacity
-        style={styles.reportButton}
-        onPress={() => setModalVisible(true)}
-      >
-        <LinearGradient
-          colors={['#FF6B6B', '#FF4C4C']}
-          style={styles.reportButtonGradient}
+        <ScrollView style={styles.content}>
+          <LinearGradient colors={['#ffffff', '#f0f0f0']} style={styles.blogGradient}>
+            <View style={styles.authorContainer}>
+              <View style={[styles.categoryContainer, { backgroundColor: blogData.category === 'health' ? '#a8e6cf' : '#ffd3b6' }]}>
+                <Text style={styles.blogCategory}>{blogData.category === 'health' ? 'สุขภาพ' : 'สูตรอาหาร'}</Text>
+              </View>
+              <Text style={styles.authorText}>โดย {blogData.author}</Text>
+            </View>
+            {blogData.photo && (
+              <Image source={{ uri: blogData.photo }} style={styles.blogImage} />
+            )}
+            <Text style={styles.contentText}>{blogData.content}</Text>
+          </LinearGradient>
+        </ScrollView>
+
+        <TouchableOpacity
+          style={styles.reportButton}
+          onPress={() => setModalVisible(true)}
         >
-          <Icon name="flag" size={24} color="white" />
-        </LinearGradient>
-      </TouchableOpacity>
+          <LinearGradient
+            colors={['#FF6B6B', '#FF4C4C']}
+            style={styles.reportButtonGradient}
+          >
+            <Icon name="flag" size={24} color="white" />
+          </LinearGradient>
+        </TouchableOpacity>
 
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>เลือกประเภทการรายงาน</Text>
-            {['เนื้อหาไม่เหมาะสม', 'การละเมิดสิทธิบัตร', 'อื่น ๆ'].map((type) => (
-              <TouchableOpacity
-                key={type}
-                style={[
-                  styles.modalOption,
-                  selectedReportType === type ? styles.selectedOption : null,
-                ]}
-                onPress={() => setSelectedReportType(type)}
-              >
-                <Text style={[
-                  styles.modalOptionText,
-                  selectedReportType === type ? styles.selectedOptionText : null,
-                ]}>{type}</Text>
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={modalVisible}
+          onRequestClose={() => setModalVisible(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>เลือกประเภทการรายงาน</Text>
+              {['เนื้อหาไม่เหมาะสม', 'การละเมิดสิทธิบัตร', 'อื่น ๆ'].map((type) => (
+                <TouchableOpacity
+                  key={type}
+                  style={[
+                    styles.modalOption,
+                    selectedReportType === type ? styles.selectedOption : null,
+                  ]}
+                  onPress={() => setSelectedReportType(type)}
+                >
+                  <Text style={[
+                    styles.modalOptionText,
+                    selectedReportType === type ? styles.selectedOptionText : null,
+                  ]}>{type}</Text>
+                </TouchableOpacity>
+              ))}
+              <TextInput
+                style={styles.commentsInput}
+                placeholder="พิมพ์คำอธิบายเพิ่มเติม (ถ้ามี)"
+                value={additionalComments}
+                onChangeText={setAdditionalComments}
+                multiline
+              />
+              <TouchableOpacity style={styles.submitButton} onPress={handleReport}>
+                <LinearGradient
+                  colors={['#4A90E2', '#50E3C2']}
+                  style={styles.submitButtonGradient}
+                >
+                  <Text style={styles.submitButtonText}>ส่งรายงาน</Text>
+                </LinearGradient>
               </TouchableOpacity>
-            ))}
-            <TextInput
-              style={styles.commentsInput}
-              placeholder="พิมพ์คำอธิบายเพิ่มเติม (ถ้ามี)"
-              value={additionalComments}
-              onChangeText={setAdditionalComments}
-              multiline
-            />
-            <TouchableOpacity style={styles.submitButton} onPress={handleReport}>
-              <LinearGradient
-                colors={['#4A90E2', '#50E3C2']}
-                style={styles.submitButtonGradient}
-              >
-                <Text style={styles.submitButtonText}>ส่งรายงาน</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)}>
-              <Text style={styles.cancelButtonText}>ยกเลิก</Text>
-            </TouchableOpacity>
+              <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)}>
+                <Text style={styles.cancelButtonText}>ยกเลิก</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </Modal>
-    </SafeAreaView>
+        </Modal>
+      </SafeAreaView>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F6FFF5',
   },
-  headerGradient: {
+  safeArea: {
+    flex: 1,
+  },
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    paddingHorizontal: 15,
     paddingTop: 50,
+    paddingBottom: 15,
   },
   backButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    padding: 5,
   },
   headerTitle: {
-    marginLeft: 16,
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFF',
-    flex: 1,
     fontFamily: 'Kanit-Bold',
-  },
-  scrollContainer: {
-    flexGrow: 1,
-  },
-  contentContainer: {
+    color: '#FFF',
+    marginLeft: 15,
     flex: 1,
-    padding: 16,
+    textShadowColor: 'rgba(0, 0, 0, 0.1)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  content: {
+    flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+  },
+  blogGradient: {
+    padding: 20,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
   },
   authorContainer: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 15,
   },
-  authorIndicator: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 8,
+  categoryContainer: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 15,
+  },
+  blogCategory: {
+    fontSize: 12,
+    fontFamily: 'Kanit-Regular',
+    color: '#333',
   },
   authorText: {
     fontSize: 14,
@@ -225,9 +241,8 @@ const styles = StyleSheet.create({
   blogImage: {
     width: '100%',
     height: 200,
-    resizeMode: 'cover',
     borderRadius: 10,
-    marginBottom: 16,
+    marginBottom: 15,
   },
   contentText: {
     fontSize: 16,
@@ -337,15 +352,17 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#f5f5f5',
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#f5f5f5',
   },
   errorText: {
     fontSize: 18,
-    color: '#FF6B6B',
+    color: '#666',
     marginBottom: 20,
     fontFamily: 'Kanit-Regular',
   },

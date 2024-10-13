@@ -1,82 +1,67 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, SafeAreaView, ScrollView, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, SafeAreaView, ScrollView, StatusBar, Platform } from 'react-native';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { LinearGradient } from 'expo-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { ProgressBar } from 'react-native-paper';
-
-const { width } = Dimensions.get('window');
 
 const SummaryPage = ({ route }) => {
   const { date } = route.params;
-  const [formattedDate, setFormattedDate] = useState('');
-
   const [diary, setDiary] = useState({
     totalCalories: 0,
     totalProtein: 0,
     totalCarbs: 0,
     totalFat: 0,
-    exercises: {
-      list: [],
-      totalCaloriesBurned: 0,
-      totalDuration: 0
-    }
+    exercises: []
   });
-  const [goals, setGoals] = useState({
-    tdee: 0,
-    carbs: 0,
-    protein: 0,
-    fat: 0,
-  });
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-
+  const [goals, setGoals] = useState({});
   const firestore = getFirestore();
   const auth = getAuth();
   const user = auth.currentUser;
 
   useEffect(() => {
     const fetchData = async () => {
-      setIsLoading(true);
-      setError(null);
       try {
         if (!user) {
-          throw new Error('ไม่พบข้อมูลผู้ใช้ กรุณาเข้าสู่ระบบ');
+          console.log('No user logged in');
+          return;
         }
-  
-        const localDate = new Date(date);
-        localDate.setMinutes(localDate.getMinutes() - localDate.getTimezoneOffset());
-        const formattedDate = localDate.toISOString().split('T')[0];
-        setFormattedDate(localDate.toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' }));
-  
+
+        // Format the date string to match your Firestore document ID format
+        const formattedDate = new Date(date).toISOString().split('T')[0];
+
+        // Fetch diary data for the specific date
         const diaryRef = doc(firestore, 'users', user.uid, 'entries', formattedDate);
+        console.log(`Fetching diary from path: ${diaryRef.path}`);
         const diarySnap = await getDoc(diaryRef);
-  
+
         if (diarySnap.exists()) {
+          console.log('Diary data found:', diarySnap.data());
           const diaryData = diarySnap.data();
           const meals = diaryData.meals || {};
           const exercises = diaryData.exercises || [];
-  
+
           let totalCalories = 0;
           let totalProtein = 0;
           let totalCarbs = 0;
           let totalFat = 0;
           let totalCaloriesBurned = 0;
           let totalDuration = 0;
-  
+
+          // Aggregate data from each meal
           Object.values(meals).forEach(meal => {
             totalCalories += meal.calories || 0;
             totalProtein += meal.protein || 0;
             totalCarbs += meal.carbs || 0;
             totalFat += meal.fat || 0;
           });
-  
+
+          // Aggregate data from each exercise
           exercises.forEach(exercise => {
             totalCaloriesBurned += exercise.calories || 0;
             totalDuration += exercise.duration || 0;
           });
-  
+
           setDiary({
             totalCalories,
             totalProtein,
@@ -88,12 +73,29 @@ const SummaryPage = ({ route }) => {
               totalDuration
             }
           });
+        } else {
+          console.log('No diary data found for the selected date');
+          // Reset diary state when no data is found
+          setDiary({
+            totalCalories: 0,
+            totalProtein: 0,
+            totalCarbs: 0,
+            totalFat: 0,
+            exercises: {
+              list: [],
+              totalCaloriesBurned: 0,
+              totalDuration: 0
+            }
+          });
         }
-  
+
+        // Fetch user goals including TDEE (this doesn't change with date)
         const userRef = doc(firestore, 'users', user.uid);
+        console.log(`Fetching user from path: ${userRef.path}`);
         const userSnap = await getDoc(userRef);
-  
+
         if (userSnap.exists()) {
+          console.log('User data found:', userSnap.data());
           const userData = userSnap.data();
           setGoals({
             tdee: userData.tdee || 0,
@@ -102,59 +104,25 @@ const SummaryPage = ({ route }) => {
             fat: userData.macronutrients?.fat || 0,
           });
         } else {
-          console.log('ไม่พบข้อมูลผู้ใช้');
+          console.log('No user data found');
         }
       } catch (error) {
-        console.error('เกิดข้อผิดพลาดในการดึงข้อมูล:', error);
-        setError(error.message);
-      } finally {
-        setIsLoading(false);
+        console.error('Error fetching data: ', error);
       }
     };
-  
+
     fetchData();
-  }, [firestore, user?.uid, date]);
+  }, [firestore, user?.uid, date]); // Add date to the dependency array
 
-  const renderExerciseItem = ({ item }) => (
-    <View style={styles.exerciseItem}>
-      <Icon name="run" size={24} color="#4caf50" style={styles.exerciseIcon} />
-      <View style={styles.exerciseDetails}>
-        <Text style={styles.exerciseName}>{item.name}</Text>
-        <Text style={styles.exerciseText}>แคลอรี่ที่เผาผลาญ: {item.calories || 0} แคล</Text>
-        <Text style={styles.exerciseText}>ระยะเวลา: {item.duration || 0} นาที</Text>
-      </View>
-    </View>
-  );
-
-  const MacroProgressBar = ({ title, current, goal, color, icon }) => {
-    const currentValue = typeof current === 'number' ? current : 0;
-    const goalValue = typeof goal === 'number' && goal > 0 ? goal : 1; // Prevent division by zero
-    const progress = Math.min(currentValue / goalValue, 1);
-
+  if (!diary || !goals) {
     return (
-      <View style={styles.macroProgressContainer}>
-        <View style={styles.macroTitleContainer}>
-          <Icon name={icon} size={24} color={color} style={styles.macroIcon} />
-          <Text style={styles.macroTitle}>{title}</Text>
-        </View>
-        <View style={styles.macroProgressContent}>
-          <ProgressBar
-            progress={progress}
-            color={color}
-            style={styles.progressBar}
-          />
-          <Text style={styles.macroText}>
-            {currentValue.toFixed(1)}g / {goalValue.toFixed(1)}g
-          </Text>
-        </View>
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );
-  };
-
+  }
   const CalorieSummary = ({ consumed, goal }) => {
-    const consumedValue = typeof consumed === 'number' ? consumed : 0;
-    const goalValue = typeof goal === 'number' ? goal : 0;
-    const remaining = goalValue - consumedValue;
+    const remaining = goal - consumed;
     const isOverConsumed = remaining < 0;
 
     return (
@@ -164,12 +132,12 @@ const SummaryPage = ({ route }) => {
           <View style={styles.calorieSummaryItem}>
             <Icon name="fire" size={24} color="#FF6347" />
             <Text style={styles.calorieSummaryLabel}>เป้าหมาย</Text>
-            <Text style={styles.calorieSummaryValue}>{goalValue} แคล</Text>
+            <Text style={styles.calorieSummaryValue}>{goal} แคล</Text>
           </View>
           <View style={styles.calorieSummaryItem}>
             <Icon name="food-apple" size={24} color="#4CAF50" />
             <Text style={styles.calorieSummaryLabel}>บริโภค</Text>
-            <Text style={styles.calorieSummaryValue}>{consumedValue} แคล</Text>
+            <Text style={styles.calorieSummaryValue}>{consumed} แคล</Text>
           </View>
           <View style={styles.calorieSummaryItem}>
             <Icon name={isOverConsumed ? "alert-circle" : "check-circle"} size={24} color={isOverConsumed ? "#FF6347" : "#4CAF50"} />
@@ -183,125 +151,107 @@ const SummaryPage = ({ route }) => {
     );
   };
 
-  if (isLoading) {
+  const renderExerciseItem = ({ item }) => (
+    <View style={styles.exerciseItem}>
+      <Icon name="run" size={24} color="#4A90E2" style={styles.exerciseIcon} />
+      <View style={styles.exerciseDetails}>
+        <Text style={styles.exerciseName}>{item.name}</Text>
+        <Text style={styles.exerciseText}>เผาผลาญทั้งหมด: {item.calories} แคลอรี่</Text>
+        <Text style={styles.exerciseText}>ระยะเวลา: {item.duration} นาที</Text>
+      </View>
+    </View>
+  );
+
+  const MacroProgressBar = ({ title, current, goal, color }) => (
+    <View style={styles.macroProgressContainer}>
+      <Text style={styles.macroTitle}>{title}</Text>
+      <View style={styles.progressBarContainer}>
+        <View style={[styles.progressBar, { width: `${Math.min((current / goal) * 100, 100)}%`, backgroundColor: color }]} />
+      </View>
+      <Text style={styles.macroText}>{current}g / {goal}g</Text>
+    </View>
+  );
+
+  const HeaderComponent = () => (
+    <>
+      <View style={styles.statusBarPlaceholder} />
+      <LinearGradient colors={['#4A90E2', '#50E3C2']} style={styles.header}>
+        <Text style={styles.headerText}>สรุปของวันที่ {new Date(date).toLocaleDateString()}</Text>
+      </LinearGradient>
+
+      <CalorieSummary consumed={diary.totalCalories} goal={goals.tdee || 0} />
+
+      <View style={styles.card}>
+        <Text style={styles.cardHeader}>สารอาหาร</Text>
+        <MacroProgressBar title="คาร์โบไฮเดรต" current={diary.totalCarbs} goal={goals.carbs || 0} color="#FFB300" />
+        <MacroProgressBar title="โปรตีน" current={diary.totalProtein} goal={goals.protein || 0} color="#2196F3" />
+        <MacroProgressBar title="ไขมัน" current={diary.totalFat} goal={goals.fat || 0} color="#FF5722" />
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.cardHeader}>การออกกำลังกาย</Text>
+        <View style={styles.exerciseSummary}>
+          <View style={styles.exerciseSummaryItem}>
+            <Icon name="fire" size={24} color="#4A90E2" />
+            <Text style={styles.exerciseSummaryText}>{diary.exercises.totalCaloriesBurned} แคลอรี่</Text>
+          </View>
+          <View style={styles.exerciseSummaryItem}>
+            <Icon name="clock-outline" size={24} color="#4A90E2" />
+            <Text style={styles.exerciseSummaryText}>{diary.exercises.totalDuration} นาที</Text>
+          </View>
+        </View>
+      </View>
+    </>
+  );
+
+  if (!diary || !goals) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4A90E2" />
-        <Text style={styles.loadingText}>กำลังโหลดข้อมูล...</Text>
+        <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );
   }
 
-  if (error) {
-    return (
-      <View style={styles.errorContainer}>
-        <Icon name="alert-circle-outline" size={48} color="#FF6347" />
-        <Text style={styles.errorText}>เกิดข้อผิดพลาด: {error}</Text>
-      </View>
-    );
-  }
-
-   return (
-    <LinearGradient colors={['#4A90E2', '#50E3C2']} style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.header}>
-          <Text style={styles.headerText}>สรุปข้อมูลวันที่ {formattedDate}</Text>
-        </View>
-        <FlatList
-          ListHeaderComponent={() => (
-            <View style={styles.content}>
-              <CalorieSummary consumed={diary.totalCalories} goal={goals.tdee} />
-              <View style={styles.card}>
-                <Text style={styles.cardHeader}>สารอาหาร</Text>
-                <MacroProgressBar
-                  title="คาร์บ"
-                  current={diary.totalCarbs}
-                  goal={goals.carbs}
-                  color="#FFB300"
-                  icon="bread-slice"
-                />
-                <MacroProgressBar
-                  title="โปรตีน"
-                  current={diary.totalProtein}
-                  goal={goals.protein}
-                  color="#2196F3"
-                  icon="egg-fried"
-                />
-                <MacroProgressBar
-                  title="ไขมัน"
-                  current={diary.totalFat}
-                  goal={goals.fat}
-                  color="#FF5722"
-                  icon="oil"
-                />
-              </View>
-  
-              <View style={styles.card}>
-                <Text style={styles.cardHeader}>การออกกำลังกาย</Text>
-                <View style={styles.exerciseSummary}>
-                  <View style={styles.exerciseSummaryItem}>
-                    <Icon name="fire" size={24} color="#4caf50" />
-                    <Text style={styles.exerciseSummaryText}>{diary.exercises.totalCaloriesBurned} แคล</Text>
-                    <Text style={styles.exerciseSummaryLabel}>แคลอรี่ที่เผาผลาญ</Text>
-                  </View>
-                  <View style={styles.exerciseSummaryItem}>
-                    <Icon name="clock-outline" size={24} color="#4caf50" />
-                    <Text style={styles.exerciseSummaryText}>{diary.exercises.totalDuration} นาที</Text>
-                    <Text style={styles.exerciseSummaryLabel}>เวลาทั้งหมด</Text>
-                  </View>
-                </View>
-              </View>
-  
-              <View style={styles.card}>
-                <Text style={styles.cardHeader}>รายการออกกำลังกาย</Text>
-              </View>
-            </View>
-          )}
-          data={diary.exercises.list}
-          renderItem={renderExerciseItem}
-          keyExtractor={(item, index) => index.toString()}
-          ListEmptyComponent={<Text style={styles.emptyListText}>ไม่มีข้อมูลการออกกำลังกายในวันนี้</Text>}
-        />
-      </SafeAreaView>
-    </LinearGradient>
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar backgroundColor="#4A90E2" barStyle="light-content" />
+      <FlatList
+        ListHeaderComponent={HeaderComponent}
+        data={diary.exercises.list}
+        keyExtractor={(item, index) => index.toString()}
+        renderItem={renderExerciseItem}
+        ListEmptyComponent={<Text style={styles.emptyListText}>No exercises recorded for this day.</Text>}
+        contentContainerStyle={styles.flatListContent}
+      />
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f5f5f5',
   },
-  safeArea: {
-    flex: 1,
+  statusBarPlaceholder: {
+    height: StatusBar.currentHeight,
+    backgroundColor: '#4A90E2',
   },
   header: {
     padding: 20,
-    alignItems: 'center',
+    paddingTop: Platform.OS === 'ios' ? 40 : 20,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
   },
   headerText: {
-    fontSize: 24,
-    fontFamily: 'Kanit-Bold',
-    color: '#FFF',
-    textShadowColor: 'rgba(0, 0, 0, 0.1)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    paddingTop: 20,
-    paddingHorizontal: 15,
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#fff',
   },
   card: {
     backgroundColor: '#fff',
-    borderRadius: 15,
-    padding: 20,
-    marginBottom: 20,
+    borderRadius: 10,
+    margin: 10,
+    padding: 15,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -310,15 +260,15 @@ const styles = StyleSheet.create({
   },
   cardHeader: {
     fontSize: 20,
-    fontFamily: 'Kanit-Bold',
-    color: '#333',
+    fontWeight: 'bold',
+    color: '#4A90E2',
     marginBottom: 15,
   },
   calorieSummaryContainer: {
     backgroundColor: '#fff',
-    borderRadius: 15,
-    padding: 20,
-    marginBottom: 20,
+    borderRadius: 10,
+    margin: 10,
+    padding: 15,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -327,8 +277,8 @@ const styles = StyleSheet.create({
   },
   calorieSummaryTitle: {
     fontSize: 20,
-    fontFamily: 'Kanit-Bold',
-    color: '#333',
+    fontWeight: 'bold',
+    color: '#4A90E2',
     marginBottom: 15,
   },
   calorieSummaryContent: {
@@ -340,13 +290,12 @@ const styles = StyleSheet.create({
   },
   calorieSummaryLabel: {
     fontSize: 14,
-    fontFamily: 'Kanit-Regular',
     color: '#666',
     marginTop: 5,
   },
   calorieSummaryValue: {
     fontSize: 18,
-    fontFamily: 'Kanit-Bold',
+    fontWeight: 'bold',
     color: '#333',
     marginTop: 5,
   },
@@ -354,55 +303,38 @@ const styles = StyleSheet.create({
     color: '#FF6347',
   },
   macroProgressContainer: {
-    marginBottom: 20,
-  },
-  macroTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  macroIcon: {
-    marginRight: 10,
+    marginBottom: 15,
   },
   macroTitle: {
     fontSize: 16,
-    fontFamily: 'Kanit-Bold',
-    color: '#333',
+    fontWeight: 'bold',
+    marginBottom: 5,
   },
-  macroProgressContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  progressBarContainer: {
+    height: 10,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 5,
+    overflow: 'hidden',
   },
   progressBar: {
-    flex: 1,
-    height: 10,
-    borderRadius: 5,
+    height: '100%',
   },
   macroText: {
-    marginLeft: 10,
     fontSize: 14,
-    fontFamily: 'Kanit-Regular',
     color: '#666',
+    marginTop: 5,
   },
-  
   exerciseSummary: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginBottom: 20,
+    marginBottom: 15,
   },
   exerciseSummaryItem: {
     alignItems: 'center',
   },
   exerciseSummaryText: {
-    fontSize: 18,
-    fontFamily: 'Kanit-Bold',
-    color: '#4caf50',
-    marginTop: 5,
-  },
-  exerciseSummaryLabel: {
-    fontSize: 14,
-    fontFamily: 'Kanit-Regular',
-    color: '#666',
+    fontSize: 16,
+    color: '#4A90E2',
     marginTop: 5,
   },
   exerciseItem: {
@@ -420,22 +352,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   exerciseName: {
-    fontSize: 16,
-    fontFamily: 'Kanit-Bold',
-    color: '#333',
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#4A90E2',
   },
   exerciseText: {
     fontSize: 14,
-    fontFamily: 'Kanit-Regular',
     color: '#666',
   },
   emptyListText: {
     fontSize: 16,
-    fontFamily: 'Kanit-Regular',
     color: '#666',
     textAlign: 'center',
     fontStyle: 'italic',
-    marginTop: 20,
   },
   loadingContainer: {
     flex: 1,
@@ -444,23 +373,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
   },
   loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    fontFamily: 'Kanit-Regular',
+    fontSize: 18,
     color: '#4A90E2',
   },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-  },
-  errorText: {
-    marginTop: 10,
-    fontSize: 16,
-    fontFamily: 'Kanit-Regular',
-    color: '#FF6347',
-    textAlign: 'center',
+  flatListContent: {
+    paddingBottom: 20,
   },
 });
 

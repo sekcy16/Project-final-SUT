@@ -72,7 +72,7 @@ const ExerciseEntry = () => {
         date: date
       }, { merge: true });
       
-      Alert.alert('Success', `Added ${exercise.name} to your diary`);
+      Alert.alert('สำเร็จ', `เพิ่ม ${exercise.name} เรียบร้อยแล้ว`);
       navigation.goBack();
     } catch (error) {
       console.error('Error adding exercise to diary:', error);
