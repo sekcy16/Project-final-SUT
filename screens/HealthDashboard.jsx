@@ -1,13 +1,6 @@
-import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  Dimensions,
-  RefreshControl,
-} from "react-native";
+import { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, RefreshControl } from "react-native";
+import { Pedometer } from "expo-sensors";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -25,9 +18,9 @@ import {
   onSnapshot,
   orderBy,
   limit,
+  addDoc,
 } from "firebase/firestore";
 import { Svg, Circle, Path, G, Text as SvgText } from "react-native-svg";
-
 const { width, height } = Dimensions.get("window");
 
 const HealthDashboard = ({ navigation }) => {
@@ -53,12 +46,98 @@ const HealthDashboard = ({ navigation }) => {
   const [carbsGoal, setCarbsGoal] = useState(0);
   const [fatGoal, setFatGoal] = useState(0);
   const [meals, setMeals] = useState({});
+  const [stepCount, setStepCount] = useState(0);
+  const [isPedometerAvailable, setIsPedometerAvailable] = useState("checking");
+  const stepGoal = 10000; // เป้าหมายจำนวนก้าว
+  const lastSavedDateRef = useRef('');
+
+  const saveStepCount = async (stepCount) => {
+    const user = firebaseAuth.currentUser;
+    if (user) {
+      const today = new Date().toISOString().split('T')[0];
+      
+      try {
+        const userDocRef = doc(firebaseDB, "users", user.uid);
+        const stepHistoryDocRef = doc(userDocRef, "stepHistory", today);
+        
+        // ตรวจสอบว่ามีข้อมูลของวันนี้หรือยัง
+        const stepHistoryDoc = await getDoc(stepHistoryDocRef);
+        
+        if (stepHistoryDoc.exists()) {
+          // อัพเดทข้อมูลที่มีอยู่
+          await setDoc(stepHistoryDocRef, { steps: stepCount, lastUpdated: new Date() }, { merge: true });
+        } else {
+          // สร้างข้อมูลใหม่สำหรับวันนี้
+          await setDoc(stepHistoryDocRef, {
+            date: today,
+            steps: stepCount,
+            createdAt: new Date(),
+            lastUpdated: new Date()
+          });
+        }
+        
+        console.log("Step count saved successfully");
+      } catch (error) {
+        console.error("Error saving step count: ", error);
+      }
+    }
+  };
+
+ 
+useEffect(() => {
+  let subscription;
+
+  const setupPedometer = async () => {
+    const today = new Date().toISOString().split('T')[0];
+    const lastSavedDate = await AsyncStorage.getItem('lastSavedStepDate');
+    
+    if (lastSavedDate !== today) {
+      setStepCount(0);
+      await AsyncStorage.setItem('lastSavedStepDate', today);
+    } else {
+      const savedStepCount = await AsyncStorage.getItem('lastSavedStepCount');
+      if (savedStepCount) {
+        setStepCount(parseInt(savedStepCount, 10));
+      }
+    }
+    
+    lastSavedDateRef.current = today;
+
+    const isAvailable = await Pedometer.isAvailableAsync();
+    if (isAvailable) {
+      const end = new Date();
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+
+      const pastStepCount = await Pedometer.getStepCountAsync(start, end);
+      setStepCount(pastStepCount.steps);
+
+      subscription = Pedometer.watchStepCount(result => {
+        setStepCount(prevCount => {
+          const newCount = prevCount + result.steps;
+          saveStepCount(newCount);
+          AsyncStorage.setItem('lastSavedStepCount', newCount.toString());
+          return newCount;
+        });
+      });
+    }
+  };
+
+  setupPedometer();
+
+  return () => {
+    if (subscription) {
+      subscription.remove();
+    }
+  };
+}, []);
+
 
   useEffect(() => {
     const unsubscribeAuth = firebaseAuth.onAuthStateChanged((user) => {
       if (user) {
         fetchUserData(user.uid);
-        fetchLatestBloodSugar(user.uid);  // Replace fetchLatestBloodSugar with this
+        fetchLatestBloodSugar(user.uid);
       } else {
         setUserData(null);
         setLatestBloodSugar(null);
@@ -113,8 +192,18 @@ const HealthDashboard = ({ navigation }) => {
 
   const fetchLatestBloodSugar = async (uid) => {
     try {
-      const bloodSugarRef = collection(firebaseDB, "users", uid, "bloodSugarHistory");
-      const q = query(bloodSugarRef, orderBy("date", "desc"), orderBy("time", "desc"), limit(1));
+      const bloodSugarRef = collection(
+        firebaseDB,
+        "users",
+        uid,
+        "bloodSugarHistory"
+      );
+      const q = query(
+        bloodSugarRef,
+        orderBy("date", "desc"),
+        orderBy("time", "desc"),
+        limit(1)
+      );
       const querySnapshot = await getDocs(q);
 
       if (!querySnapshot.empty) {
@@ -137,9 +226,11 @@ const HealthDashboard = ({ navigation }) => {
       const user = firebaseAuth.currentUser;
       if (user) {
         await fetchLatestBloodSugar(user.uid);
-        
+
         // Load average blood sugar
-        const savedAverageBloodSugar = await AsyncStorage.getItem("averageBloodSugarToday");
+        const savedAverageBloodSugar = await AsyncStorage.getItem(
+          "averageBloodSugarToday"
+        );
         if (savedAverageBloodSugar) {
           setAverageBloodSugar(parseFloat(savedAverageBloodSugar));
         }
@@ -165,7 +256,8 @@ const HealthDashboard = ({ navigation }) => {
       }
 
       // Calculate totals
-      const { totalCalories, totalProtein, totalCarbs, totalFat } = calculateTotals(meals);
+      const { totalCalories, totalProtein, totalCarbs, totalFat } =
+        calculateTotals(meals);
 
       setCaloriesConsumed(totalCalories);
       setProteinConsumed(totalProtein);
@@ -175,7 +267,8 @@ const HealthDashboard = ({ navigation }) => {
       console.error("เกิดข้อผิดพลาดในการโหลดข้อมูลล่าสุด:", error);
       // Use default data in case of error
       setMeals(getDefaultMeals());
-      const { totalCalories, totalProtein, totalCarbs, totalFat } = calculateTotals(getDefaultMeals());
+      const { totalCalories, totalProtein, totalCarbs, totalFat } =
+        calculateTotals(getDefaultMeals());
       setCaloriesConsumed(totalCalories);
       setProteinConsumed(totalProtein);
       setCarbsConsumed(totalCarbs);
@@ -184,11 +277,11 @@ const HealthDashboard = ({ navigation }) => {
   };
 
   // Helper function to get default meals
-const getDefaultMeals = () => ({
-  มื้อเช้า: { calories: 0, protein: 0, carbs: 0, fat: 0 },
-  มื้อเที่ยง: { calories: 0, protein: 0, carbs: 0, fat: 0 },
-  มื้อเย็น: { calories: 0, protein: 0, carbs: 0, fat: 0 },
-});
+  const getDefaultMeals = () => ({
+    มื้อเช้า: { calories: 0, protein: 0, carbs: 0, fat: 0 },
+    มื้อเที่ยง: { calories: 0, protein: 0, carbs: 0, fat: 0 },
+    มื้อเย็น: { calories: 0, protein: 0, carbs: 0, fat: 0 },
+  });
   // Helper function to calculate totals
   const calculateTotals = (meals) => {
     return Object.values(meals).reduce(
@@ -379,35 +472,41 @@ const getDefaultMeals = () => ({
     );
 
     const NutritionRow = ({ label, value, goal, unit, color, icon }) => {
-      const isCalories = label.toLowerCase().includes('แคลอรี่');
+      const isCalories = label.toLowerCase().includes("แคลอรี่");
       const isExceeded = value > goal;
       const exceedAmount = isExceeded ? value - goal : 0;
       const remaining = isExceeded ? 0 : goal - value;
-    
+
       return (
         <View style={styles.nutritionRow}>
           <View style={styles.nutritionLabelContainer}>
-            <Icon name={icon} size={24} color={color} style={styles.nutritionIcon} />
+            <Icon
+              name={icon}
+              size={24}
+              color={color}
+              style={styles.nutritionIcon}
+            />
             <Text style={styles.nutritionLabel}>{label}</Text>
           </View>
           <View style={styles.nutritionValueContainer}>
             <Text style={styles.nutritionValue}>
               {value.toFixed(1)} / {goal.toFixed(1)} {unit}
             </Text>
-            <ProgressBar 
-              progress={Math.min(value / goal, 1)} 
-              color={isExceeded ? '#FF0000' : color} 
-              style={styles.progressBar} 
+            <ProgressBar
+              progress={Math.min(value / goal, 1)}
+              color={isExceeded ? "#FF0000" : color}
+              style={styles.progressBar}
             />
             {isCalories && (
-              <Text style={[
-                styles.nutritionLeft,
-                isExceeded ? styles.exceededText : null
-              ]}>
+              <Text
+                style={[
+                  styles.nutritionLeft,
+                  isExceeded ? styles.exceededText : null,
+                ]}
+              >
                 {isExceeded
                   ? `เกิน ${exceedAmount.toFixed(1)} ${unit}`
-                  : `เหลือ ${remaining.toFixed(1)} ${unit}`
-                }
+                  : `เหลือ ${remaining.toFixed(1)} ${unit}`}
               </Text>
             )}
           </View>
@@ -492,13 +591,32 @@ const getDefaultMeals = () => ({
     );
   };
 
-  const HealthCard = ({ title, value, icon, color, onPress }) => (
+// ปรับปรุง StepCountCard component
+const StepCountCard = ({ onPress }) => (
+  <HealthCard
+    title="จำนวนก้าว"
+    value={`${stepCount} / ${stepGoal} ก้าว`}
+    color="#FF9800"
+    customIcon={
+      <View style={styles.stepIconContainer}>
+        <Icon name="walk" size={24} color="#FFF" />
+        <Icon name="numeric-9-plus-circle" size={16} color="#FFF" style={styles.plusIcon} />
+      </View>
+    }
+    onPress={onPress}
+  >
+    <ProgressBar progress={stepCount / stepGoal} color="#FFF" style={styles.stepProgressBar} />
+  </HealthCard>
+);
+
+  // ปรับปรุงฟังก์ชัน HealthCard เพื่อรองรับไอคอนแบบกำหนดเอง
+  const HealthCard = ({ title, value, icon, color, onPress, customIcon }) => (
     <TouchableOpacity
       style={[styles.card, { backgroundColor: color }]}
       onPress={onPress}
     >
       <View style={styles.cardContent}>
-        <Icon name={icon} size={32} color="#FFF" />
+        {customIcon ? customIcon : <Icon name={icon} size={32} color="#FFF" />}
         <View style={styles.cardTextContent}>
           <Text style={styles.cardTitle}>{title}</Text>
           <Text style={styles.cardValue}>{value}</Text>
@@ -506,7 +624,6 @@ const getDefaultMeals = () => ({
       </View>
     </TouchableOpacity>
   );
-
   return (
     <LinearGradient colors={["#4A90E2", "#50E3C2"]} style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
@@ -554,6 +671,7 @@ const getDefaultMeals = () => ({
             />
 
             <View style={styles.cardContainer}>
+            <StepCountCard onPress={() => navigation.navigate("StepHistory")} />
               <HealthCard
                 title="ระดับน้ำตาลในเลือด"
                 value={
@@ -565,7 +683,7 @@ const getDefaultMeals = () => ({
                 color="#FF6B6B"
                 onPress={() => navigation.navigate("BloodSugar")}
               />
-              
+
               <HealthCard
                 title="น้ำหนัก"
                 value={
@@ -575,7 +693,6 @@ const getDefaultMeals = () => ({
                 color="#4ECDC4"
                 onPress={() => navigation.navigate("WeightProgress")}
               />
-              
             </View>
           </View>
         </ScrollView>
@@ -740,8 +857,8 @@ const styles = StyleSheet.create({
     color: "#666",
   },
   exceededText: {
-    color: '#FF0000',
-    fontFamily: 'Kanit-Bold',
+    color: "#FF0000",
+    fontFamily: "Kanit-Bold",
   },
   paginationDots: {
     flexDirection: "row",
@@ -795,6 +912,19 @@ const styles = StyleSheet.create({
     fontFamily: "Kanit-Regular",
     color: "#777777",
     textAlign: "center",
+  },
+  stepIconContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  plusIcon: {
+    marginLeft: -8,
+    marginTop: -8,
+  },
+  stepProgressBar: {
+    height: 5,
+    borderRadius: 2.5,
+    marginTop: 5,
   },
 });
 

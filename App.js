@@ -52,6 +52,7 @@ import BookmarkListPage from "./screens/BookmarkListPage";
 import SummaryPage from "./screens/SummaryPage";
 import 'react-native-gesture-handler';
 import { TransitionPresets } from '@react-navigation/stack';
+import StepHistoryScreen from './screens/StepHistoryScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -343,6 +344,7 @@ const RootNavigator = () => {
       />
       <Stack.Screen name="FoodQRPage" component={FoodQRPage} />
       <Stack.Screen name="FoodQRResult" component={FoodQRResult} />
+      <Stack.Screen name="StepHistory" component={StepHistoryScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 };
