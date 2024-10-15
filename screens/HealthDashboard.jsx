@@ -1,6 +1,13 @@
-import { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, RefreshControl } from "react-native";
-import { Pedometer } from "expo-sensors";
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Dimensions,
+  RefreshControl,
+} from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -8,19 +15,9 @@ import PagerView from "react-native-pager-view";
 import { ProgressBar } from "react-native-paper";
 import { LinearGradient } from "expo-linear-gradient";
 import { firebaseAuth, firebaseDB } from "../config/firebase.config";
-import {
-  doc,
-  getDoc,
-  getDocs,
-  collection,
-  query,
-  where,
-  onSnapshot,
-  orderBy,
-  limit,
-  addDoc,
-} from "firebase/firestore";
+import { doc, getDoc, getDocs, collection, query, where, onSnapshot, orderBy, limit } from "firebase/firestore";
 import { Svg, Circle, Path, G, Text as SvgText } from "react-native-svg";
+
 const { width, height } = Dimensions.get("window");
 
 const HealthDashboard = ({ navigation }) => {
@@ -46,92 +43,6 @@ const HealthDashboard = ({ navigation }) => {
   const [carbsGoal, setCarbsGoal] = useState(0);
   const [fatGoal, setFatGoal] = useState(0);
   const [meals, setMeals] = useState({});
-  const [stepCount, setStepCount] = useState(0);
-  const [isPedometerAvailable, setIsPedometerAvailable] = useState("checking");
-  const stepGoal = 10000; // เป้าหมายจำนวนก้าว
-  const lastSavedDateRef = useRef('');
-
-  const saveStepCount = async (stepCount) => {
-    const user = firebaseAuth.currentUser;
-    if (user) {
-      const today = new Date().toISOString().split('T')[0];
-      
-      try {
-        const userDocRef = doc(firebaseDB, "users", user.uid);
-        const stepHistoryDocRef = doc(userDocRef, "stepHistory", today);
-        
-        // ตรวจสอบว่ามีข้อมูลของวันนี้หรือยัง
-        const stepHistoryDoc = await getDoc(stepHistoryDocRef);
-        
-        if (stepHistoryDoc.exists()) {
-          // อัพเดทข้อมูลที่มีอยู่
-          await setDoc(stepHistoryDocRef, { steps: stepCount, lastUpdated: new Date() }, { merge: true });
-        } else {
-          // สร้างข้อมูลใหม่สำหรับวันนี้
-          await setDoc(stepHistoryDocRef, {
-            date: today,
-            steps: stepCount,
-            createdAt: new Date(),
-            lastUpdated: new Date()
-          });
-        }
-        
-        console.log("Step count saved successfully");
-      } catch (error) {
-        console.error("Error saving step count: ", error);
-      }
-    }
-  };
-
- 
-useEffect(() => {
-  let subscription;
-
-  const setupPedometer = async () => {
-    const today = new Date().toISOString().split('T')[0];
-    const lastSavedDate = await AsyncStorage.getItem('lastSavedStepDate');
-    
-    if (lastSavedDate !== today) {
-      setStepCount(0);
-      await AsyncStorage.setItem('lastSavedStepDate', today);
-    } else {
-      const savedStepCount = await AsyncStorage.getItem('lastSavedStepCount');
-      if (savedStepCount) {
-        setStepCount(parseInt(savedStepCount, 10));
-      }
-    }
-    
-    lastSavedDateRef.current = today;
-
-    const isAvailable = await Pedometer.isAvailableAsync();
-    if (isAvailable) {
-      const end = new Date();
-      const start = new Date();
-      start.setHours(0, 0, 0, 0);
-
-      const pastStepCount = await Pedometer.getStepCountAsync(start, end);
-      setStepCount(pastStepCount.steps);
-
-      subscription = Pedometer.watchStepCount(result => {
-        setStepCount(prevCount => {
-          const newCount = prevCount + result.steps;
-          saveStepCount(newCount);
-          AsyncStorage.setItem('lastSavedStepCount', newCount.toString());
-          return newCount;
-        });
-      });
-    }
-  };
-
-  setupPedometer();
-
-  return () => {
-    if (subscription) {
-      subscription.remove();
-    }
-  };
-}, []);
-
 
   useEffect(() => {
     const unsubscribeAuth = firebaseAuth.onAuthStateChanged((user) => {
@@ -141,8 +52,10 @@ useEffect(() => {
       } else {
         setUserData(null);
         setLatestBloodSugar(null);
+        setLatestWeight(null);
       }
     });
+  
 
     // Fetch unread notifications
     const unsubscribeNotifications = onSnapshot(
@@ -173,15 +86,17 @@ useEffect(() => {
     try {
       const userDocRef = doc(firebaseDB, "users", uid);
       const userDoc = await getDoc(userDocRef);
-
+  
       if (userDoc.exists()) {
         const data = userDoc.data();
         setUserData(data);
-        setLatestWeight(data.weight);
         setCaloriesAllowed(data.tdee || 0);
         setProteinGoal(data.macronutrients?.protein || 0);
         setCarbsGoal(data.macronutrients?.carbs || 0);
         setFatGoal(data.macronutrients?.fat || 0);
+        
+        // เรียกฟังก์ชันเพื่อดึงข้อมูลน้ำหนักล่าสุด
+        await fetchLatestWeight(uid);
       } else {
         console.error("ไม่พบเอกสารผู้ใช้!");
       }
@@ -189,6 +104,26 @@ useEffect(() => {
       console.error("เกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้:", error);
     }
   };
+  const fetchLatestWeight = async (uid) => {
+    try {
+      const weightHistoryRef = collection(firebaseDB, "users", uid, "weightHistory");
+      const q = query(weightHistoryRef, orderBy("date", "desc"), orderBy("time", "desc"), limit(1));
+      const querySnapshot = await getDocs(q);
+  
+      if (!querySnapshot.empty) {
+        const latestWeightData = querySnapshot.docs[0].data();
+        setLatestWeight(latestWeightData.weight);
+        console.log("Latest weight:", latestWeightData.weight);
+      } else {
+        console.log("ไม่พบข้อมูลน้ำหนัก");
+        setLatestWeight(null);
+      }
+    } catch (error) {
+      console.error("เกิดข้อผิดพลาดในการดึงข้อมูลน้ำหนักล่าสุด:", error);
+      setLatestWeight(null);
+    }
+  };
+
 
   const fetchLatestBloodSugar = async (uid) => {
     try {
@@ -300,11 +235,11 @@ useEffect(() => {
     const user = firebaseAuth.currentUser;
     if (user) {
       await fetchUserData(user.uid);
+      await fetchLatestBloodSugar(user.uid);
       await loadLatestData();
     }
     setRefreshing(false);
   };
-
   const SimplePieChart = ({ data, hasRealData }) => {
     const total = data.reduce((sum, item) => sum + item.value, 0);
     let startAngle = 0;
@@ -591,32 +526,13 @@ useEffect(() => {
     );
   };
 
-// ปรับปรุง StepCountCard component
-const StepCountCard = ({ onPress }) => (
-  <HealthCard
-    title="จำนวนก้าว"
-    value={`${stepCount} / ${stepGoal} ก้าว`}
-    color="#FF9800"
-    customIcon={
-      <View style={styles.stepIconContainer}>
-        <Icon name="walk" size={24} color="#FFF" />
-        <Icon name="numeric-9-plus-circle" size={16} color="#FFF" style={styles.plusIcon} />
-      </View>
-    }
-    onPress={onPress}
-  >
-    <ProgressBar progress={stepCount / stepGoal} color="#FFF" style={styles.stepProgressBar} />
-  </HealthCard>
-);
-
-  // ปรับปรุงฟังก์ชัน HealthCard เพื่อรองรับไอคอนแบบกำหนดเอง
-  const HealthCard = ({ title, value, icon, color, onPress, customIcon }) => (
+  const HealthCard = ({ title, value, icon, color, onPress }) => (
     <TouchableOpacity
       style={[styles.card, { backgroundColor: color }]}
       onPress={onPress}
     >
       <View style={styles.cardContent}>
-        {customIcon ? customIcon : <Icon name={icon} size={32} color="#FFF" />}
+        <Icon name={icon} size={32} color="#FFF" />
         <View style={styles.cardTextContent}>
           <Text style={styles.cardTitle}>{title}</Text>
           <Text style={styles.cardValue}>{value}</Text>
@@ -624,6 +540,7 @@ const StepCountCard = ({ onPress }) => (
       </View>
     </TouchableOpacity>
   );
+
   return (
     <LinearGradient colors={["#4A90E2", "#50E3C2"]} style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
@@ -638,9 +555,12 @@ const StepCountCard = ({ onPress }) => (
           }
         >
           <View style={styles.header}>
-            <Text style={styles.headerText}>
-              สวัสดี, {userData?.fullName || "ผู้ใช้"}
-            </Text>
+            <View style={styles.headerTextContainer}>
+              <Text style={styles.headerGreeting}>สวัสดี</Text>
+              <Text style={styles.headerName}>
+                {userData?.fullName || "ผู้ใช้"}
+              </Text>
+            </View>
             <TouchableOpacity
               style={[
                 styles.notificationIcon,
@@ -671,7 +591,6 @@ const StepCountCard = ({ onPress }) => (
             />
 
             <View style={styles.cardContainer}>
-            <StepCountCard onPress={() => navigation.navigate("StepHistory")} />
               <HealthCard
                 title="ระดับน้ำตาลในเลือด"
                 value={
@@ -718,9 +637,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 15,
   },
+  headerTextContainer: {
+    flexDirection: "column",
+  },
+  headerGreeting: {
+    fontSize: 25,
+    fontFamily: "Kanit-Bold",
+    color: "#FFF",
+    textShadowColor: "rgba(0, 0, 0, 0.1)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
   headerText: {
     fontSize: 28,
     fontFamily: "Kanit-Bold",
+    color: "#FFF",
+    textShadowColor: "rgba(0, 0, 0, 0.1)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  headerName: {
+    fontSize: 21,
+    fontFamily: "Kanit-Regular",
     color: "#FFF",
     textShadowColor: "rgba(0, 0, 0, 0.1)",
     textShadowOffset: { width: 1, height: 1 },
@@ -912,19 +850,6 @@ const styles = StyleSheet.create({
     fontFamily: "Kanit-Regular",
     color: "#777777",
     textAlign: "center",
-  },
-  stepIconContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  plusIcon: {
-    marginLeft: -8,
-    marginTop: -8,
-  },
-  stepProgressBar: {
-    height: 5,
-    borderRadius: 2.5,
-    marginTop: 5,
   },
 });
 

@@ -152,7 +152,6 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
       style={styles.tabContainer}
     >
       <View style={styles.tabContent}>
-        {(state.index === 0 || state.index === 1) && <SearchBar />}
         <View style={styles.tabButtonContainer}>
           {state.routes.map((route, index) => {
             const { options } = descriptors[route.key];
@@ -203,7 +202,6 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
   );
 };
 
-
 // MainTabNavigator Component
 const MainTabNavigator = () => (
   <Tab.Navigator
@@ -234,56 +232,50 @@ const MainTabNavigator = () => (
 // DoctorTabNavigator Component
 const DoctorTabNavigator = () => (
   <Tab.Navigator
+    tabBar={(props) => <CustomTabBar {...props} />}
     screenOptions={({ route }) => ({
       headerShown: false,
       tabBarIcon: ({ focused, color, size }) => {
         let iconName;
         switch (route.name) {
-          case "DoctorHomePage":
+          case "หน้าหลัก":
             iconName = focused ? "home" : "home-outline";
             break;
-          case "PatientListScreen":
-            iconName = focused ? "list" : "list-outline";
+          case "ผู้ป่วย":
+            iconName = focused ? "people" : "people-outline";
             break;
-          case "BlogList":
-            iconName = focused ? "document" : "document-outline";
+          case "บทความ":
+            iconName = focused ? "document-text" : "document-text-outline";
             break;
-          case "DoctorProfilePage":
+          case "โปรไฟล์":
             iconName = focused ? "person" : "person-outline";
             break;
           default:
-            iconName = "alert";
+            iconName = "alert-circle-outline";
         }
         return <Icon name={iconName} size={size} color={color} />;
       },
-      tabBarActiveTintColor: "#007AFF",
-      tabBarInactiveTintColor: "#8E8E93",
-      tabBarStyle: styles.tabBar,
-      tabBarLabelStyle: styles.tabBarLabel,
     })}
   >
     <Tab.Screen
-      name="DoctorHomePage"
+      name="หน้าหลัก"
       component={DoctorHomePage}
-      options={{ tabBarLabel: "Home" }}
     />
     <Tab.Screen
-      name="PatientListScreen"
+      name="ผู้ป่วย"
       component={PatientListScreen}
-      options={{ tabBarLabel: "Patients" }}
     />
     <Tab.Screen
-      name="BlogList"
+      name="บทความ"
       component={BlogList}
-      options={{ tabBarLabel: "Blog" }}
     />
     <Tab.Screen
-      name="DoctorProfilePage"
+      name="โปรไฟล์"
       component={DoctorProfilePage}
-      options={{ tabBarLabel: "Profile" }}
     />
   </Tab.Navigator>
 );
+
 
 // RootNavigator Component
 const RootNavigator = () => {
@@ -405,6 +397,20 @@ const styles = StyleSheet.create({
   },
   tabContent: {
     paddingTop: 10,
+  },
+    tabButtonContainer: {
+    flexDirection: 'row',
+    height: 60,
+  },
+  tabButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabLabel: {
+    fontSize: 12,
+    marginTop: 4,
+    fontFamily: 'Kanit-Regular',
   },
   searchBarContainer: {
     flexDirection: 'row',

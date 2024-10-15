@@ -6,6 +6,9 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { getAuth } from 'firebase/auth';
 import { getFirestore, collection, doc, getDoc, setDoc, addDoc } from 'firebase/firestore';
 import { firebaseDB, firebaseAuth } from "../../config/firebase.config";
+import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 
 const AddTaskScreen = () => {
   const [selectedDate, setSelectedDate] = useState('');
@@ -90,131 +93,155 @@ const AddTaskScreen = () => {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
-        <Text style={styles.title}>เพิ่มงานใหม่</Text>
+    <LinearGradient colors={['#4A90E2', '#50E3C2']} style={styles.container}>
+      <SafeAreaView style={styles.safeArea}>
+        <ScrollView contentContainerStyle={styles.scrollViewContent}>
+          <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
+            <View style={styles.header}>
+              <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                <Icon name="arrow-back" size={24} color="#FFF" />
+              </TouchableOpacity>
+              <Text style={styles.title}>เพิ่มงานใหม่</Text>
+            </View>
 
-        <Calendar 
-          onDayPress={handleDateSelect}
-          markedDates={{ 
-            [selectedDate]: { selected: true, selectedColor: '#4CAF50' },
-          }}
-          theme={{
-            backgroundColor: '#ffffff',
-            calendarBackground: '#ffffff',
-            textSectionTitleColor: '#1E88E5',
-            selectedDayBackgroundColor: '#4CAF50',
-            selectedDayTextColor: '#ffffff',
-            todayTextColor: '#4CAF50',
-            dayTextColor: '#2d4150',
-            textDisabledColor: '#d9e1e8',
-            dotColor: '#4CAF50',
-            selectedDotColor: '#ffffff',
-            arrowColor: '#1E88E5',
-            monthTextColor: '#1E88E5',
-            indicatorColor: '#1E88E5',
-            textDayFontWeight: '300',
-            textMonthFontWeight: 'bold',
-            textDayHeaderFontWeight: '300',
-            textDayFontSize: 16,
-            textMonthFontSize: 18,
-            textDayHeaderFontSize: 14
-          }}
-          style={styles.calendar}
-        />
-
-        {selectedDate ? (
-          <View style={styles.formContainer}>
-            <Text style={styles.label}>เลือกเวลา</Text>
-
-            <TouchableOpacity style={styles.timeButton} onPress={() => setShowTimePicker(true)}>
-              <Icon name="access-time" size={24} color="#fff" />
-              <Text style={styles.timeButtonText}>เลือกเวลา</Text>
-            </TouchableOpacity>
-
-            {showTimePicker && (
-              <DateTimePicker
-                value={time}
-                mode="time"
-                is24Hour={true}
-                display="default"
-                onChange={handleTimeChange}
+            <View style={styles.card}>
+              <Calendar 
+                onDayPress={handleDateSelect}
+                markedDates={{ 
+                  [selectedDate]: { selected: true, selectedColor: '#4CAF50' },
+                }}
+                theme={{
+                  backgroundColor: '#ffffff',
+                  calendarBackground: '#ffffff',
+                  textSectionTitleColor: '#4A90E2',
+                  selectedDayBackgroundColor: '#4CAF50',
+                  selectedDayTextColor: '#ffffff',
+                  todayTextColor: '#4A90E2',
+                  dayTextColor: '#2d4150',
+                  textDisabledColor: '#d9e1e8',
+                  dotColor: '#4CAF50',
+                  selectedDotColor: '#ffffff',
+                  arrowColor: '#4A90E2',
+                  monthTextColor: '#4A90E2',
+                  indicatorColor: '#4A90E2',
+                  textDayFontFamily: 'Kanit-Regular',
+                  textMonthFontFamily: 'Kanit-Bold',
+                  textDayHeaderFontFamily: 'Kanit-Regular',
+                  textDayFontSize: 16,
+                  textMonthFontSize: 18,
+                  textDayHeaderFontSize: 14
+                }}
+                style={styles.calendar}
               />
-            )}
 
-            <Text style={styles.selectedTimeText}>เวลาที่เลือก: {time.toLocaleTimeString()}</Text>
+              {selectedDate ? (
+                <View style={styles.formContainer}>
+                  <Text style={styles.label}>เลือกเวลา</Text>
 
-            <TextInput
-              style={styles.input}
-              placeholder="กรอกงานที่ต้องทำ"
-              value={task}
-              onChangeText={setTask}
-            />
+                  <TouchableOpacity style={styles.timeButton} onPress={() => setShowTimePicker(true)}>
+                    <Icon name="access-time" size={24} color="#fff" />
+                    <Text style={styles.timeButtonText}>เลือกเวลา</Text>
+                  </TouchableOpacity>
 
-            <TextInput
-              style={[styles.input, styles.descriptionInput]}
-              placeholder="กรอกคำอธิบายงาน"
-              value={description}
-              onChangeText={setDescription}
-              multiline
-            />
+                  {showTimePicker && (
+                    <DateTimePicker
+                      value={time}
+                      mode="time"
+                      is24Hour={true}
+                      display="default"
+                      onChange={handleTimeChange}
+                    />
+                  )}
 
-            <TouchableOpacity style={styles.addButton} onPress={handleAddTask}>
-              <Text style={styles.addButtonText}>เพิ่มงาน</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <Text style={styles.noDateText}>กรุณาเลือกวันที่</Text>
-        )}
-      </Animated.View>
-    </ScrollView>
+                  <Text style={styles.selectedTimeText}>เวลาที่เลือก: {time.toLocaleTimeString()}</Text>
+
+                  <TextInput
+                    style={styles.input}
+                    placeholder="กรอกงานที่ต้องทำ"
+                    value={task}
+                    onChangeText={setTask}
+                    placeholderTextColor="#999"
+                  />
+
+                  <TextInput
+                    style={[styles.input, styles.descriptionInput]}
+                    placeholder="กรอกคำอธิบายงาน"
+                    value={description}
+                    onChangeText={setDescription}
+                    multiline
+                    placeholderTextColor="#999"
+                  />
+
+                  <TouchableOpacity style={styles.addButton} onPress={handleAddTask}>
+                    <Text style={styles.addButtonText}>เพิ่มงาน</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <Text style={styles.noDateText}>กรุณาเลือกวันที่</Text>
+              )}
+            </View>
+          </Animated.View>
+        </ScrollView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+  },
+  safeArea: {
+    flex: 1,
+  },
+  scrollViewContent: {
+    flexGrow: 1,
+    paddingBottom: 20,
   },
   content: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
     padding: 20,
+    paddingTop: 10,
+  },
+  backButton: {
+    marginRight: 15,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1E88E5',
-    marginBottom: 20,
-    textAlign: 'center',
+    fontSize: 24,
+    fontFamily: 'Kanit-Bold',
+    color: '#FFF',
     textShadowColor: 'rgba(0, 0, 0, 0.1)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
-  calendar: {
-    marginBottom: 20,
-    borderRadius: 15,
-    overflow: 'hidden',
-    elevation: 4,
+  card: {
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    margin: 20,
+    padding: 20,
+    elevation: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-  formContainer: {
-    backgroundColor: '#FFFFFF',
+  calendar: {
+    marginBottom: 20,
     borderRadius: 15,
-    padding: 20,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
+    overflow: 'hidden',
+  },
+  formContainer: {
+    marginTop: 20,
   },
   label: {
     fontSize: 18,
-    color: '#1E88E5',
+    fontFamily: 'Kanit-Regular',
+    color: '#4A90E2',
     marginBottom: 10,
-    textAlign: 'center',
-    fontWeight: '600',
   },
   timeButton: {
     flexDirection: 'row',
@@ -224,25 +251,19 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 30,
     marginBottom: 20,
-    alignSelf: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
   },
   timeButtonText: {
     color: '#fff',
     fontSize: 16,
     marginLeft: 10,
-    fontWeight: '600',
+    fontFamily: 'Kanit-Regular',
   },
   selectedTimeText: {
     fontSize: 16,
-    color: '#1E88E5',
+    color: '#4A90E2',
     textAlign: 'center',
     marginBottom: 20,
-    fontWeight: '500',
+    fontFamily: 'Kanit-Regular',
   },
   input: {
     borderWidth: 1,
@@ -250,9 +271,9 @@ const styles = StyleSheet.create({
     padding: 15,
     marginBottom: 20,
     borderRadius: 10,
-    backgroundColor: '#fff',
-    elevation: 1,
+    backgroundColor: '#F5F5F5',
     fontSize: 16,
+    fontFamily: 'Kanit-Regular',
   },
   descriptionInput: {
     height: 100,
@@ -264,23 +285,19 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     alignItems: 'center',
     marginTop: 10,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
   },
   addButtonText: {
     color: '#fff',
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: 'Kanit-Bold',
   },
   noDateText: {
     fontSize: 18,
-    color: '#1E88E5',
+    color: '#4A90E2',
     textAlign: 'center',
     marginTop: 20,
     fontStyle: 'italic',
+    fontFamily: 'Kanit-Regular',
   },
 });
 

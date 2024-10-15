@@ -141,7 +141,6 @@ const DoctorProfilePage = () => {
               style={styles.profileImage}
             />
             <Text style={styles.doctorName}>{doctorData?.fullName || "ชื่อแพทย์"}</Text>
-            <Text style={styles.specialization}>{doctorData?.specialization || "สาขาเชี่ยวชาญ"}</Text>
             <Text style={styles.doctorEmail}>{doctorData?.email || "กำลังโหลด.."}</Text>
 
             <TouchableOpacity
@@ -198,12 +197,12 @@ const DoctorProfilePage = () => {
               onPress={() => navigation.navigate("BookmarkListPage")}
               color="#6BCB77"
             />
-            <MenuItem
+            {/* <MenuItem
               icon="cog-outline"
               label="การตั้งค่า"
               onPress={() => navigation.navigate("DoctorSettings")}
               color="#FF7F50"
-            />
+            /> */}
           </View>
 
           <TouchableOpacity style={styles.logoutButton} onPress={handleSignOut}>
@@ -271,12 +270,6 @@ const styles = StyleSheet.create({
     color: "#333",
     marginTop: 15,
     fontFamily: "Kanit-Bold",
-  },
-  specialization: {
-    fontSize: 18,
-    color: "#666",
-    marginTop: 5,
-    fontFamily: "Kanit-Regular",
   },
   doctorEmail: {
     fontSize: 16,

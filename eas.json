@@ -7,22 +7,18 @@
       "developmentClient": true,
       "distribution": "internal",
       "android": {
-        "gradleCommand": ":app:assembleDebug",
-        "buildType": "apk",
-        "androidApiLevel": 34
+        "gradleCommand": ":app:assembleDebug"
       }
     },
     "preview": {
       "distribution": "internal",
       "android": {
-        "buildType": "apk",
-        "androidApiLevel": 34
+        "buildType": "apk"
       }
     },
     "production": {
       "android": {
         "buildType": "apk",
-        "androidApiLevel": 34,
         "gradleCommand": ":app:assembleRelease"
       }
     }

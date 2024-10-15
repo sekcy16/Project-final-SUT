@@ -6,17 +6,22 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "sdkVersion": "50.0.0",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSMotionUsageDescription": "This app requires motion tracking for step counting.",
+        "NSLocationWhenInUseUsageDescription": "We need your location to track your movement and provide accurate distance information.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "We need your location to track your movement and provide accurate distance information, even when the app is in the background.",
+        "UIBackgroundModes": ["location", "fetch"],
+        "NSHealthShareUsageDescription": "We need access to your health data to track your steps, distance, and calories burned.",
+        "NSHealthUpdateUsageDescription": "We need permission to update your health data with the steps, distance, and calories burned that we track."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -27,15 +32,38 @@
       "permissions": [
         "android.permission.ACTIVITY_RECOGNITION",
         "android.permission.FOREGROUND_SERVICE",
-        "android.permission.WAKE_LOCK"
-      ]
+        "android.permission.WAKE_LOCK",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION"
+      ],
+      "config": {
+        "googleFit": {
+          "fitnessDataTypes": [
+            "com.google.step_count.delta",
+            "com.google.distance.delta",
+            "com.google.calories.expended"
+          ]
+        }
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-font",
-      "expo-sensors",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location."
+        }
+      ],
+      [
+        "expo-sensors",
+        {
+          "motionPermission": "Allow $(PRODUCT_NAME) to access your device motion."
+        }
+      ],
       [
         "expo-build-properties",
         {
@@ -44,6 +72,26 @@
             "targetSdkVersion": 34,
             "buildToolsVersion": "34.0.0"
           }
+        }
+      ],
+      [
+        "expo-health-connect",
+        {
+          "iOSPermissions": [
+            "BloodGlucose",
+            "BloodPressure",
+            "BodyMassIndex",
+            "DateOfBirth",
+            "Height",
+            "Weight",
+            "BodyFatPercentage",
+            "BodyTemperature",
+            "HeartRate",
+            "RestingHeartRate",
+            "Steps",
+            "BiologicalSex",
+            "Workout"
+          ]
         }
       ]
     ],

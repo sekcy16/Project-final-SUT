@@ -4,8 +4,12 @@ import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { LinearGradient } from 'expo-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-
+import { useFonts } from 'expo-font';
 const SummaryPage = ({ route }) => {
+  const [fontsLoaded] = useFonts({
+    'Kanit-Regular': require('../assets/fonts/Kanit-Regular.ttf'),
+    'Kanit-Bold': require('../assets/fonts/Kanit-Bold.ttf'),
+  });
   const { date } = route.params;
   const [diary, setDiary] = useState({
     totalCalories: 0,
@@ -231,7 +235,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
-  },
+  },  
   statusBarPlaceholder: {
     height: StatusBar.currentHeight,
     backgroundColor: '#4A90E2',
@@ -244,7 +248,7 @@ const styles = StyleSheet.create({
   },
   headerText: {
     fontSize: 22,
-    fontWeight: 'bold',
+    fontFamily: 'Kanit-Bold',
     color: '#fff',
   },
   card: {
@@ -260,7 +264,7 @@ const styles = StyleSheet.create({
   },
   cardHeader: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontFamily: 'Kanit-Bold',
     color: '#4A90E2',
     marginBottom: 15,
   },
@@ -277,7 +281,7 @@ const styles = StyleSheet.create({
   },
   calorieSummaryTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontFamily: 'Kanit-Bold',
     color: '#4A90E2',
     marginBottom: 15,
   },
@@ -290,12 +294,13 @@ const styles = StyleSheet.create({
   },
   calorieSummaryLabel: {
     fontSize: 14,
+    fontFamily: 'Kanit-Regular',
     color: '#666',
     marginTop: 5,
   },
   calorieSummaryValue: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: 'Kanit-Bold',
     color: '#333',
     marginTop: 5,
   },
@@ -321,6 +326,7 @@ const styles = StyleSheet.create({
   },
   macroText: {
     fontSize: 14,
+    fontFamily: 'Kanit-Regular',
     color: '#666',
     marginTop: 5,
   },
@@ -334,6 +340,7 @@ const styles = StyleSheet.create({
   },
   exerciseSummaryText: {
     fontSize: 16,
+    fontFamily: 'Kanit-Regular',
     color: '#4A90E2',
     marginTop: 5,
   },
@@ -353,15 +360,17 @@ const styles = StyleSheet.create({
   },
   exerciseName: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: 'Kanit-Bold',
     color: '#4A90E2',
   },
   exerciseText: {
     fontSize: 14,
+    fontFamily: 'Kanit-Regular',
     color: '#666',
   },
   emptyListText: {
     fontSize: 16,
+    fontFamily: 'Kanit-Regular',
     color: '#666',
     textAlign: 'center',
     fontStyle: 'italic',
@@ -374,6 +383,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 18,
+    fontFamily: 'Kanit-Regular',
     color: '#4A90E2',
   },
   flatListContent: {
