@@ -8,7 +8,69 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 const FoodQRResult = ({ route }) => {
     const navigation = useNavigation();
     const { product } = route.params;
-    const amount = product.product_quantity ? `${product.product_quantity} ${product.quantity_unit || ''}` : 'N/A';
+    
+    const determineUnit = () => {
+        console.log('Product:', product);
+        console.log('product.quantity:', product.quantity);
+        console.log('product.product_quantity:', product.product_quantity);
+    
+        if (product.quantity_unit) {
+            console.log('Quantity unit from product:', product.quantity_unit);
+            // Normalize the unit to avoid duplicates
+            const normalizedUnit = product.quantity_unit.toLowerCase().replace(/(.)\1+/g, '$1');
+            console.log('Normalized quantity unit:', normalizedUnit);
+            return normalizedUnit;
+        }
+    
+        const liquidCategories = ['beverages', 'drinks', 'liquids', 'milk', 'juice', 'water', 'soda', 'cola'];
+        const isLiquid = liquidCategories.some(category => 
+            product.categories_tags?.some(tag => tag.toLowerCase().includes(category)) ||
+            product.categories?.toLowerCase().includes(category) ||
+            product.product_name?.toLowerCase().includes(category)
+        );
+    
+        // Check if the quantity string includes 'ml', 'l', or 'g'
+        if (product.quantity) {
+            console.log('Original quantity string:', product.quantity);
+            const normalizedQuantity = product.quantity.toLowerCase().replace(/(.)\1+/g, '$1');
+            console.log('Normalized quantity string:', normalizedQuantity);
+            
+            if (normalizedQuantity.includes('ml')) return 'ml';
+            if (normalizedQuantity.includes('l')) return 'l';
+            if (normalizedQuantity.includes('g')) return 'g';
+        }
+    
+        console.log('Determined unit based on product type:', isLiquid ? 'ml' : 'g');
+        return isLiquid ? 'ml' : 'g';
+    };
+    
+    const formatQuantity = (quantity, unit) => {
+        console.log('Formatting quantity:', quantity, 'with unit:', unit);
+        let numericQuantity = parseFloat(quantity);
+        
+        if (unit === 'l') {
+            if (numericQuantity < 10) {
+                return `${numericQuantity.toFixed(1)}L`;
+            }
+            return `${(numericQuantity / 1000).toFixed(1)}L`;
+        }
+    
+        if (unit === 'ml' && numericQuantity >= 1000) {
+            return `${(numericQuantity / 1000).toFixed(1)}L`;
+        }
+    
+        if (unit === 'g' && numericQuantity >= 1000) {
+            return `${(numericQuantity / 1000).toFixed(1)}kg`;
+        }
+    
+        return `${numericQuantity} ${unit}`;
+    };
+    
+    const unit = determineUnit();
+    console.log('Determined unit:', unit);
+    const amount = product.product_quantity ? formatQuantity(product.product_quantity, unit) : 'N/A';
+    console.log('Formatted amount:', amount);
+
 
     if (!product || !product.nutriments) {
         return (
@@ -76,25 +138,26 @@ const FoodQRResult = ({ route }) => {
     const handleAddFood = async () => {
         const userId = firebaseAuth.currentUser?.uid;
         const productName = product.product_name ? product.product_name : 'Unknown Product';
-
+    
         if (productName !== undefined) {
             const foodData = {
                 name: productName,
                 energy_kcal: parseFloat(energyKcal),
                 calories: parseFloat(energyKcal),
-                amount: (product.product_quantity || 1) + 'g',
+                amount: amount, // Use the formatted amount here
+                unit: unit,
                 fat: nutriments.fat_100g || 0,
                 carbs: nutriments.carbohydrates_100g || 0,
                 protein: nutriments.proteins_100g || 0,
                 userId: userId,
                 createdAt: serverTimestamp(),
             };
-
+    
             try {
                 const docRef = await addDoc(collection(firebaseDB, 'foodHistory'), foodData);
                 foodData.id = docRef.id;
                 console.log('Food added to history successfully');
-                navigation.navigate('AddFood', { newFood: foodData });
+                navigation.navigate('AddFood', { newFood: foodData, alreadyInFirestore: true });
             } catch (error) {
                 console.error('Error adding food to history:', error);
             }
@@ -109,6 +172,7 @@ const FoodQRResult = ({ route }) => {
         <SafeAreaView style={styles.container}>
             <ScrollView style={styles.scrollView}>
                 <Text style={styles.title}>{product.product_name}</Text>
+                <Text style={styles.subtitle}>Amount: {amount}</Text>
                 <View style={styles.nutrientContainer}>
                     <NutrientItem
                         icon="flame-outline"
@@ -192,6 +256,11 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: 'bold',
         marginLeft: 10,
+    },
+    subtitle: {
+        fontSize: 18,
+        color: '#666666',
+        marginBottom: 10,
     },
 });
 

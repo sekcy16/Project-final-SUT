@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -33,7 +33,7 @@ const AddFood = () => {
 
   const mealOptions = ['มื้อเช้า', 'มื้อเที่ยง', 'มื้อเย็น'];
 
-  const loadScannedFoods = async () => {
+  const loadScannedFoods = useCallback(async () => {
     try {
       const userId = firebaseAuth.currentUser?.uid;
 
@@ -54,28 +54,55 @@ const AddFood = () => {
     } catch (error) {
       console.error('Error loading scanned foods:', error);
     }
-  };
+  }, []);
 
   useFocusEffect(
-    React.useCallback(() => {
+    useCallback(() => {
       loadScannedFoods();
-    }, [])
+    }, [loadScannedFoods])
   );
 
   useEffect(() => {
     const addNewFood = async () => {
-      
       if (route.params?.newFood) {
         const newFood = route.params.newFood;
+        const alreadyInFirestore = route.params.alreadyInFirestore;
 
         try {
-          
+          const userId = firebaseAuth.currentUser?.uid;
+          if (!userId) {
+            console.error('User is not authenticated.');
+            return;
+          }
+
+          if (!alreadyInFirestore) {
+            // Check if the food is already in Firestore
+            const existingFoodQuery = query(
+              collection(firebaseDB, 'foodHistory'),
+              where('userId', '==', userId),
+              where('name', '==', newFood.name || ''),
+              where('createdAt', '==', newFood.createdAt)
+            );
+            const existingFoodSnapshot = await getDocs(existingFoodQuery);
+
+            if (existingFoodSnapshot.empty) {
+              // Add the new food to Firestore only if it doesn't exist
+              const docRef = await addDoc(collection(firebaseDB, 'foodHistory'), newFood);
+              console.log('Food added to Firestore in AddFood component');
+            } else {
+              console.log('Food already exists in Firestore, not adding again');
+            }
+          } else {
+            console.log('Food was already added to Firestore in previous component');
+          }
+
+          // Update the local state with the new food
           setScannedFoods((prevFoods) => [newFood, ...prevFoods]);
         } catch (error) {
-          console.error('Error adding new food:', error);
+          console.error('Error processing new food:', error);
         }
 
-        navigation.setParams({ newFood: null });
+        navigation.setParams({ newFood: null, alreadyInFirestore: false });
       }
     };
 
@@ -90,12 +117,12 @@ const AddFood = () => {
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     loadScannedFoods().then(() => setRefreshing(false));
-  }, []);
+  }, [loadScannedFoods]);
 
   const handleAddFood = async (food) => {
     if (isAdding) {
-        console.log('Add button disabled - food is being added.');
-        return;
+      console.log('Add button disabled - food is being added.');
+      return;
     }
 
     console.log('Button clicked, adding food process started.');
@@ -113,7 +140,7 @@ const AddFood = () => {
   
       // Navigate to the MealEntry screen, passing the food data
       navigation.navigate('MealEntry', {
-        mealType: selectedMeal, // Assuming this comes from a state
+        mealType: selectedMeal,
         date: new Date().toISOString(),
         addedFood: food,
       });
@@ -124,9 +151,6 @@ const AddFood = () => {
       console.log('Food added successfully, button enabled again.');
     }
   };
-
-  
-  
 
   const handleScan = scanType => {
     navigation.navigate(scanType === 'AR' ? 'FoodARPage' : 'FoodQRPage');
@@ -141,8 +165,7 @@ const AddFood = () => {
     try {
       await deleteDoc(doc(firebaseDB, 'foodHistory', foodToDelete.id));
       console.log('Food deleted successfully from Firestore');
-      const updatedFoods = scannedFoods.filter(food => food.id !== foodToDelete.id);
-      setScannedFoods(updatedFoods);
+      setScannedFoods(prevFoods => prevFoods.filter(food => food.id !== foodToDelete.id));
     } catch (error) {
       console.error('Error deleting food:', error);
     }
@@ -202,17 +225,17 @@ const AddFood = () => {
             </TouchableOpacity>
           </Animated.View>
   
-          {/* Wrapping Touchable in TouchableWithoutFeedback to manage gestures properly */}
           <Animated.View
             style={[styles.historyItem, { transform: [{ translateX: pan.x }] }]}
             {...panResponder.panHandlers}
           >
             <View style={styles.historyItemContent}>
               <Text style={styles.historyItemTitle}>{food.name}</Text>
-              <Text style={styles.historyItemSubtitle}>{`${food.calories} แคลอรี่, ${food.amount}`}</Text>
+              <Text style={styles.historyItemSubtitle}>
+              {`${food.calories} kcal, ${food.amount}`}
+              </Text>
             </View>
   
-            {/* Use TouchableWithoutFeedback to avoid gesture conflicts */}
             <TouchableWithoutFeedback onPress={() => handleAddFood(food)}>
               <View style={styles.addButton}>
                 <Icon name="plus" size={24} color="#FFFFFF" />
@@ -221,7 +244,9 @@ const AddFood = () => {
           </Animated.View>
         </View>
       );
-    }, [handleAddFood]);
+    },
+    [handleAddFood]
+  );
   
 
     return (

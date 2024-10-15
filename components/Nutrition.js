@@ -1,85 +1,34 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, DeviceEventEmitter } from 'react-native';
-import axios from 'axios';
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, DeviceEventEmitter } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
 const Nutrition = ({ route }) => {
-  const { foodName } = route.params;
-  const [nutritionData, setNutritionData] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { newFood } = route.params;
   const navigation = useNavigation();
-
-  useEffect(() => {
-    const fetchNutritionData = async () => {
-      try {
-        const response = await axios.post(
-          'https://trackapi.nutritionix.com/v2/natural/nutrients',
-          {
-            query: foodName,
-          },
-          {
-            headers: {
-              'x-app-id': 'faaefb5c',
-              'x-app-key': '0953bb6b7e0cbc3242fb017d9c586753',
-              'Content-Type': 'application/json',
-            },
-          }
-        );
-
-        const data = response.data.foods[0];
-        setNutritionData({
-          calories: data.nf_calories,
-          carbs: data.nf_total_carbohydrate,
-          fat: data.nf_total_fat,
-          protein: data.nf_protein,
-        });
-      } catch (error) {
-        console.error('Error fetching nutrition data:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchNutritionData();
-  }, [foodName]);
 
   const handleGoToDashboard = () => {
     // Emit the reset camera event
     DeviceEventEmitter.emit('resetCamera');
     
-    // Navigate to the dashboard
-    navigation.navigate('AddFood');
+    // Navigate to the AddFood screen with the new food data
+    navigation.navigate('AddFood', { newFood });
   };
 
   return (
     <View style={styles.container}>
-      {isLoading ? (
-        <ActivityIndicator size="large" color="#4CAF50" />
-      ) : nutritionData ? (
-        <View style={styles.card}>
-          <Text style={styles.title}>{foodName}</Text>
-          <View style={styles.nutritionContainer}>
-            <Text style={styles.nutritionText}>Calories</Text>
-            <Text style={styles.nutritionValue}>{nutritionData.calories} kcal</Text>
-          </View>
-          <View style={styles.nutritionContainer}>
-            <Text style={styles.nutritionText}>Carbs</Text>
-            <Text style={styles.nutritionValue}>{nutritionData.carbs}g</Text>
-          </View>
-          <View style={styles.nutritionContainer}>
-            <Text style={styles.nutritionText}>Fat</Text>
-            <Text style={styles.nutritionValue}>{nutritionData.fat}g</Text>
-          </View>
-          <View style={styles.nutritionContainer}>
-            <Text style={styles.nutritionText}>Protein</Text>
-            <Text style={styles.nutritionValue}>{nutritionData.protein}g</Text>
-          </View>
+      <View style={styles.card}>
+        <Text style={styles.title}>{newFood.name}</Text>
+        <View style={styles.nutritionContainer}>
+          <Text style={styles.nutritionText}>Calories</Text>
+          <Text style={styles.nutritionValue}>{newFood.calories} kcal</Text>
         </View>
-      ) : (
-        <Text style={styles.errorText}>Failed to retrieve nutrition information.</Text>
-      )}
+        <View style={styles.nutritionContainer}>
+          <Text style={styles.nutritionText}>Amount</Text>
+          <Text style={styles.nutritionValue}>{newFood.amount}</Text>
+        </View>
+      </View>
       <TouchableOpacity style={styles.button} onPress={handleGoToDashboard}>
-        <Text style={styles.buttonText}>Go to Home Page</Text>
+        <Text style={styles.buttonText}>Add to Meal</Text>
       </TouchableOpacity>
     </View>
   );
@@ -124,10 +73,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#333',
-  },
-  errorText: {
-    fontSize: 18,
-    color: 'red',
   },
   button: {
     backgroundColor: '#4CAF50',
