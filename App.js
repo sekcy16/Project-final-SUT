@@ -52,7 +52,6 @@ import BookmarkListPage from "./screens/BookmarkListPage";
 import SummaryPage from "./screens/SummaryPage";
 import 'react-native-gesture-handler';
 import { TransitionPresets } from '@react-navigation/stack';
-import StepHistoryScreen from './screens/StepHistoryScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -152,6 +151,7 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
       style={styles.tabContainer}
     >
       <View style={styles.tabContent}>
+        {(state.index === 0 || state.index === 1) && <SearchBar />}
         <View style={styles.tabButtonContainer}>
           {state.routes.map((route, index) => {
             const { options } = descriptors[route.key];
@@ -202,6 +202,7 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
   );
 };
 
+
 // MainTabNavigator Component
 const MainTabNavigator = () => (
   <Tab.Navigator
@@ -232,46 +233,53 @@ const MainTabNavigator = () => (
 // DoctorTabNavigator Component
 const DoctorTabNavigator = () => (
   <Tab.Navigator
-    tabBar={(props) => <CustomTabBar {...props} />}
     screenOptions={({ route }) => ({
       headerShown: false,
       tabBarIcon: ({ focused, color, size }) => {
         let iconName;
         switch (route.name) {
-          case "หน้าหลัก":
+          case "DoctorHomePage":
             iconName = focused ? "home" : "home-outline";
             break;
-          case "ผู้ป่วย":
-            iconName = focused ? "people" : "people-outline";
+          case "PatientListScreen":
+            iconName = focused ? "list" : "list-outline";
             break;
-          case "บทความ":
-            iconName = focused ? "document-text" : "document-text-outline";
+          case "BlogList":
+            iconName = focused ? "document" : "document-outline";
             break;
-          case "โปรไฟล์":
+          case "DoctorProfilePage":
             iconName = focused ? "person" : "person-outline";
             break;
           default:
-            iconName = "alert-circle-outline";
+            iconName = "alert";
         }
         return <Icon name={iconName} size={size} color={color} />;
       },
+      tabBarActiveTintColor: "#007AFF",
+      tabBarInactiveTintColor: "#8E8E93",
+      tabBarStyle: styles.tabBar,
+      tabBarLabelStyle: styles.tabBarLabel,
     })}
   >
     <Tab.Screen
-      name="หน้าหลัก"
+      name="DoctorHomePage"
       component={DoctorHomePage}
+      options={{ tabBarLabel: "Home" }}
     />
     <Tab.Screen
-      name="ผู้ป่วย"
+      name="PatientListScreen"
       component={PatientListScreen}
+      options={{ tabBarLabel: "Patients" }}
     />
     <Tab.Screen
-      name="บทความ"
+      name="BlogList"
       component={BlogList}
+      options={{ tabBarLabel: "Blog" }}
     />
     <Tab.Screen
-      name="โปรไฟล์"
+      name="DoctorProfilePage"
       component={DoctorProfilePage}
+      options={{ tabBarLabel: "Profile" }}
     />
   </Tab.Navigator>
 );
@@ -335,7 +343,6 @@ const RootNavigator = () => {
       />
       <Stack.Screen name="FoodQRPage" component={FoodQRPage} />
       <Stack.Screen name="FoodQRResult" component={FoodQRResult} />
-      <Stack.Screen name="StepHistory" component={StepHistoryScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 };
