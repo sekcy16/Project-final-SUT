@@ -276,7 +276,6 @@ const DoctorTabNavigator = () => (
   </Tab.Navigator>
 );
 
-
 // RootNavigator Component
 const RootNavigator = () => {
   const user = useSelector((state) => state.user?.user);
@@ -397,20 +396,6 @@ const styles = StyleSheet.create({
   },
   tabContent: {
     paddingTop: 10,
-  },
-    tabButtonContainer: {
-    flexDirection: 'row',
-    height: 60,
-  },
-  tabButton: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tabLabel: {
-    fontSize: 12,
-    marginTop: 4,
-    fontFamily: 'Kanit-Regular',
   },
   searchBarContainer: {
     flexDirection: 'row',
