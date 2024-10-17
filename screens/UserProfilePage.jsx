@@ -17,8 +17,6 @@ import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { LinearGradient } from "expo-linear-gradient";
 
-const { width } = Dimensions.get("window");
-
 const ProfilePage = () => {
   const navigation = useNavigation();
   const [userData, setUserData] = useState(null);
@@ -26,29 +24,28 @@ const ProfilePage = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    let unsubscribeAuth;
-    let unsubscribeFirestore;
+    let unsubscribeAuth = null;
+    let unsubscribeFirestore = null;
 
     const setupSubscriptions = async () => {
       unsubscribeAuth = onAuthStateChanged(firebaseAuth, (user) => {
         if (user) {
           setIsAuthenticated(true);
           const userDocRef = doc(firebaseDB, "users", user.uid);
-          unsubscribeFirestore = onSnapshot(userDocRef, 
+          unsubscribeFirestore = onSnapshot(
+            userDocRef, 
             (doc) => {
               if (doc.exists()) {
                 setUserData(doc.data());
               } else {
-                console.error("ไม่พบเอกสารดังกล่าว!");
+                console.log("No such document!");
               }
             }, 
             (error) => {
-              console.error("เกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้:", error);
+              console.error("Error fetching user data:", error);
               if (error.code === 'permission-denied') {
-                // Handle permission denied error
-                setIsAuthenticated(false);
-                setUserData(null);
-                navigation.navigate("LoginScreen");
+                console.log("Permission denied. User might be logged out.");
+                handleSignOut();
               }
             }
           );
@@ -57,7 +54,9 @@ const ProfilePage = () => {
           setUserData(null);
           if (unsubscribeFirestore) {
             unsubscribeFirestore();
+            unsubscribeFirestore = null;
           }
+          navigation.navigate("LoginScreen");
         }
       });
     };
@@ -70,31 +69,18 @@ const ProfilePage = () => {
     };
   }, [navigation]);
 
-  const handleSignOut = () => {
-    Alert.alert("ออกจากระบบ", "คุณแน่ใจหรือไม่ที่ต้องการออกจากระบบ?", [
-      {
-        text: "ยกเลิก",
-        style: "cancel",
-      },
-      {
-        text: "ตกลง",
-        onPress: async () => {
-          try {
-            await firebaseAuth.signOut();
-            setIsAuthenticated(false);
-            setUserData(null);
-            navigation.navigate("LoginScreen");
-          } catch (error) {
-            console.error("ข้อผิดพลาดในการออกจากระบบ: ", error);
-            Alert.alert(
-              "ข้อผิดพลาด",
-              "ไม่สามารถออกจากระบบได้ กรุณาลองอีกครั้ง"
-            );
-          }
-        },
-      },
-    ]);
+  const handleSignOut = async () => {
+    try {
+      await firebaseAuth.signOut();
+      setIsAuthenticated(false);
+      setUserData(null);
+      navigation.navigate("LoginScreen");
+    } catch (error) {
+      console.error("Error signing out: ", error);
+      Alert.alert("Error", "Failed to sign out. Please try again.");
+    }
   };
+
 
   const onRefresh = async () => {
     if (!isAuthenticated) {

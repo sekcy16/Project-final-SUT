@@ -109,7 +109,7 @@ const SignUpScreen = () => {
         3.9485 * height -
         5.0035 * age;
     }
-
+  
     // Multiply BMR by activity level to get TDEE
     let activityMultiplier;
     switch (activityLevel) {
@@ -128,44 +128,44 @@ const SignUpScreen = () => {
       default:
         activityMultiplier = 1.2;
     }
-
+  
     let TDEE = BMR * activityMultiplier;
-
+  
     // Adjust TDEE based on diabetes type
     switch (diabetesType) {
-      case "Type 1":
-        TDEE *= 1.1; // Increase by 10% to account for higher energy expenditure
-        break;
       case "Type 2":
-        TDEE *= 0.95; // Decrease by 5% to promote weight management
+        TDEE *= 0.9; // Decrease by 10% to promote weight management and blood sugar control
         break;
-      case "Gestational":
-        TDEE *= 1.05; // Slight increase for gestational diabetes
+      case "Pre-diabetes":
+        TDEE *= 0.95; // Decrease by 5% to help prevent progression to Type 2 diabetes
+        break;
+      case "No diabetes":
+        // No adjustment needed
         break;
       default:
-      // No adjustment for "Other" type
+        // No adjustment if type is unknown
     }
-
+  
     return Math.round(TDEE);
   };
-
+  
   const calculateMacros = (TDEE, diabetesType, goal) => {
     let carbPercentage, proteinPercentage, fatPercentage;
-
+  
     switch (diabetesType) {
-      case "Type 1":
+      case "Type 2":
         carbPercentage = 0.4;
         proteinPercentage = 0.3;
         fatPercentage = 0.3;
         break;
-      case "Type 2":
-        carbPercentage = 0.35;
-        proteinPercentage = 0.3;
-        fatPercentage = 0.35;
-        break;
-      case "Gestational":
+      case "Pre-diabetes":
         carbPercentage = 0.45;
         proteinPercentage = 0.25;
+        fatPercentage = 0.3;
+        break;
+      case "No diabetes":
+        carbPercentage = 0.5;
+        proteinPercentage = 0.2;
         fatPercentage = 0.3;
         break;
       default:
@@ -173,7 +173,7 @@ const SignUpScreen = () => {
         proteinPercentage = 0.25;
         fatPercentage = 0.3;
     }
-
+  
     // Adjust macros based on goal
     if (goal === "Lose Weight") {
       carbPercentage -= 0.05;
@@ -183,13 +183,14 @@ const SignUpScreen = () => {
       proteinPercentage += 0.05;
       fatPercentage -= 0.1;
     }
-
+  
     const carbs = Math.round((TDEE * carbPercentage) / 4);
     const protein = Math.round((TDEE * proteinPercentage) / 4);
     const fat = Math.round((TDEE * fatPercentage) / 9);
-
+  
     return { carbs, protein, fat };
   };
+  
 
   const handleSignUp = async () => {
     // ตรวจสอบข้อมูลที่จำเป็นและความถูกต้องของอีเมลและเบอร์โทร
@@ -440,10 +441,9 @@ const SignUpScreen = () => {
               <RNPickerSelect
                 onValueChange={(value) => setDiabetesType(value)}
                 items={[
-                  { label: "ประเภท 1", value: "ประเภท 1" },
-                  { label: "ประเภท 2", value: "ประเภท 2" },
-                  { label: "ขณะตั้งครรภ์", value: "ขณะตั้งครรภ์" },
-                  { label: "อื่นๆ", value: "อื่นๆ" },
+                  { label: "ประเภท 2", value: "Type 2" },
+                  { label: "ก่อนเบาหวาน", value: "Pre-diabetes" },
+                  { label: "ไม่เป็นเบาหวาน", value: "No diabetes" },
                 ]}
                 placeholder={{ label: "เลือกประเภทเบาหวาน", value: null }}
               />

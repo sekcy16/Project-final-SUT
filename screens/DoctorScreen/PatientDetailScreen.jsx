@@ -373,9 +373,7 @@ const PatientDetailScreen = ({ route, navigation }) => {
         total += item.calories || 0;
       });
     });
-    entry.exercises?.forEach(exercise => {
-      total -= exercise.calories || 0;
-    });
+    
     return total.toFixed(0);
   };
 
