@@ -12,13 +12,15 @@ import {
 } from "react-native";
 import { addDoc, collection, doc, setDoc } from "firebase/firestore";
 import { firebaseDB } from "../../config/firebase.config";
+import { LinearGradient } from "expo-linear-gradient";
+import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 
 const AdvicePage = ({ route, navigation }) => {
   const {
     patientName = "Unknown",
     patientAge = "Unknown",
     patientLevel = "Unknown",
-    patientId, 
+    patientId,
   } = route.params || {};
 
   // State for advice sections
@@ -78,11 +80,9 @@ const AdvicePage = ({ route, navigation }) => {
         return;
       }
 
-      
       const patientAdviceRef = doc(firebaseDB, "users", patientId, "advice", new Date().toISOString());
       await setDoc(patientAdviceRef, adviceData);
 
-      
       if (notification.title.trim() && notification.message.trim()) {
         await addDoc(collection(firebaseDB, "Notidetails"), {
           title: notification.title,
@@ -102,13 +102,16 @@ const AdvicePage = ({ route, navigation }) => {
     }
   };
 
-  const renderAdviceSection = (type, title) => (
+  const renderAdviceSection = (type, title, icon) => (
     <View style={styles.adviceSection}>
       <View style={styles.adviceHeader}>
+        <Icon name={icon} size={24} color="#1E88E5" style={styles.adviceIcon} />
         <Text style={styles.sectionTitle}>{title}</Text>
         <Switch
           value={adviceTypes[type].enabled}
           onValueChange={() => toggleAdviceType(type)}
+          trackColor={{ false: "#767577", true: "#81b0ff" }}
+          thumbColor={adviceTypes[type].enabled ? "#1E88E5" : "#f4f3f4"}
         />
       </View>
       {adviceTypes[type].enabled && (
@@ -119,88 +122,108 @@ const AdvicePage = ({ route, navigation }) => {
           onChangeText={(content) => updateAdviceContent(type, content)}
           value={adviceTypes[type].content}
           placeholder={`Provide ${type} advice`}
+          placeholderTextColor="#999"
         />
       )}
     </View>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView>
-        <View style={styles.header}>
-          <Text style={styles.name}>{patientName}</Text>
-          <Text style={styles.details}>
-            Age: {patientAge} | Diabetes Level: {patientLevel}
-          </Text>
-        </View>
-
-        <View style={styles.contentContainer}>
-          {renderAdviceSection("eating", "Eating Advice")}
-          {renderAdviceSection("exercise", "Exercise Advice")}
-          {renderAdviceSection("additional", "Additional Advice")}
-
-          <View style={styles.adviceSection}>
-            <Text style={styles.sectionTitle}>Notification (Optional)</Text>
-            <TextInput
-              style={styles.input}
-              onChangeText={(title) => setNotification(prev => ({ ...prev, title }))}
-              value={notification.title}
-              placeholder="Notification Title"
-            />
-            <TextInput
-              style={[styles.input, { marginTop: 10 }]}
-              multiline
-              numberOfLines={4}
-              onChangeText={(message) => setNotification(prev => ({ ...prev, message }))}
-              value={notification.message}
-              placeholder="Notification Message"
-            />
+    <LinearGradient colors={["#4A90E2", "#50E3C2"]} style={styles.container}>
+      <SafeAreaView style={styles.safeArea}>
+        <ScrollView style={styles.content}>
+          <View style={styles.header}>
+            <Text style={styles.name}>{patientName}</Text>
+            <Text style={styles.details}>
+              Age: {patientAge} | Diabetes Level: {patientLevel}
+            </Text>
           </View>
-        </View>
-      </ScrollView>
 
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={styles.buttonText}>Back</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm}>
-          <Text style={styles.buttonText}>Confirm & Send</Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+          <View style={styles.contentContainer}>
+            {renderAdviceSection("eating", "Eating Advice", "food-apple")}
+            {renderAdviceSection("exercise", "Exercise Advice", "run")}
+            {renderAdviceSection("additional", "Additional Advice", "note-text")}
+
+            <View style={styles.adviceSection}>
+              <Text style={styles.sectionTitle}>Notification (Optional)</Text>
+              <TextInput
+                style={styles.input}
+                onChangeText={(title) => setNotification(prev => ({ ...prev, title }))}
+                value={notification.title}
+                placeholder="Notification Title"
+                placeholderTextColor="#999"
+              />
+              <TextInput
+                style={[styles.input, { marginTop: 10 }]}
+                multiline
+                numberOfLines={4}
+                onChangeText={(message) => setNotification(prev => ({ ...prev, message }))}
+                value={notification.message}
+                placeholder="Notification Message"
+                placeholderTextColor="#999"
+              />
+            </View>
+          </View>
+        </ScrollView>
+
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.buttonText}>Back</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm}>
+            <Text style={styles.buttonText}>Confirm & Send</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#E8F0F2",
+  },
+  safeArea: {
+    flex: 1,
+  },
+  content: {
+    flex: 1,
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    paddingTop: 20,
+    paddingHorizontal: 15,
   },
   header: {
-    backgroundColor: "#007BFF",
     padding: 20,
+    marginBottom: 20,
   },
   name: {
     fontSize: 24,
-    fontWeight: "bold",
-    color: "white",
+    fontFamily: "Kanit-Bold",
+    color: "#1E88E5",
   },
   details: {
     fontSize: 16,
-    color: "white",
+    fontFamily: "Kanit-Regular",
+    color: "#666",
   },
   contentContainer: {
-    flex: 1,
     padding: 20,
   },
   adviceSection: {
-    backgroundColor: "white",
+    backgroundColor: "#FFF",
     borderRadius: 10,
     padding: 15,
     marginBottom: 20,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   adviceHeader: {
     flexDirection: 'row',
@@ -208,10 +231,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 10,
   },
+  adviceIcon: {
+    marginRight: 10,
+  },
   sectionTitle: {
+    flex: 1,
     fontSize: 18,
-    fontWeight: "bold",
-    color: "#007BFF",
+    fontFamily: "Kanit-Bold",
+    color: "#1E88E5",
   },
   input: {
     borderWidth: 1,
@@ -220,11 +247,15 @@ const styles = StyleSheet.create({
     padding: 10,
     minHeight: 100,
     textAlignVertical: "top",
+    fontFamily: "Kanit-Regular",
+    fontSize: 16,
+    color: "#333",
   },
   buttonContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
     padding: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
   },
   backButton: {
     backgroundColor: "#FF6F61",
@@ -235,7 +266,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   confirmButton: {
-    backgroundColor: "#007BFF",
+    backgroundColor: "#1E88E5",
     borderRadius: 5,
     padding: 15,
     flex: 1,
@@ -246,6 +277,7 @@ const styles = StyleSheet.create({
     color: "white",
     fontWeight: "bold",
     fontSize: 16,
+    fontFamily: "Kanit-Bold",
   },
 });
 

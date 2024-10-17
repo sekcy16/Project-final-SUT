@@ -143,12 +143,12 @@ const DoctorProfilePage = () => {
             <Text style={styles.doctorName}>{doctorData?.fullName || "ชื่อแพทย์"}</Text>
             <Text style={styles.doctorEmail}>{doctorData?.email || "กำลังโหลด.."}</Text>
 
-            <TouchableOpacity
+            {/* <TouchableOpacity
               style={styles.editProfileButton}
               onPress={() => navigation.navigate("EditDoctorProfilePage")}
             >
               <Text style={styles.editProfileButtonText}>แก้ไขโปรไฟล์</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </View>
 
           {/* <View style={styles.statsSection}>

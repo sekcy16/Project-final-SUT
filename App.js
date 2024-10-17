@@ -112,7 +112,7 @@ const SearchModal = ({ visible, onClose }) => {
   );
 };
 
-// SearchBar Component
+// SearchBar Component (remains the same)
 const SearchBar = () => {
   const navigation = useNavigation();
 
@@ -131,18 +131,15 @@ const SearchBar = () => {
         <Text style={styles.searchPlaceholder}>ค้นหาอาหาร</Text>
       </TouchableOpacity>
       <TouchableOpacity onPress={handleBarcodePress} style={styles.barcodeButton}>
-        <Icon
-          name="barcode-outline"
-          size={20}
-          color="#fff"
-        />
+        <Icon name="barcode-outline" size={20} color="#fff" />
       </TouchableOpacity>
     </View>
   );
 };
 
-// CustomTabBar Component
-const CustomTabBar = ({ state, descriptors, navigation }) => {
+
+// Updated CustomTabBar Component
+const CustomTabBar = ({ state, descriptors, navigation, showSearch = false }) => {
   return (
     <LinearGradient
       colors={['#4A90E2', '#50E3C2']}
@@ -151,7 +148,7 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
       style={styles.tabContainer}
     >
       <View style={styles.tabContent}>
-        {(state.index === 0 || state.index === 1) && <SearchBar />}
+        {showSearch && <SearchBar />}
         <View style={styles.tabButtonContainer}>
           {state.routes.map((route, index) => {
             const { options } = descriptors[route.key];
@@ -202,11 +199,10 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
   );
 };
 
-
-// MainTabNavigator Component
+// Updated MainTabNavigator Component
 const MainTabNavigator = () => (
   <Tab.Navigator
-    tabBar={(props) => <CustomTabBar {...props} />}
+    tabBar={(props) => <CustomTabBar {...props} showSearch={true} />}
     screenOptions={({ route }) => ({
       headerShown: false,
       tabBarIcon: ({ focused, color, size }) => {
@@ -230,9 +226,11 @@ const MainTabNavigator = () => (
     <Tab.Screen name="โปรไฟล์" component={UserProfilePage} />
   </Tab.Navigator>
 );
-// DoctorTabNavigator Component
+
+// Updated DoctorTabNavigator Component
 const DoctorTabNavigator = () => (
   <Tab.Navigator
+    tabBar={(props) => <CustomTabBar {...props} showSearch={false} />}
     screenOptions={({ route }) => ({
       headerShown: false,
       tabBarIcon: ({ focused, color, size }) => {
@@ -255,35 +253,30 @@ const DoctorTabNavigator = () => (
         }
         return <Icon name={iconName} size={size} color={color} />;
       },
-      tabBarActiveTintColor: "#007AFF",
-      tabBarInactiveTintColor: "#8E8E93",
-      tabBarStyle: styles.tabBar,
-      tabBarLabelStyle: styles.tabBarLabel,
     })}
   >
     <Tab.Screen
       name="DoctorHomePage"
       component={DoctorHomePage}
-      options={{ tabBarLabel: "Home" }}
+      options={{ tabBarLabel: "หน้าหลัก" }}
     />
     <Tab.Screen
       name="PatientListScreen"
       component={PatientListScreen}
-      options={{ tabBarLabel: "Patients" }}
+      options={{ tabBarLabel: "ผู้ป่วย" }}
     />
     <Tab.Screen
       name="BlogList"
       component={BlogList}
-      options={{ tabBarLabel: "Blog" }}
+      options={{ tabBarLabel: "บทความ" }}
     />
     <Tab.Screen
       name="DoctorProfilePage"
       component={DoctorProfilePage}
-      options={{ tabBarLabel: "Profile" }}
+      options={{ tabBarLabel: "โปรไฟล์" }}
     />
   </Tab.Navigator>
 );
-
 // RootNavigator Component
 const RootNavigator = () => {
   const user = useSelector((state) => state.user?.user);

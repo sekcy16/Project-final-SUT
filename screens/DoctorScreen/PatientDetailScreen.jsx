@@ -12,15 +12,17 @@ import { LineChart } from "react-native-chart-kit";
 import { firebaseDB } from "../../config/firebase.config";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView } from "react-native-safe-area-context";
+
 
 const PatientDetailScreen = ({ route, navigation }) => {
-  const { patientId } = route.params; // Get patient ID from route parameters
-  const [patientData, setPatientData] = useState(null); // State to store patient data
-  const [selectedTab, setSelectedTab] = useState("bloodSugar"); // Tab state
-  const [loading, setLoading] = useState(true); // Loading state
+  const { patientId } = route.params;
+  const [patientData, setPatientData] = useState(null);
+  const [selectedTab, setSelectedTab] = useState("bloodSugar");
+  const [loading, setLoading] = useState(true);
   const [weightHistory, setWeightHistory] = useState([]);
   const [diaryEntries, setDiaryEntries] = useState([]);
-
 
   const fetchPatientData = async () => {
     try {
@@ -137,31 +139,29 @@ const PatientDetailScreen = ({ route, navigation }) => {
     fetchAllData();
   }, [patientId]);
 
-
   if (loading) {
     return (
-      <ActivityIndicator
-        size="large"
-        color="#2196F3"
-        style={{ marginTop: 20 }}
-      />
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#2196F3" />
+      </View>
     );
   }
 
   if (!patientData) {
     return (
-      <Text style={{ textAlign: "center", marginTop: 20 }}>
-        ไม่พบข้อมูลผู้ป่วย
-      </Text>
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>ไม่พบข้อมูลผู้ป่วย</Text>
+      </View>
     );
   }
+
 
   const renderTabContent = () => {
     switch (selectedTab) {
       case "bloodSugar":
         return (
           <View style={styles.tabContent}>
-            <Text style={styles.statsText}>ระดับน้ำตาลในเลือด</Text>
+            <Text style={styles.sectionTitle}>ระดับน้ำตาลในเลือด</Text>
             {patientData.bloodSugarHistory ? (
               <LineChart
                 data={{
@@ -391,97 +391,116 @@ const PatientDetailScreen = ({ route, navigation }) => {
 
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.name}>{patientData.fullName || "No Name"}</Text>
-        <Text style={styles.age}>
-          อายุ {patientData.age || "N/A"} | เบาหวานระดับ {patientData.diabetesType || "N/A"}
-        </Text>
-      </View>
+    <LinearGradient colors={["#4A90E2", "#50E3C2"]} style={styles.container}>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.header}>
+          <Text style={styles.name}>{patientData.fullName || "No Name"}</Text>
+          <Text style={styles.age}>
+            อายุ {patientData.age || "N/A"} | เบาหวานระดับ {patientData.diabetesType || "N/A"}
+          </Text>
+        </View>
 
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tab, selectedTab === "bloodSugar" && styles.activeTab]}
-          onPress={() => setSelectedTab("bloodSugar")}
-        >
-          <MaterialCommunityIcons
-            name="water"
-            size={24}
-            color={selectedTab === "bloodSugar" ? "#2196F3" : "#757575"}
-          />
-          <Text style={[styles.tabText, selectedTab === "bloodSugar" && styles.activeTabText]}>
-            น้ำตาล
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, selectedTab === "weight" && styles.activeTab]}
-          onPress={() => setSelectedTab("weight")}
-        >
-          <MaterialCommunityIcons
-            name="scale-bathroom"
-            size={24}
-            color={selectedTab === "weight" ? "#2196F3" : "#757575"}
-          />
-          <Text style={[styles.tabText, selectedTab === "weight" && styles.activeTabText]}>
-            น้ำหนัก
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, selectedTab === "diary" && styles.activeTab]}
-          onPress={() => setSelectedTab("diary")}
-        >
-          <MaterialCommunityIcons
-            name="book-open-variant"
-            size={24}
-            color={selectedTab === "diary" ? "#2196F3" : "#757575"}
-          />
-          <Text style={[styles.tabText, selectedTab === "diary" && styles.activeTabText]}>
-            ไดอารี่
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, selectedTab === "relatives" && styles.activeTab]}
-          onPress={() => setSelectedTab("relatives")}
-        >
-          <MaterialCommunityIcons
-            name="account-group"
-            size={24}
-            color={selectedTab === "relatives" ? "#2196F3" : "#757575"}
-          />
-          <Text style={[styles.tabText, selectedTab === "relatives" && styles.activeTabText]}>
-            ญาติ
-          </Text>
-        </TouchableOpacity>
-      </View>
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tab, selectedTab === "bloodSugar" && styles.activeTab]}
+            onPress={() => setSelectedTab("bloodSugar")}
+          >
+            <MaterialCommunityIcons
+              name="water"
+              size={24}
+              color={selectedTab === "bloodSugar" ? "#2196F3" : "#757575"}
+            />
+            <Text style={[styles.tabText, selectedTab === "bloodSugar" && styles.activeTabText]}>
+              น้ำตาล
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, selectedTab === "weight" && styles.activeTab]}
+            onPress={() => setSelectedTab("weight")}
+          >
+            <MaterialCommunityIcons
+              name="scale-bathroom"
+              size={24}
+              color={selectedTab === "weight" ? "#2196F3" : "#757575"}
+            />
+            <Text style={[styles.tabText, selectedTab === "weight" && styles.activeTabText]}>
+              น้ำหนัก
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, selectedTab === "diary" && styles.activeTab]}
+            onPress={() => setSelectedTab("diary")}
+          >
+            <MaterialCommunityIcons
+              name="book-open-variant"
+              size={24}
+              color={selectedTab === "diary" ? "#2196F3" : "#757575"}
+            />
+            <Text style={[styles.tabText, selectedTab === "diary" && styles.activeTabText]}>
+              ไดอารี่
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, selectedTab === "relatives" && styles.activeTab]}
+            onPress={() => setSelectedTab("relatives")}
+          >
+            <MaterialCommunityIcons
+              name="account-group"
+              size={24}
+              color={selectedTab === "relatives" ? "#2196F3" : "#757575"}
+            />
+            <Text style={[styles.tabText, selectedTab === "relatives" && styles.activeTabText]}>
+              ญาติ
+            </Text>
+          </TouchableOpacity>
+        </View>
 
-      <ScrollView style={styles.content}>
-        {renderTabContent()}
-      </ScrollView>
-      <TouchableOpacity
-        style={styles.adviceButton}
-        onPress={() => {
-          // Add this console.log to verify the ID
-          console.log("Patient ID being passed:", patientId);
-
-          navigation.navigate("AdvicePage", {
-            patientName: patientData.fullName,
-            patientAge: patientData.age,
-            patientLevel: patientData.diabetesType,
-            patientId: patientId, // Make sure this matches the ID from route.params
-            userId: patientId,    // Add this as a backup
-          });
-        }}
-      >
-        <MaterialCommunityIcons name="lightbulb-on" size={24} color="white" />
-        <Text style={styles.adviceButtonText}>ให้คำแนะนำ</Text>
-      </TouchableOpacity>
-    </View>
+        <ScrollView style={styles.content}>
+          {renderTabContent()}
+        </ScrollView>
+        <TouchableOpacity
+          style={styles.adviceButton}
+          onPress={() => {
+            navigation.navigate("AdvicePage", {
+              patientName: patientData.fullName,
+              patientAge: patientData.age,
+              patientLevel: patientData.diabetesType,
+              patientId: patientId,
+              userId: patientId,
+            });
+          }}
+        >
+         <MaterialCommunityIcons name="lightbulb-on" size={24} color="white" />
+          <Text style={styles.adviceButtonText}>ให้คำแนะนำ</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    </LinearGradient>
   );
 };
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F5F5F5"
+  },
+  safeArea: {
+    flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+  },
+  errorText: {
+    fontSize: 18,
+    color: '#FF5252',
+    fontFamily: 'Kanit-Regular',
   },
   header: {
     padding: 20,
@@ -492,7 +511,7 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 26,
-    fontWeight: "bold",
+    fontFamily: 'Kanit-Bold',
     color: "white"
   },
   age: {
@@ -524,17 +543,33 @@ const styles = StyleSheet.create({
   },
   activeTabText: {
     color: "#2196F3",
-    fontWeight: "bold",
+    fontFamily: 'Kanit-Bold',
   },
   content: {
     flex: 1,
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    paddingTop: 20,
+    paddingHorizontal: 15,
   },
   tabContent: {
     padding: 15,
   },
+  sectionTitle: {
+    fontSize: 22,
+    marginBottom: 15,
+    color: "#1E88E5",
+    fontFamily: 'Kanit-Bold',
+  },
+  chart: {
+    borderRadius: 16,
+    marginVertical: 20,
+    alignItems: "center",
+  },
   statsText: {
     fontSize: 20,
-    fontWeight: "bold",
+    fontFamily: 'Kanit-Bold',
     marginBottom: 15,
     color: "#333",
   },
@@ -568,27 +603,30 @@ const styles = StyleSheet.create({
   historyDate: {
     fontSize: 16,
     color: "#333",
-    fontWeight: "bold",
+    fontFamily: 'Kanit-Regular',
   },
   historyTime: {
     fontSize: 14,
     color: "#757575",
     marginTop: 4,
+    fontFamily: 'Kanit-Light',
   },
   historyValue: {
     fontSize: 18,
-    fontWeight: "bold",
-    color: "#2196F3"
+    color: "#2196F3",
+    fontFamily: 'Kanit-Bold',
   },
   historyStatus: {
     fontSize: 14,
     marginTop: 4,
+    fontFamily: 'Kanit-Regular',
   },
   noDataText: {
     fontSize: 16,
     color: "#757575",
     textAlign: "center",
     marginTop: 20,
+    fontFamily: 'Kanit-Regular',
   },
   adviceButton: {
     flexDirection: "row",
@@ -603,7 +641,7 @@ const styles = StyleSheet.create({
   adviceButtonText: {
     color: "white",
     fontSize: 18,
-    fontWeight: "bold",
+    fontFamily: 'Kanit-Bold',
     marginLeft: 10,
   },
   // New styles for the diary section
@@ -612,7 +650,7 @@ const styles = StyleSheet.create({
   },
   diaryTitle: {
     fontSize: 24,
-    fontWeight: "bold",
+    fontFamily: 'Kanit-Bold',
     color: "#333",
     marginBottom: 20,
   },
@@ -631,13 +669,13 @@ const styles = StyleSheet.create({
   },
   diaryDate: {
     fontSize: 18,
-    fontWeight: "bold",
+    fontFamily: 'Kanit-Bold',
     color: "#2196F3",
   },
   diaryCalories: {
     fontSize: 16,
     color: "#4CAF50",
-    fontWeight: "bold",
+    fontFamily: 'Kanit-Bold',
   },
   macrosContainer: {
     flexDirection: "row",
@@ -652,7 +690,7 @@ const styles = StyleSheet.create({
   },
   macroValue: {
     fontSize: 18,
-    fontWeight: "bold",
+    fontFamily: 'Kanit-Bold',
     marginTop: 5,
   },
   macroLabel: {
@@ -661,7 +699,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: "bold",
+    fontFamily: 'Kanit-Bold',
     color: "#333",
     marginTop: 15,
     marginBottom: 10,
@@ -671,7 +709,7 @@ const styles = StyleSheet.create({
   },
   mealName: {
     fontSize: 18,
-    fontWeight: "bold",
+    fontFamily: 'Kanit-Bold',
     color: "#2196F3",
     marginBottom: 5,
   },
@@ -700,7 +738,7 @@ const styles = StyleSheet.create({
   },
   exerciseName: {
     fontSize: 16,
-    fontWeight: "bold",
+    fontFamily: 'Kanit-Bold',
     color: "#333",
   },
   exerciseInfo: {
@@ -712,7 +750,7 @@ const styles = StyleSheet.create({
   },
   relativesTitle: {
     fontSize: 20,
-    fontWeight: "bold",
+    fontFamily: 'Kanit-Bold',
     marginBottom: 15,
     color: "#333",
   },
@@ -730,7 +768,7 @@ const styles = StyleSheet.create({
   },
   relativeName: {
     fontSize: 18,
-    fontWeight: "bold",
+    fontFamily: 'Kanit-Bold',
     color: "#333",
   },
   relativePhone: {

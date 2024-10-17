@@ -80,9 +80,9 @@ const FoodQRResult = ({ route }) => {
         );
     }
 
-    const NutrientItem = ({ icon, label, value }) => (
-        <View style={styles.nutrientItem}>
-            <Icon name={icon} size={24} color="#2E7D32" style={styles.nutrientIcon} />
+    const NutrientItem = ({ icon, label, value, color }) => (
+        <View style={[styles.nutrientItem, { backgroundColor: color }]}>
+            <Icon name={icon} size={28} color="#FFFFFF" style={styles.nutrientIcon} />
             <View>
                 <Text style={styles.nutrientLabel}>{label}</Text>
                 <Text style={styles.nutrientValue}>{value}</Text>
@@ -171,96 +171,112 @@ const FoodQRResult = ({ route }) => {
     return (
         <SafeAreaView style={styles.container}>
             <ScrollView style={styles.scrollView}>
-                <Text style={styles.title}>{product.product_name}</Text>
-                <Text style={styles.subtitle}>Amount: {amount}</Text>
+                <Text style={styles.title}>{product.product_name || 'ไม่ทราบชื่อสินค้า'}</Text>
+                <Text style={styles.subtitle}>ปริมาณ: {amount}</Text>
                 <View style={styles.nutrientContainer}>
                     <NutrientItem
                         icon="flame-outline"
-                        label="Energy"
-                        value={`${energyKj} kJ (${energyKcal} kcal)`}
+                        label="พลังงาน"
+                        value={`${energyKj} กิโลจูล (${energyKcal} กิโลแคลอรี่)`}
+                        color="#FF6B6B"
                     />
                     <NutrientItem
                         icon="restaurant-outline"
-                        label="Fat"
-                        value={`${nutriments.fat_100g || 0} g`}
+                        label="ไขมัน"
+                        value={`${nutriments.fat_100g || 0} กรัม`}
+                        color="#4ECDC4"
                     />
                     <NutrientItem
                         icon="nutrition-outline"
-                        label="Carbohydrates"
-                        value={`${nutriments.carbohydrates_100g || 0} g`}
+                        label="คาร์โบไฮเดรต"
+                        value={`${nutriments.carbohydrates_100g || 0} กรัม`}
+                        color="#45B7D1"
                     />
                     <NutrientItem
                         icon="barbell-outline"
-                        label="Proteins"
-                        value={`${nutriments.proteins_100g || 0} g`}
+                        label="โปรตีน"
+                        value={`${nutriments.proteins_100g || 0} กรัม`}
+                        color="#FF9F1C"
                     />
                 </View>
                 <TouchableOpacity style={styles.addButton} onPress={handleAddFood}>
                     <Icon name="add-circle-outline" size={24} color="#FFFFFF" />
-                    <Text style={styles.addButtonText}>Add to History</Text>
+                    <Text style={styles.addButtonText}>เพิ่มในประวัติ</Text>
                 </TouchableOpacity>
             </ScrollView>
         </SafeAreaView>
     );
 };
 
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: '#F7F7F7',
     },
     scrollView: {
         flex: 1,
         padding: 20,
     },
     title: {
-        fontSize: 24,
+        fontSize: 28,
         fontWeight: 'bold',
+        marginBottom: 10,
+        color: '#2C3E50',
+        textAlign: 'center',
+    },
+    subtitle: {
+        fontSize: 18,
+        color: '#7F8C8D',
         marginBottom: 20,
-        color: '#333333',
+        textAlign: 'center',
     },
     nutrientContainer: {
-        backgroundColor: '#F5F5F5',
-        borderRadius: 10,
-        padding: 15,
         marginBottom: 20,
     },
     nutrientItem: {
         flexDirection: 'row',
         alignItems: 'center',
         marginBottom: 15,
+        padding: 15,
+        borderRadius: 10,
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
     },
     nutrientIcon: {
         marginRight: 15,
     },
     nutrientLabel: {
         fontSize: 16,
-        color: '#666666',
+        color: '#FFFFFF',
+        fontWeight: 'bold',
     },
     nutrientValue: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#333333',
+        color: '#FFFFFF',
     },
     addButton: {
-        backgroundColor: '#4CAF50',
+        backgroundColor: '#2ECC71',
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         padding: 15,
-        margin: 20,
         borderRadius: 10,
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
     },
     addButtonText: {
         color: '#FFFFFF',
         fontSize: 18,
         fontWeight: 'bold',
         marginLeft: 10,
-    },
-    subtitle: {
-        fontSize: 18,
-        color: '#666666',
-        marginBottom: 10,
     },
 });
 
