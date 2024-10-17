@@ -18,6 +18,7 @@ import { collection, query, where, getDocs, doc, setDoc, getDoc, deleteDoc, addD
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import moment from 'moment-timezone';
 
 const PatientListScreen = ({ navigation }) => {
   const [patients, setPatients] = useState([]);
@@ -32,6 +33,7 @@ const PatientListScreen = ({ navigation }) => {
   const [appointmentDate, setAppointmentDate] = useState(new Date());
   const [appointmentTime, setAppointmentTime] = useState(new Date());
   const [appointmentNote, setAppointmentNote] = useState('');
+  const [appointmentDateTime, setAppointmentDateTime] = useState(moment().tz('Asia/Bangkok'));
 
   const fetchPatients = useCallback(async () => {
     setLoading(true);
@@ -175,41 +177,49 @@ const PatientListScreen = ({ navigation }) => {
   };
   
 
+  const onDateTimeChange = (event, selectedDateTime) => {
+    setShowDatePicker(false);
+    setShowTimePicker(false);
+    if (selectedDateTime) {
+      setAppointmentDateTime(moment(selectedDateTime).tz('Asia/Bangkok'));
+    }
+  };
+
+
 
   // ใช้ฟังก์ชันนี้ก่อนที่จะสร้างการนัดหมาย
   const createAppointment = async () => {
     if (!selectedPatient) return;
-  
+
     try {
       const currentUser = firebaseAuth.currentUser;
       if (!currentUser) {
         throw new Error("ไม่พบข้อมูลผู้ใช้");
       }
-  
+
       const userRole = await checkUserRole(currentUser.uid);
       console.log("Current user role:", userRole);
-  
+
       if (userRole !== 'Doctor') {
         throw new Error("คุณไม่มีสิทธิ์ในการสร้างนัดหมาย");
       }
-  
+
       const appointmentData = {
         doctorId: currentUser.uid,
         patientId: selectedPatient.id,
         patientName: selectedPatient.fullName,
-        date: appointmentDate.toISOString().split('T')[0],
-        time: appointmentTime.toTimeString().split(' ')[0],
+        date: appointmentDateTime.format('YYYY-MM-DD'),
+        time: appointmentDateTime.format('HH:mm:ss'),
         note: appointmentNote,
-        createdAt: new Date()
+        createdAt: moment().tz('Asia/Bangkok').toDate()
       };
-  
+
       console.log("Attempting to create appointment with data:", appointmentData);
-  
-      // สร้าง collection "appointments" ถ้ายังไม่มี
+
       const appointmentsRef = collection(firebaseDB, "users", currentUser.uid, "appointments");
       const newAppointmentRef = doc(appointmentsRef);
       await setDoc(newAppointmentRef, appointmentData);
-  
+
       console.log("Appointment created with ID: ", newAppointmentRef.id);
       Alert.alert("สำเร็จ", "สร้างนัดหมายเรียบร้อยแล้ว");
       setModalVisible(false);
@@ -221,6 +231,7 @@ const PatientListScreen = ({ navigation }) => {
       Alert.alert("ข้อผิดพลาด", "ไม่สามารถสร้างนัดหมายได้: " + error.message);
     }
   };
+
   
   const renderPatientItem = ({ item }) => (
     <View style={styles.patientItem}>
@@ -319,17 +330,13 @@ const PatientListScreen = ({ navigation }) => {
         transparent={true}
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
-      >
+        >
         <View style={styles.centeredView}>
           <View style={styles.modalView}>
             <Text style={styles.modalTitle}>นัดหมายสำหรับ {selectedPatient?.fullName}</Text>
             
             <TouchableOpacity style={styles.datePickerButton} onPress={() => setShowDatePicker(true)}>
-              <Text>วันที่: {appointmentDate.toLocaleDateString()}</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.datePickerButton} onPress={() => setShowTimePicker(true)}>
-              <Text>เวลา: {appointmentTime.toLocaleTimeString()}</Text>
+              <Text>วันที่และเวลา: {appointmentDateTime.format('DD/MM/YYYY HH:mm')}</Text>
             </TouchableOpacity>
             
             <TextInput
@@ -350,15 +357,15 @@ const PatientListScreen = ({ navigation }) => {
           </View>
         </View>
       </Modal>
-
       {showDatePicker && (
-        <DateTimePicker
-          value={appointmentDate}
-          mode="date"
-          display="default"
-          onChange={onDateChange}
-        />
-      )}
+      <DateTimePicker
+        value={appointmentDateTime.toDate()}
+        mode="datetime"
+        is24Hour={true}
+        display="default"
+        onChange={onDateTimeChange}
+      />
+    )}
       {showTimePicker && (
         <DateTimePicker
           value={appointmentTime}

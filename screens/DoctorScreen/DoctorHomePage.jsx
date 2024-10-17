@@ -30,8 +30,8 @@ import { onAuthStateChanged } from "firebase/auth";
 import moment from "moment";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
-import * as Notifications from 'expo-notifications';
-
+import * as Notifications from "expo-notifications";
+import moment from "moment-timezone";
 
 const DoctorHomePage = () => {
   const navigation = useNavigation();
@@ -53,25 +53,14 @@ const DoctorHomePage = () => {
   const [taskModalVisible, setTaskModalVisible] = useState(false);
   const [allAppointments, setAllAppointments] = useState([]);
 
-  const sendTestNotification = async () => {
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: "ทดสอบการแจ้งเตือน",
-        body: 'นี่คือการแจ้งเตือนทดสอบ',
-      },
-      trigger: { seconds: 5 }, // แจ้งเตือนหลังจาก 5 วินาที
-    });
-    Alert.alert("ทดสอบการแจ้งเตือน", "การแจ้งเตือนจะปรากฏในอีก 5 วินาที");
-  };
-
   useEffect(() => {
     const requestNotificationPermissions = async () => {
       const { status } = await Notifications.requestPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('การแจ้งเตือนถูกปฏิเสธ', 'คุณจะไม่ได้รับการแจ้งเตือน');
+      if (status !== "granted") {
+        Alert.alert("การแจ้งเตือนถูกปฏิเสธ", "คุณจะไม่ได้รับการแจ้งเตือน");
       }
     };
-  
+
     const setupNotifications = async () => {
       await Notifications.setNotificationHandler({
         handleNotification: async () => ({
@@ -95,34 +84,34 @@ const DoctorHomePage = () => {
         setError("ไม่พบข้อมูลผู้ใช้ กรุณาเข้าสู่ระบบ");
       }
     });
-  
+
     requestNotificationPermissions();
-  setupNotifications();
+    setupNotifications();
     return () => unsubscribeAuth();
   }, []);
 
+  // แก้ไขฟังก์ชัน scheduleNotification
+  const scheduleNotification = async (item, type) => {
+    const notificationTime = moment
+      .tz(item.time, "Asia/Bangkok")
+      .subtract(15, "minutes")
+      .toDate();
 
-
-// แก้ไขฟังก์ชัน scheduleNotification
-const scheduleNotification = async (item, type) => {
-  const notificationDate = moment(`${item.date} ${item.time}`, "YYYY-MM-DD HH:mm:ss").toDate();
-  const notificationTime = moment(notificationDate).subtract(15, 'minutes').toDate();
-
-  let title, body;
-  if (type === 'appointment') {
-    title = "นัดหมายแพทย์";
-    body = `คุณมีนัดกับ ${item.patientName} ในอีก 15 นาที`;
-  } else if (type === 'task') {
-    title = "ตารางงาน";
-    body = `คุณมีงาน "${item.task}" ในอีก 15 นาที`;
-  }
-
-  await Notifications.scheduleNotificationAsync({
-    content: { title, body },
-    trigger: notificationTime,
-  });
-};
-
+      let title, body;
+      if (type === 'appointment') {
+        title = "นัดหมายแพทย์";
+        body = `คุณมีนัดกับ ${item.patientName} ในอีก 15 นาที`;
+      } else if (type === 'task') {
+        title = "ตารางงาน";
+        body = `คุณมีงาน "${item.task}" ในอีก 15 นาที`;
+      }
+    
+      await Notifications.scheduleNotificationAsync({
+        content: { title, body },
+        trigger: notificationTime,
+      });
+    };
+    
 
   const fetchUserData = async (uid) => {
     try {
@@ -139,62 +128,64 @@ const scheduleNotification = async (item, type) => {
     }
   };
 
-  const fetchTasks = async (uid) => {
-    try {
-      const now = new Date();
-      const currentDate = `${now.getFullYear()}-${String(
-        now.getMonth() + 1
-      ).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-  
-      const tasksRef = collection(
-        db,
-        `users/${uid}/TasksByDate/${currentDate}/tasks`
-      );
-      const q = query(tasksRef, orderBy("time", "asc"));
-      const snapshot = await getDocs(q);
-      const tasksData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setTasks(tasksData);
-  
-      // Schedule notifications for today's tasks
-      tasksData.forEach(task => scheduleNotification(task, 'task'));
-    } catch (error) {
-      setError("เกิดข้อผิดพลาดในการดึงข้อมูลตาราง");
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  // Fetching appointments
-  const fetchAppointments = async (uid) => {
-    try {
-      const today = new Date().toISOString().split("T")[0];
-      const appointmentsRef = collection(db, `users/${uid}/appointments`);
-      const q = query(
-        appointmentsRef,
-        where("date", "==", today),
-        orderBy("time", "asc")
-      );
-      const snapshot = await getDocs(q);
-      const appointmentsData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setAppointments(appointmentsData.slice(0, 3));
-      setAllAppointments(appointmentsData);
-      setSummaryData((prev) => ({
-        ...prev,
-        appointmentsToday: appointmentsData.length,
-      }));
-  
-      // Schedule notifications for today's appointments
-      appointmentsData.forEach(appointment => scheduleNotification(appointment, 'appointment'));
-    } catch (error) {
-      console.error("Error fetching appointments: ", error);
-    }
-  };
+// ในฟังก์ชัน fetchTasks
+const fetchTasks = async (uid) => {
+  try {
+    const now = moment().tz('Asia/Bangkok');
+    const currentDate = now.format('YYYY-MM-DD');
+
+    const tasksRef = collection(
+      db,
+      `users/${uid}/TasksByDate/${currentDate}/tasks`
+    );
+    const q = query(tasksRef, orderBy("time", "asc"));
+    const snapshot = await getDocs(q);
+    const tasksData = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+      // แปลงเวลาเป็น moment object ในโซนเวลาของไทย
+      time: moment.tz(`${currentDate} ${doc.data().time}`, 'YYYY-MM-DD HH:mm:ss', 'Asia/Bangkok')
+    }));
+    setTasks(tasksData);
+
+    // Schedule notifications for today's tasks
+    tasksData.forEach(task => scheduleNotification(task, 'task'));
+  } catch (error) {
+    setError("เกิดข้อผิดพลาดในการดึงข้อมูลตาราง");
+  } finally {
+    setLoading(false);
+  }
+};
+
+// แก้ไขฟังก์ชัน fetchAppointments
+const fetchAppointments = async (uid) => {
+  try {
+    const today = new Date().toISOString().split("T")[0];
+    const appointmentsRef = collection(db, `users/${uid}/appointments`);
+    const q = query(
+      appointmentsRef,
+      where("date", "==", today),
+      orderBy("time", "asc")
+    );
+    const snapshot = await getDocs(q);
+    const appointmentsData = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+    setAppointments(appointmentsData.slice(0, 3));
+    setAllAppointments(appointmentsData);
+    setSummaryData((prev) => ({
+      ...prev,
+      appointmentsToday: appointmentsData.length,
+    }));
+
+    // Schedule notifications for today's appointments
+    appointmentsData.forEach(appointment => scheduleNotification(appointment, 'appointment'));
+  } catch (error) {
+    console.error("Error fetching appointments: ", error);
+  }
+};
+
 
   const handleDeleteAppointment = async (appointmentId) => {
     try {
@@ -203,15 +194,15 @@ const scheduleNotification = async (item, type) => {
         prev.filter((app) => app.id !== appointmentId)
       );
       setAppointments((prev) => prev.filter((app) => app.id !== appointmentId));
-      
+
       // อัพเดท summaryData หลังจากลบนัดหมาย
       setSummaryData((prev) => ({
         ...prev,
         appointmentsToday: Math.max(0, prev.appointmentsToday - 1),
       }));
-      
+
       Alert.alert("สำเร็จ", "ลบนัดหมายเรียบร้อยแล้ว");
-      
+
       // เรียก fetchSummaryData เพื่ออัพเดทข้อมูลทั้งหมด
       fetchSummaryData(userId);
     } catch (error) {
@@ -227,7 +218,7 @@ const scheduleNotification = async (item, type) => {
   const fetchSummaryData = async (uid) => {
     try {
       const today = new Date().toISOString().split("T")[0];
-  
+
       // Count total patients
       const doctorPatientsRef = collection(db, "doctorPatients");
       const patientQuery = query(
@@ -236,7 +227,7 @@ const scheduleNotification = async (item, type) => {
       );
       const patientSnapshot = await getDocs(patientQuery);
       const totalPatients = patientSnapshot.size;
-  
+
       // Count appointments today
       const appointmentsRef = collection(db, `users/${uid}/appointments`);
       const appointmentQuery = query(
@@ -245,7 +236,7 @@ const scheduleNotification = async (item, type) => {
       );
       const appointmentSnapshot = await getDocs(appointmentQuery);
       const appointmentsToday = appointmentSnapshot.size;
-  
+
       // Count tasks today
       const tasksRef = collection(
         db,
@@ -253,7 +244,7 @@ const scheduleNotification = async (item, type) => {
       );
       const taskSnapshot = await getDocs(tasksRef);
       const tasksToday = taskSnapshot.size;
-  
+
       setSummaryData({ totalPatients, appointmentsToday, tasksToday });
     } catch (error) {
       console.error("Error fetching summary data: ", error);
@@ -315,13 +306,14 @@ const scheduleNotification = async (item, type) => {
     setTaskModalVisible(true);
   };
 
-  const TaskCard = ({ task, onDelete }) => (
-    <View style={styles.miniTaskCard}>
-      <View style={styles.miniTaskTimeContainer}>
-        <Text style={styles.miniTaskTime}>
-          {moment(task.time, "HH:mm:ss").format("hh:mm A")}
-        </Text>
-      </View>
+// ในส่วน TaskCard component
+const TaskCard = ({ task, onDelete }) => (
+  <View style={styles.miniTaskCard}>
+    <View style={styles.miniTaskTimeContainer}>
+      <Text style={styles.miniTaskTime}>
+        {task.time.format('HH:mm')}
+      </Text>
+    </View>
       <View style={styles.miniTaskContent}>
         <Text
           style={styles.miniTaskTitle}
@@ -361,8 +353,11 @@ const scheduleNotification = async (item, type) => {
           {moment(appointment.date).format("DD/MM/YYYY")}
         </Text>
         <Text style={styles.appointmentTime}>
-          {moment(appointment.time, "HH:mm:ss").format("HH:mm")}
+          {moment
+            .tz(appointment.time, "HH:mm:ss", "Asia/Bangkok")
+            .format("HH:mm")}
         </Text>
+
         <Text style={styles.appointmentPatient}>{appointment.patientName}</Text>
         {appointment.note && (
           <Text style={styles.appointmentNote}>
@@ -846,19 +841,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   viewMoreButtonText: {
-    color: "#FFF",
-    fontFamily: "Kanit-Regular",
-    fontSize: 16,
-  },
-  testNotificationButton: {
-    backgroundColor: "#FF9800",
-    padding: 10,
-    borderRadius: 5,
-    alignItems: "center",
-    marginTop: 20,
-    marginBottom: 20,
-  },
-  testNotificationButtonText: {
     color: "#FFF",
     fontFamily: "Kanit-Regular",
     fontSize: 16,
