@@ -18,7 +18,7 @@
         "NSMotionUsageDescription": "This app requires motion tracking for step counting.",
         "NSLocationWhenInUseUsageDescription": "We need your location to track your movement and provide accurate distance information.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "We need your location to track your movement and provide accurate distance information, even when the app is in the background.",
-        "UIBackgroundModes": ["location", "fetch"],
+        "UIBackgroundModes": ["location", "fetch", "remote-notification"],
         "NSHealthShareUsageDescription": "We need access to your health data to track your steps, distance, and calories burned.",
         "NSHealthUpdateUsageDescription": "We need permission to update your health data with the steps, distance, and calories burned that we track."
       }
@@ -35,23 +35,17 @@
         "android.permission.WAKE_LOCK",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.ACCESS_BACKGROUND_LOCATION"
-      ],
-      "config": {
-        "googleFit": {
-          "fitnessDataTypes": [
-            "com.google.step_count.delta",
-            "com.google.distance.delta",
-            "com.google.calories.expended"
-          ]
-        }
-      }
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE",
+        "android.permission.SCHEDULE_EXACT_ALARM"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-font",
+    "expo-font",
       [
         "expo-location",
         {
@@ -75,23 +69,10 @@
         }
       ],
       [
-        "expo-health-connect",
+        "expo-notifications",
         {
-          "iOSPermissions": [
-            "BloodGlucose",
-            "BloodPressure",
-            "BodyMassIndex",
-            "DateOfBirth",
-            "Height",
-            "Weight",
-            "BodyFatPercentage",
-            "BodyTemperature",
-            "HeartRate",
-            "RestingHeartRate",
-            "Steps",
-            "BiologicalSex",
-            "Workout"
-          ]
+          "icon": "./assets/notification.png",
+          "color": "#ffffff"
         }
       ]
     ],

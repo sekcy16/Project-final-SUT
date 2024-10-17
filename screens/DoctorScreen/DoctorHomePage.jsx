@@ -30,6 +30,8 @@ import { onAuthStateChanged } from "firebase/auth";
 import moment from "moment";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
+import * as Notifications from 'expo-notifications';
+
 
 const DoctorHomePage = () => {
   const navigation = useNavigation();
@@ -51,7 +53,35 @@ const DoctorHomePage = () => {
   const [taskModalVisible, setTaskModalVisible] = useState(false);
   const [allAppointments, setAllAppointments] = useState([]);
 
+  const sendTestNotification = async () => {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: "ทดสอบการแจ้งเตือน",
+        body: 'นี่คือการแจ้งเตือนทดสอบ',
+      },
+      trigger: { seconds: 5 }, // แจ้งเตือนหลังจาก 5 วินาที
+    });
+    Alert.alert("ทดสอบการแจ้งเตือน", "การแจ้งเตือนจะปรากฏในอีก 5 วินาที");
+  };
+
   useEffect(() => {
+    const requestNotificationPermissions = async () => {
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('การแจ้งเตือนถูกปฏิเสธ', 'คุณจะไม่ได้รับการแจ้งเตือน');
+      }
+    };
+  
+    const setupNotifications = async () => {
+      await Notifications.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowAlert: true,
+          shouldPlaySound: true,
+          shouldSetBadge: false,
+        }),
+      });
+    };
+
     const unsubscribeAuth = onAuthStateChanged(firebaseAuth, (user) => {
       if (user) {
         setUserId(user.uid);
@@ -65,9 +95,34 @@ const DoctorHomePage = () => {
         setError("ไม่พบข้อมูลผู้ใช้ กรุณาเข้าสู่ระบบ");
       }
     });
-
+  
+    requestNotificationPermissions();
+  setupNotifications();
     return () => unsubscribeAuth();
   }, []);
+
+
+
+// แก้ไขฟังก์ชัน scheduleNotification
+const scheduleNotification = async (item, type) => {
+  const notificationDate = moment(`${item.date} ${item.time}`, "YYYY-MM-DD HH:mm:ss").toDate();
+  const notificationTime = moment(notificationDate).subtract(15, 'minutes').toDate();
+
+  let title, body;
+  if (type === 'appointment') {
+    title = "นัดหมายแพทย์";
+    body = `คุณมีนัดกับ ${item.patientName} ในอีก 15 นาที`;
+  } else if (type === 'task') {
+    title = "ตารางงาน";
+    body = `คุณมีงาน "${item.task}" ในอีก 15 นาที`;
+  }
+
+  await Notifications.scheduleNotificationAsync({
+    content: { title, body },
+    trigger: notificationTime,
+  });
+};
+
 
   const fetchUserData = async (uid) => {
     try {
@@ -90,7 +145,7 @@ const DoctorHomePage = () => {
       const currentDate = `${now.getFullYear()}-${String(
         now.getMonth() + 1
       ).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-
+  
       const tasksRef = collection(
         db,
         `users/${uid}/TasksByDate/${currentDate}/tasks`
@@ -102,14 +157,17 @@ const DoctorHomePage = () => {
         ...doc.data(),
       }));
       setTasks(tasksData);
+  
+      // Schedule notifications for today's tasks
+      tasksData.forEach(task => scheduleNotification(task, 'task'));
     } catch (error) {
       setError("เกิดข้อผิดพลาดในการดึงข้อมูลตาราง");
     } finally {
       setLoading(false);
     }
   };
+  
   // Fetching appointments
-
   const fetchAppointments = async (uid) => {
     try {
       const today = new Date().toISOString().split("T")[0];
@@ -130,6 +188,9 @@ const DoctorHomePage = () => {
         ...prev,
         appointmentsToday: appointmentsData.length,
       }));
+  
+      // Schedule notifications for today's appointments
+      appointmentsData.forEach(appointment => scheduleNotification(appointment, 'appointment'));
     } catch (error) {
       console.error("Error fetching appointments: ", error);
     }
@@ -785,6 +846,19 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   viewMoreButtonText: {
+    color: "#FFF",
+    fontFamily: "Kanit-Regular",
+    fontSize: 16,
+  },
+  testNotificationButton: {
+    backgroundColor: "#FF9800",
+    padding: 10,
+    borderRadius: 5,
+    alignItems: "center",
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  testNotificationButtonText: {
     color: "#FFF",
     fontFamily: "Kanit-Regular",
     fontSize: 16,
