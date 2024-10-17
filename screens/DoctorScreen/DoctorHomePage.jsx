@@ -10,6 +10,7 @@ import {
   RefreshControl,
   Modal,
   FlatList,
+  Alert,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { useNavigation } from "@react-navigation/native";
@@ -48,6 +49,7 @@ const DoctorHomePage = () => {
   const db = getFirestore(app);
   const [allTasks, setAllTasks] = useState([]);
   const [taskModalVisible, setTaskModalVisible] = useState(false);
+  const [allAppointments, setAllAppointments] = useState([]);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(firebaseAuth, (user) => {
@@ -107,13 +109,13 @@ const DoctorHomePage = () => {
     }
   };
   // Fetching appointments
+
   const fetchAppointments = async (uid) => {
     try {
       const today = new Date().toISOString().split("T")[0];
-      const appointmentsRef = collection(db, "appointments");
+      const appointmentsRef = collection(db, `users/${uid}/appointments`);
       const q = query(
         appointmentsRef,
-        where("doctorId", "==", uid),
         where("date", "==", today),
         orderBy("time", "asc")
       );
@@ -122,16 +124,49 @@ const DoctorHomePage = () => {
         id: doc.id,
         ...doc.data(),
       }));
-      setAppointments(appointmentsData);
+      setAppointments(appointmentsData.slice(0, 3));
+      setAllAppointments(appointmentsData);
+      setSummaryData((prev) => ({
+        ...prev,
+        appointmentsToday: appointmentsData.length,
+      }));
     } catch (error) {
       console.error("Error fetching appointments: ", error);
     }
   };
 
+  const handleDeleteAppointment = async (appointmentId) => {
+    try {
+      await deleteDoc(doc(db, `users/${userId}/appointments`, appointmentId));
+      setAllAppointments((prev) =>
+        prev.filter((app) => app.id !== appointmentId)
+      );
+      setAppointments((prev) => prev.filter((app) => app.id !== appointmentId));
+      
+      // อัพเดท summaryData หลังจากลบนัดหมาย
+      setSummaryData((prev) => ({
+        ...prev,
+        appointmentsToday: Math.max(0, prev.appointmentsToday - 1),
+      }));
+      
+      Alert.alert("สำเร็จ", "ลบนัดหมายเรียบร้อยแล้ว");
+      
+      // เรียก fetchSummaryData เพื่ออัพเดทข้อมูลทั้งหมด
+      fetchSummaryData(userId);
+    } catch (error) {
+      console.error("Error deleting appointment: ", error);
+      Alert.alert("ข้อผิดพลาด", "ไม่สามารถลบนัดหมายได้");
+    }
+  };
+
+  const handleViewAllAppointments = () => {
+    setModalVisible(true);
+  };
+
   const fetchSummaryData = async (uid) => {
     try {
       const today = new Date().toISOString().split("T")[0];
-
+  
       // Count total patients
       const doctorPatientsRef = collection(db, "doctorPatients");
       const patientQuery = query(
@@ -140,17 +175,16 @@ const DoctorHomePage = () => {
       );
       const patientSnapshot = await getDocs(patientQuery);
       const totalPatients = patientSnapshot.size;
-
+  
       // Count appointments today
-      const appointmentsRef = collection(db, "appointments");
+      const appointmentsRef = collection(db, `users/${uid}/appointments`);
       const appointmentQuery = query(
         appointmentsRef,
-        where("doctorId", "==", uid),
         where("date", "==", today)
       );
       const appointmentSnapshot = await getDocs(appointmentQuery);
       const appointmentsToday = appointmentSnapshot.size;
-
+  
       // Count tasks today
       const tasksRef = collection(
         db,
@@ -158,7 +192,7 @@ const DoctorHomePage = () => {
       );
       const taskSnapshot = await getDocs(tasksRef);
       const tasksToday = taskSnapshot.size;
-
+  
       setSummaryData({ totalPatients, appointmentsToday, tasksToday });
     } catch (error) {
       console.error("Error fetching summary data: ", error);
@@ -191,10 +225,6 @@ const DoctorHomePage = () => {
     } catch (error) {
       console.error("Error deleting task: ", error);
     }
-  };
-
-  const handleViewAllAppointments = () => {
-    setModalVisible(true);
   };
   const fetchAllTasks = async (uid) => {
     try {
@@ -247,14 +277,17 @@ const DoctorHomePage = () => {
           {task.description || "ไม่มีรายละเอียด"}
         </Text>
       </View>
-      <TouchableOpacity onPress={() => onDelete(task.id)} style={styles.deleteButton}>
+      <TouchableOpacity
+        onPress={() => onDelete(task.id)}
+        style={styles.deleteButton}
+      >
         <Icon name="delete" size={24} color="#FF5252" />
       </TouchableOpacity>
     </View>
   );
-  
+
   // Appointment Card component
-  const AppointmentCard = ({ appointment }) => (
+  const AppointmentCard = ({ appointment, showDelete = false }) => (
     <View style={styles.appointmentCard}>
       <Icon
         name="account-clock"
@@ -263,11 +296,27 @@ const DoctorHomePage = () => {
         style={styles.appointmentIcon}
       />
       <View style={styles.appointmentContent}>
+        <Text style={styles.appointmentDate}>
+          {moment(appointment.date).format("DD/MM/YYYY")}
+        </Text>
         <Text style={styles.appointmentTime}>
-          {moment(appointment.time, "HH:mm:ss").format("hh:mm A")}
+          {moment(appointment.time, "HH:mm:ss").format("HH:mm")}
         </Text>
         <Text style={styles.appointmentPatient}>{appointment.patientName}</Text>
+        {appointment.note && (
+          <Text style={styles.appointmentNote}>
+            หมายเหตุ: {appointment.note}
+          </Text>
+        )}
       </View>
+      {showDelete && (
+        <TouchableOpacity
+          onPress={() => handleDeleteAppointment(appointment.id)}
+          style={styles.deleteButton}
+        >
+          <Icon name="delete" size={24} color="#FF5252" />
+        </TouchableOpacity>
+      )}
     </View>
   );
 
@@ -354,51 +403,57 @@ const DoctorHomePage = () => {
                   <Text style={styles.noTaskText}>คุณไม่มีงานสำหรับวันนี้</Text>
                 )}
               </View>
+
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>นัดหมายวันนี้</Text>
                 {appointments.length > 0 ? (
-                  appointments
-                    .slice(0, 3)
-                    .map((appointment) => (
-                      <AppointmentCard
-                        key={appointment.id}
-                        appointment={appointment}
-                      />
-                    ))
+                  appointments.map((appointment) => (
+                    <AppointmentCard
+                      key={appointment.id}
+                      appointment={appointment}
+                    />
+                  ))
                 ) : (
                   <Text style={styles.noAppointmentText}>
                     ไม่มีนัดหมายสำหรับวันนี้
                   </Text>
                 )}
-                <TouchableOpacity
-                  style={styles.viewMoreButton}
-                  onPress={handleViewAllAppointments}
-                >
-                  <Text style={styles.viewMoreButtonText}>
-                    ดูนัดหมายทั้งหมด
-                  </Text>
-                </TouchableOpacity>
+                {allAppointments.length > 3 && (
+                  <TouchableOpacity
+                    style={styles.viewMoreButton}
+                    onPress={handleViewAllAppointments}
+                  >
+                    <Text style={styles.viewMoreButtonText}>
+                      ดูนัดหมายทั้งหมด ({allAppointments.length})
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </>
           )}
         </ScrollView>
+
         <Modal
           animationType="slide"
           transparent={true}
-          visible={taskModalVisible}
-          onRequestClose={() => setTaskModalVisible(false)}
+          visible={modalVisible}
+          onRequestClose={() => setModalVisible(false)}
         >
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>ตารางงานทั้งหมดของวันนี้</Text>
+              <Text style={styles.modalTitle}>
+                นัดหมายทั้งหมดของวันนี้ ({allAppointments.length})
+              </Text>
               <FlatList
-                data={allTasks}
-                renderItem={({ item }) => <TaskCard task={item} />}
+                data={allAppointments}
+                renderItem={({ item }) => (
+                  <AppointmentCard appointment={item} showDelete={true} />
+                )}
                 keyExtractor={(item) => item.id}
               />
               <TouchableOpacity
                 style={styles.closeButton}
-                onPress={() => setTaskModalVisible(false)}
+                onPress={() => setModalVisible(false)}
               >
                 <Text style={styles.closeButtonText}>ปิด</Text>
               </TouchableOpacity>
@@ -614,6 +669,11 @@ const styles = StyleSheet.create({
   appointmentContent: {
     flex: 1,
   },
+  appointmentDate: {
+    fontSize: 14,
+    fontFamily: "Kanit-Regular",
+    color: "#666",
+  },
   appointmentTime: {
     fontSize: 16,
     fontFamily: "Kanit-Bold",
@@ -624,6 +684,12 @@ const styles = StyleSheet.create({
     fontFamily: "Kanit-Regular",
     color: "#666",
   },
+  appointmentNote: {
+    fontSize: 12,
+    fontFamily: "Kanit-Regular",
+    color: "#666",
+    marginTop: 5,
+  },
   noAppointmentText: {
     fontSize: 16,
     fontFamily: "Kanit-Regular",
@@ -631,6 +697,9 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 10,
     fontStyle: "italic",
+  },
+  deleteButton: {
+    padding: 8,
   },
   modalOverlay: {
     flex: 1,
@@ -650,6 +719,18 @@ const styles = StyleSheet.create({
     fontFamily: "Kanit-Bold",
     color: "#333",
     marginBottom: 15,
+  },
+  closeButton: {
+    backgroundColor: "#FF5252",
+    padding: 10,
+    borderRadius: 5,
+    alignItems: "center",
+    marginTop: 10,
+  },
+  closeButtonText: {
+    color: "#FFF",
+    fontFamily: "Kanit-Regular",
+    fontSize: 16,
   },
   input: {
     borderWidth: 1,
