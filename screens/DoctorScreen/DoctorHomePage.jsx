@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   Modal,
   FlatList,
   Alert,
+  AppState,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { useNavigation } from "@react-navigation/native";
@@ -31,7 +32,14 @@ import moment from "moment";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Notifications from "expo-notifications";
-import moment from "moment-timezone";
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 const DoctorHomePage = () => {
   const navigation = useNavigation();
@@ -52,6 +60,61 @@ const DoctorHomePage = () => {
   const [allTasks, setAllTasks] = useState([]);
   const [taskModalVisible, setTaskModalVisible] = useState(false);
   const [allAppointments, setAllAppointments] = useState([]);
+  const [expoPushToken, setExpoPushToken] = useState('');
+  const [notification, setNotification] = useState(false);
+  const notificationListener = useRef();
+  const responseListener = useRef();
+  const appState = useRef(AppState.currentState);
+
+  useEffect(() => {
+    registerForPushNotificationsAsync().then(token => setExpoPushToken(token));
+
+    notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
+      setNotification(notification);
+    });
+
+    responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
+      console.log(response);
+    });
+
+    const subscription = AppState.addEventListener("change", nextAppState => {
+      if (appState.current.match(/inactive|background/) && nextAppState === "active") {
+        console.log("App has come to the foreground!");
+        refreshNotifications();
+      }
+      appState.current = nextAppState;
+    });
+
+    return () => {
+      Notifications.removeNotificationSubscription(notificationListener.current);
+      Notifications.removeNotificationSubscription(responseListener.current);
+      subscription.remove();
+    };
+  }, []);
+
+  const refreshNotifications = async () => {
+    if (userId) {
+      await fetchTasks(userId);
+      await fetchAppointments(userId);
+    }
+  };
+
+  const registerForPushNotificationsAsync = async () => {
+    let token;
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+    if (finalStatus !== 'granted') {
+      Alert.alert('Failed to get push token for push notification!');
+      return;
+    }
+    token = (await Notifications.getExpoPushTokenAsync()).data;
+    console.log(token);
+    return token;
+  };
 
   useEffect(() => {
     const requestNotificationPermissions = async () => {
@@ -60,15 +123,18 @@ const DoctorHomePage = () => {
         Alert.alert("การแจ้งเตือนถูกปฏิเสธ", "คุณจะไม่ได้รับการแจ้งเตือน");
       }
     };
-
     const setupNotifications = async () => {
-      await Notifications.setNotificationHandler({
-        handleNotification: async () => ({
-          shouldShowAlert: true,
-          shouldPlaySound: true,
-          shouldSetBadge: false,
-        }),
-      });
+      try {
+        await Notifications.setNotificationHandler({
+          handleNotification: async () => ({
+            shouldShowAlert: true,
+            shouldPlaySound: true,
+            shouldSetBadge: false,
+          }),
+        });
+      } catch (error) {
+        console.error("Error setting up notifications:", error);
+      }
     };
 
     const unsubscribeAuth = onAuthStateChanged(firebaseAuth, (user) => {
@@ -92,26 +158,35 @@ const DoctorHomePage = () => {
 
   // แก้ไขฟังก์ชัน scheduleNotification
   const scheduleNotification = async (item, type) => {
-    const notificationTime = moment
-      .tz(item.time, "Asia/Bangkok")
-      .subtract(15, "minutes")
-      .toDate();
+    try {
+      const notificationDate = moment(`${item.date} ${item.time}`, "YYYY-MM-DD HH:mm:ss").toDate();
+      const notificationTime = moment(notificationDate).subtract(15, 'minutes').toDate();
 
       let title, body;
-      if (type === 'appointment') {
+      if (type === "appointment") {
         title = "นัดหมายแพทย์";
         body = `คุณมีนัดกับ ${item.patientName} ในอีก 15 นาที`;
-      } else if (type === 'task') {
+      } else if (type === "task") {
         title = "ตารางงาน";
         body = `คุณมีงาน "${item.task}" ในอีก 15 นาที`;
       }
-    
-      await Notifications.scheduleNotificationAsync({
+
+      const notificationId = await Notifications.scheduleNotificationAsync({
         content: { title, body },
         trigger: notificationTime,
       });
-    };
-    
+
+      console.log(`Notification scheduled: ${notificationId} for ${type} at ${notificationTime}`);
+      return notificationId;
+    } catch (error) {
+      console.error("Error scheduling notification:", error);
+      Alert.alert("ข้อผิดพลาด", "ไม่สามารถตั้งค่าการแจ้งเตือนได้");
+    }
+  };
+  const checkScheduledNotifications = async () => {
+    const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
+    console.log('Scheduled notifications:', scheduledNotifications);
+  };
 
   const fetchUserData = async (uid) => {
     try {
@@ -128,64 +203,69 @@ const DoctorHomePage = () => {
     }
   };
 
-// ในฟังก์ชัน fetchTasks
-const fetchTasks = async (uid) => {
-  try {
-    const now = moment().tz('Asia/Bangkok');
-    const currentDate = now.format('YYYY-MM-DD');
+  const fetchTasks = async (uid) => {
+    try {
+      const now = new Date();
+      const currentDate = `${now.getFullYear()}-${String(
+        now.getMonth() + 1
+      ).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
-    const tasksRef = collection(
-      db,
-      `users/${uid}/TasksByDate/${currentDate}/tasks`
-    );
-    const q = query(tasksRef, orderBy("time", "asc"));
-    const snapshot = await getDocs(q);
-    const tasksData = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-      // แปลงเวลาเป็น moment object ในโซนเวลาของไทย
-      time: moment.tz(`${currentDate} ${doc.data().time}`, 'YYYY-MM-DD HH:mm:ss', 'Asia/Bangkok')
-    }));
-    setTasks(tasksData);
+      const tasksRef = collection(
+        db,
+        `users/${uid}/TasksByDate/${currentDate}/tasks`
+      );
+      const q = query(tasksRef, orderBy("time", "asc"));
+      const snapshot = await getDocs(q);
+      const tasksData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setTasks(tasksData);
 
-    // Schedule notifications for today's tasks
-    tasksData.forEach(task => scheduleNotification(task, 'task'));
-  } catch (error) {
-    setError("เกิดข้อผิดพลาดในการดึงข้อมูลตาราง");
-  } finally {
-    setLoading(false);
-  }
-};
+      // Schedule notifications for today's tasks
+      tasksData.forEach(async (task) => {
+        await scheduleNotification(task, 'task');
+      });
+      checkScheduledNotifications(); // ตรวจสอบการแจ้งเตือนที่ถูกกำหนดไว้
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+      setError("เกิดข้อผิดพลาดในการดึงข้อมูลตาราง");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-// แก้ไขฟังก์ชัน fetchAppointments
-const fetchAppointments = async (uid) => {
-  try {
-    const today = new Date().toISOString().split("T")[0];
-    const appointmentsRef = collection(db, `users/${uid}/appointments`);
-    const q = query(
-      appointmentsRef,
-      where("date", "==", today),
-      orderBy("time", "asc")
-    );
-    const snapshot = await getDocs(q);
-    const appointmentsData = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
-    setAppointments(appointmentsData.slice(0, 3));
-    setAllAppointments(appointmentsData);
-    setSummaryData((prev) => ({
-      ...prev,
-      appointmentsToday: appointmentsData.length,
-    }));
+  // Fetching appointments
+  const fetchAppointments = async (uid) => {
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      const appointmentsRef = collection(db, `users/${uid}/appointments`);
+      const q = query(
+        appointmentsRef,
+        where("date", "==", today),
+        orderBy("time", "asc")
+      );
+      const snapshot = await getDocs(q);
+      const appointmentsData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setAppointments(appointmentsData.slice(0, 3));
+      setAllAppointments(appointmentsData);
+      setSummaryData((prev) => ({
+        ...prev,
+        appointmentsToday: appointmentsData.length,
+      }));
 
-    // Schedule notifications for today's appointments
-    appointmentsData.forEach(appointment => scheduleNotification(appointment, 'appointment'));
-  } catch (error) {
-    console.error("Error fetching appointments: ", error);
-  }
-};
-
+      // Schedule notifications for today's appointments
+      appointmentsData.forEach(async (appointment) => {
+        await scheduleNotification(appointment, 'appointment');
+      });
+      checkScheduledNotifications(); // ตรวจสอบการแจ้งเตือนที่ถูกกำหนดไว้
+    } catch (error) {
+      console.error("Error fetching appointments:", error);
+    }
+  };
 
   const handleDeleteAppointment = async (appointmentId) => {
     try {
@@ -306,14 +386,13 @@ const fetchAppointments = async (uid) => {
     setTaskModalVisible(true);
   };
 
-// ในส่วน TaskCard component
-const TaskCard = ({ task, onDelete }) => (
-  <View style={styles.miniTaskCard}>
-    <View style={styles.miniTaskTimeContainer}>
-      <Text style={styles.miniTaskTime}>
-        {task.time.format('HH:mm')}
-      </Text>
-    </View>
+  const TaskCard = ({ task, onDelete }) => (
+    <View style={styles.miniTaskCard}>
+      <View style={styles.miniTaskTimeContainer}>
+        <Text style={styles.miniTaskTime}>
+          {moment(task.time, "HH:mm:ss").format("hh:mm A")}
+        </Text>
+      </View>
       <View style={styles.miniTaskContent}>
         <Text
           style={styles.miniTaskTitle}
@@ -353,11 +432,8 @@ const TaskCard = ({ task, onDelete }) => (
           {moment(appointment.date).format("DD/MM/YYYY")}
         </Text>
         <Text style={styles.appointmentTime}>
-          {moment
-            .tz(appointment.time, "HH:mm:ss", "Asia/Bangkok")
-            .format("HH:mm")}
+          {moment(appointment.time, "HH:mm:ss").format("HH:mm")}
         </Text>
-
         <Text style={styles.appointmentPatient}>{appointment.patientName}</Text>
         {appointment.note && (
           <Text style={styles.appointmentNote}>
@@ -444,7 +520,11 @@ const TaskCard = ({ task, onDelete }) => (
                 ) : tasks.length > 0 ? (
                   <View style={styles.taskCardContainer}>
                     {tasks.slice(0, 3).map((task) => (
-                      <TaskCard key={task.id} task={task} />
+                      <TaskCard
+                        key={task.id}
+                        task={task}
+                        onDelete={handleDeleteTask}
+                      />
                     ))}
                     {tasks.length > 3 && (
                       <TouchableOpacity
@@ -453,6 +533,7 @@ const TaskCard = ({ task, onDelete }) => (
                       >
                         <Text style={styles.viewMoreButtonText}>ดูทั้งหมด</Text>
                       </TouchableOpacity>
+                      
                     )}
                   </View>
                 ) : (
@@ -658,7 +739,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   viewMoreButtonText: {
-    color: "#1E88E5",
+    color: "#FFF", // เปลี่ยนจาก "#1E88E5" เป็น "#FFF"
     fontFamily: "Kanit-Regular",
     fontSize: 14,
   },
@@ -810,18 +891,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   addButtonText: {
-    color: "#FFF",
-    fontFamily: "Kanit-Regular",
-    fontSize: 16,
-  },
-  closeButton: {
-    backgroundColor: "#FF5252",
-    padding: 10,
-    borderRadius: 5,
-    alignItems: "center",
-    marginTop: 10,
-  },
-  closeButtonText: {
     color: "#FFF",
     fontFamily: "Kanit-Regular",
     fontSize: 16,
