@@ -12,6 +12,7 @@ import {
   FlatList,
   Alert,
   AppState,
+  TextInput,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { useNavigation } from "@react-navigation/native";
@@ -25,6 +26,8 @@ import {
   doc,
   getDoc,
   where,
+  addDoc,
+  updateDoc,
 } from "firebase/firestore";
 import { app, firebaseAuth } from "../../config/firebase.config";
 import { onAuthStateChanged } from "firebase/auth";
@@ -32,6 +35,7 @@ import moment from "moment";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Notifications from "expo-notifications";
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -65,6 +69,14 @@ const DoctorHomePage = () => {
   const notificationListener = useRef();
   const responseListener = useRef();
   const appState = useRef(AppState.currentState);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editingAppointment, setEditingAppointment] = useState(null);
+  const [editedPatientName, setEditedPatientName] = useState("");
+  const [editedDate, setEditedDate] = useState(new Date());
+  const [editedTime, setEditedTime] = useState(new Date());
+  const [editedNote, setEditedNote] = useState("");
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
   useEffect(() => {
     registerForPushNotificationsAsync().then(token => setExpoPushToken(token));
@@ -155,6 +167,54 @@ const DoctorHomePage = () => {
     setupNotifications();
     return () => unsubscribeAuth();
   }, []);
+
+// ฟังก์ชันสำหรับจัดการการแก้ไขนัดหมาย
+const handleEditAppointment = (appointment) => {
+  setEditingAppointment(appointment);
+  setEditedPatientName(appointment.patientName);
+  setEditedDate(new Date(appointment.date));
+  setEditedTime(moment(appointment.time, "HH:mm:ss").toDate());
+  setEditedNote(appointment.note || "");
+  setEditModalVisible(true);
+};
+
+
+
+  // ฟังก์ชันสำหรับบันทึกการแก้ไขนัดหมาย
+const handleSaveEdit = async () => {
+  if (!editingAppointment) return;
+
+  try {
+    const appointmentRef = doc(db, `users/${userId}/appointments`, editingAppointment.id);
+    await updateDoc(appointmentRef, {
+      patientName: editedPatientName,
+      date: moment(editedDate).format("YYYY-MM-DD"),
+      time: moment(editedTime).format("HH:mm:ss"),
+      note: editedNote,
+    });
+
+    // อัพเดทข้อมูลใน state
+    const updatedAppointments = allAppointments.map(app =>
+      app.id === editingAppointment.id
+        ? {
+            ...app,
+            patientName: editedPatientName,
+            date: moment(editedDate).format("YYYY-MM-DD"),
+            time: moment(editedTime).format("HH:mm:ss"),
+            note: editedNote,
+          }
+        : app
+    );
+    setAllAppointments(updatedAppointments);
+    setAppointments(updatedAppointments.slice(0, 3));
+
+    Alert.alert("สำเร็จ", "แก้ไขนัดหมายเรียบร้อยแล้ว");
+    setEditModalVisible(false);
+  } catch (error) {
+    console.error("เกิดข้อผิดพลาดในการอัพเดทนัดหมาย: ", error);
+    Alert.alert("ข้อผิดพลาด", "ไม่สามารถแก้ไขนัดหมายได้");
+  }
+};
 
   // แก้ไขฟังก์ชัน scheduleNotification
   const scheduleNotification = async (item, type) => {
@@ -275,19 +335,47 @@ const DoctorHomePage = () => {
       );
       setAppointments((prev) => prev.filter((app) => app.id !== appointmentId));
 
-      // อัพเดท summaryData หลังจากลบนัดหมาย
       setSummaryData((prev) => ({
         ...prev,
         appointmentsToday: Math.max(0, prev.appointmentsToday - 1),
       }));
 
       Alert.alert("สำเร็จ", "ลบนัดหมายเรียบร้อยแล้ว");
-
-      // เรียก fetchSummaryData เพื่ออัพเดทข้อมูลทั้งหมด
       fetchSummaryData(userId);
     } catch (error) {
       console.error("Error deleting appointment: ", error);
       Alert.alert("ข้อผิดพลาด", "ไม่สามารถลบนัดหมายได้");
+    }
+  };
+
+
+  // แก้ไขฟังก์ชัน handleCompleteAppointment
+  const handleCompleteAppointment = async (appointment) => {
+    try {
+      // เพิ่มการนัดหมายลงใน completedAppointments subcollection
+      const completedAppointmentsRef = collection(db, `users/${userId}/completedAppointments`);
+      await addDoc(completedAppointmentsRef, {
+        ...appointment,
+        completedAt: new Date().toISOString(),
+      });
+
+      // ลบการนัดหมายออกจาก active appointments
+      await deleteDoc(doc(db, `users/${userId}/appointments`, appointment.id));
+
+      // อัปเดต state
+      setAllAppointments((prev) => prev.filter((app) => app.id !== appointment.id));
+      setAppointments((prev) => prev.filter((app) => app.id !== appointment.id));
+
+      setSummaryData((prev) => ({
+        ...prev,
+        appointmentsToday: Math.max(0, prev.appointmentsToday - 1),
+      }));
+
+      Alert.alert("สำเร็จ", "บันทึกการเสร็จสิ้นนัดหมายเรียบร้อยแล้ว");
+      fetchSummaryData(userId);
+    } catch (error) {
+      console.error("Error completing appointment: ", error);
+      Alert.alert("ข้อผิดพลาด", "ไม่สามารถบันทึกการเสร็จสิ้นนัดหมายได้");
     }
   };
 
@@ -418,8 +506,8 @@ const DoctorHomePage = () => {
     </View>
   );
 
-  // Appointment Card component
-  const AppointmentCard = ({ appointment, showDelete = false }) => (
+   // Appointment Card component
+   const AppointmentCard = ({ appointment, showActions = false }) => (
     <View style={styles.appointmentCard}>
       <Icon
         name="account-clock"
@@ -441,16 +529,31 @@ const DoctorHomePage = () => {
           </Text>
         )}
       </View>
-      {showDelete && (
-        <TouchableOpacity
-          onPress={() => handleDeleteAppointment(appointment.id)}
-          style={styles.deleteButton}
-        >
-          <Icon name="delete" size={24} color="#FF5252" />
-        </TouchableOpacity>
+      {showActions && (
+        <View style={styles.appointmentActions}>
+          <TouchableOpacity
+            onPress={() => handleEditAppointment(appointment)}
+            style={styles.editButton}
+          >
+            <Icon name="pencil" size={24} color="#FFA000" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => handleCompleteAppointment(appointment)}
+            style={styles.completeButton}
+          >
+            <Icon name="check-circle" size={24} color="#4CAF50" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => handleDeleteAppointment(appointment.id)}
+            style={styles.deleteButton}
+          >
+            <Icon name="delete" size={24} color="#FF5252" />
+          </TouchableOpacity>
+        </View>
       )}
     </View>
   );
+
 
   const SummaryCard = ({ icon, title, value }) => (
     <View style={styles.summaryCard}>
@@ -460,7 +563,7 @@ const DoctorHomePage = () => {
     </View>
   );
 
-  return (
+   return (
     <LinearGradient colors={["#4A90E2", "#50E3C2"]} style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
@@ -482,6 +585,7 @@ const DoctorHomePage = () => {
             <Icon name="plus" size={28} color="#FFF" />
           </TouchableOpacity>
         </View>
+
         <ScrollView
           style={styles.content}
           refreshControl={
@@ -541,13 +645,14 @@ const DoctorHomePage = () => {
                 )}
               </View>
 
-              <View style={styles.section}>
+        <View style={styles.section}>
                 <Text style={styles.sectionTitle}>นัดหมายวันนี้</Text>
                 {appointments.length > 0 ? (
                   appointments.map((appointment) => (
                     <AppointmentCard
                       key={appointment.id}
                       appointment={appointment}
+                      showActions={true}
                     />
                   ))
                 ) : (
@@ -569,8 +674,7 @@ const DoctorHomePage = () => {
             </>
           )}
         </ScrollView>
-
-        <Modal
+ <Modal
           animationType="slide"
           transparent={true}
           visible={modalVisible}
@@ -578,21 +682,92 @@ const DoctorHomePage = () => {
         >
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>
-                นัดหมายทั้งหมดของวันนี้ ({allAppointments.length})
-              </Text>
+              <Text style={styles.modalTitle}>นัดหมายทั้งหมด</Text>
               <FlatList
                 data={allAppointments}
                 renderItem={({ item }) => (
-                  <AppointmentCard appointment={item} showDelete={true} />
+                  <AppointmentCard appointment={item} showActions={true} />
                 )}
                 keyExtractor={(item) => item.id}
+                style={styles.flatList}
               />
               <TouchableOpacity
                 style={styles.closeButton}
                 onPress={() => setModalVisible(false)}
               >
                 <Text style={styles.closeButtonText}>ปิด</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+          {/* เพิ่ม Modal สำหรับแก้ไขนัดหมาย */}
+          <Modal
+          animationType="slide"
+          transparent={true}
+          visible={editModalVisible}
+          onRequestClose={() => setEditModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>แก้ไขนัดหมาย</Text>
+              <TextInput
+                style={styles.input}
+                value={editedPatientName}
+                onChangeText={setEditedPatientName}
+                placeholder="ชื่อผู้ป่วย"
+              />
+              <TouchableOpacity
+                style={styles.datePickerButton}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Text>{moment(editedDate).format("DD/MM/YYYY")}</Text>
+              </TouchableOpacity>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={editedDate}
+                  mode="date"
+                  display="default"
+                  onChange={(event, selectedDate) => {
+                    setShowDatePicker(false);
+                    if (selectedDate) setEditedDate(selectedDate);
+                  }}
+                />
+              )}
+              <TouchableOpacity
+                style={styles.datePickerButton}
+                onPress={() => setShowTimePicker(true)}
+              >
+                <Text>{moment(editedTime).format("HH:mm")}</Text>
+              </TouchableOpacity>
+              {showTimePicker && (
+                <DateTimePicker
+                  value={editedTime}
+                  mode="time"
+                  display="default"
+                  onChange={(event, selectedTime) => {
+                    setShowTimePicker(false);
+                    if (selectedTime) setEditedTime(selectedTime);
+                  }}
+                />
+              )}
+              <TextInput
+                style={styles.input}
+                value={editedNote}
+                onChangeText={setEditedNote}
+                placeholder="หมายเหตุ"
+                multiline
+              />
+              <TouchableOpacity
+                style={styles.saveButton}
+                onPress={handleSaveEdit}
+              >
+                <Text style={styles.saveButtonText}>บันทึก</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setEditModalVisible(false)}
+              >
+                <Text style={styles.closeButtonText}>ยกเลิก</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -913,6 +1088,44 @@ const styles = StyleSheet.create({
     color: "#FFF",
     fontFamily: "Kanit-Regular",
     fontSize: 16,
+  },
+  editButton: {
+    padding: 8,
+  },
+  saveButton: {
+    backgroundColor: "#4CAF50",
+    padding: 10,
+    borderRadius: 5,
+    alignItems: "center",
+    marginTop: 10,
+  },
+  saveButtonText: {
+    color: "#FFF",
+    fontFamily: "Kanit-Regular",
+    fontSize: 16,
+  },
+  datePickerButton: {
+    backgroundColor: "#F0F0F0",
+    padding: 10,
+    borderRadius: 5,
+    marginBottom: 15,
+  },
+  appointmentActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  // สไตล์สำหรับปุ่มแก้ไข
+  editButton: {
+    padding: 8,
+  },
+  // สไตล์สำหรับปุ่มทำเครื่องหมายว่าเสร็จสิ้น
+  completeButton: {
+    padding: 8,
+  },
+  // สไตล์สำหรับปุ่มลบ
+  deleteButton: {
+    padding: 8,
   },
 });
 

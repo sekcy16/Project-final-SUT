@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, StatusBar, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, StatusBar, Animated, SafeAreaView, ActivityIndicator } from 'react-native';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { getFirestore, collection, getDocs } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { firebaseAuth } from "../../config/firebase.config";
 import moment from 'moment';
 import 'moment/locale/th';
@@ -27,10 +27,14 @@ moment.locale('th');
 
 const ScheduleScreen = ({ navigation }) => {
   const [selectedDate, setSelectedDate] = useState(moment().format('YYYY-MM-DD'));
+  const [appointments, setAppointments] = useState([]);
   const [tasks, setTasks] = useState([]);
+  const [completedAppointments, setCompletedAppointments] = useState([]);
   const [markedDates, setMarkedDates] = useState({});
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
+  const [activeTab, setActiveTab] = useState('appointments');
+  const [loading, setLoading] = useState(false);
 
   const db = getFirestore();
   const user = firebaseAuth.currentUser;
@@ -49,34 +53,83 @@ const ScheduleScreen = ({ navigation }) => {
   useFocusEffect(
     useCallback(() => {
       if (user && fontsLoaded) {
-        fetchTasks();
+        fetchData();
         Animated.timing(fadeAnim, {
           toValue: 1,
           duration: 1000,
           useNativeDriver: true,
         }).start();
       }
-    }, [user, fontsLoaded, fadeAnim])
+    }, [user, fontsLoaded, fadeAnim, selectedDate])
   );
 
-  const fetchTasks = async () => {
+
+  const fetchData = async () => {
     if (!user) return;
-  
-    const tasksRef = collection(db, `users/${user.uid}/TasksByDate`);
-    
+    setLoading(true);
     try {
-      const querySnapshot = await getDocs(tasksRef);
-      let newMarkedDates = {};
-      
-      querySnapshot.forEach((doc) => {
-        newMarkedDates[doc.id] = { marked: true, dotColor: '#FF6B6B' };
-      });
-  
-      setMarkedDates(newMarkedDates);
-      fetchTasksForDate(selectedDate);
+      await Promise.all([
+        fetchAppointments(),
+        fetchTasks(),
+        fetchCompletedAppointments(),
+      ]);
+      updateMarkedDates();
     } catch (error) {
-      console.error("เกิดข้อผิดพลาดในการดึงข้อมูลงาน: ", error);
+      console.error("Error fetching data:", error);
+    } finally {
+      setLoading(false);
     }
+  };
+
+
+   const fetchAppointments = async () => {
+    const appointmentsRef = collection(db, `users/${user.uid}/appointments`);
+    const q = query(appointmentsRef, where("date", "==", selectedDate), orderBy("time", "asc"));
+    const snapshot = await getDocs(q);
+    const appointmentsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    console.log("Appointments fetched:", appointmentsData);
+    setAppointments(appointmentsData);
+  };
+
+  const fetchTasks = async () => {
+    const tasksRef = collection(db, `users/${user.uid}/TasksByDate/${selectedDate}/tasks`);
+    const q = query(tasksRef, orderBy("time", "asc"));
+    const snapshot = await getDocs(q);
+    const tasksData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    console.log("Tasks fetched:", tasksData);
+    setTasks(tasksData);
+  };
+  const fetchCompletedAppointments = async () => {
+    const completedRef = collection(db, `users/${user.uid}/completedAppointments`);
+    const q = query(completedRef, where("date", "==", selectedDate), orderBy("time", "asc"));
+    const snapshot = await getDocs(q);
+    const completedData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    console.log("Completed appointments fetched:", completedData);
+    setCompletedAppointments(completedData);
+  };
+
+
+  const updateMarkedDates = () => {
+    const newMarkedDates = {};
+    appointments.forEach(app => {
+      newMarkedDates[app.date] = { marked: true, dotColor: '#FF6B6B' };
+    });
+    tasks.forEach(task => {
+      if (newMarkedDates[selectedDate]) {
+        newMarkedDates[selectedDate].dots = [
+          { color: '#FF6B6B' },
+          { color: '#4A90E2' }
+        ];
+      } else {
+        newMarkedDates[selectedDate] = { marked: true, dotColor: '#4A90E2' };
+      }
+    });
+    setMarkedDates(newMarkedDates);
+  };
+
+  const handleDateSelect = (day) => {
+    setSelectedDate(day.dateString);
+    fetchData();
   };
 
   const fetchTasksForDate = async (date) => {
@@ -96,38 +149,90 @@ const ScheduleScreen = ({ navigation }) => {
     }
   };
 
-  const handleDateSelect = (day) => {
-    setSelectedDate(day.dateString);
-    fetchTasksForDate(day.dateString);
-  };
 
-  const renderTask = ({ item }) => (
+  const renderAppointment = ({ item }) => (
     <LinearGradient
       colors={['#F8F9FA', '#E9ECEF']}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
-      style={styles.taskItem}
+      style={styles.itemContainer}
     >
-      <View style={styles.taskTimeContainer}>
-        <Text style={styles.taskTime}>{moment(item.time, 'HH:mm:ss').format('HH:mm')}</Text>
+      <View style={styles.timeContainer}>
+        <Text style={styles.timeText}>{moment(item.time, 'HH:mm:ss').format('HH:mm')}</Text>
       </View>
-      <View style={styles.taskContent}>
-        <Text style={styles.taskTitle}>{item.task}</Text>
-        <Text style={styles.taskDescription}>{item.description}</Text>
+      <View style={styles.contentContainer}>
+        <Text style={styles.titleText}>{item.patientName}</Text>
+        <Text style={styles.descriptionText}>{item.note || 'ไม่มีบันทึกเพิ่มเติม'}</Text>
       </View>
-      <TouchableOpacity style={styles.taskIcon}>
-        <Icon name="more-vert" size={24} color="#6C757D" />
-      </TouchableOpacity>
     </LinearGradient>
   );
 
-  const renderHeader = () => (
-    <>
+
+const renderTask = ({ item }) => (
+    <LinearGradient
+      colors={['#F8F9FA', '#E9ECEF']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.itemContainer}
+    >
+      <View style={styles.timeContainer}>
+        <Text style={styles.timeText}>{moment(item.time, 'HH:mm:ss').format('HH:mm')}</Text>
+      </View>
+      <View style={styles.contentContainer}>
+        <Text style={styles.titleText}>{item.task}</Text>
+        <Text style={styles.descriptionText}>{item.description || 'ไม่มีรายละเอียด'}</Text>
+      </View>
+    </LinearGradient>
+  );
+
+  const renderCompletedAppointment = ({ item }) => (
+    <LinearGradient
+      colors={['#F8F9FA', '#E9ECEF']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.itemContainer}
+    >
+      <View style={styles.timeContainer}>
+        <Text style={styles.timeText}>{moment(item.time, 'HH:mm:ss').format('HH:mm')}</Text>
+      </View>
+      <View style={styles.contentContainer}>
+        <Text style={styles.titleText}>{item.patientName}</Text>
+        <Text style={styles.descriptionText}>ตรวจเสร็จสิ้น</Text>
+      </View>
+    </LinearGradient>
+  );
+
+  const TabButton = ({ title, active, onPress }) => (
+    <TouchableOpacity
+      style={[styles.tabButton, active && styles.activeTabButton]}
+      onPress={onPress}
+    >
+      <Text style={[styles.tabButtonText, active && styles.activeTabButtonText]}>{title}</Text>
+    </TouchableOpacity>
+  );
+
+  
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" />
+      <LinearGradient
+        colors={['#4A90E2', '#50E3C2']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.header}
+      >
+        <Text style={styles.headerTitle}>ตารางงาน</Text>
+      </LinearGradient>
       <Calendar
         onDayPress={handleDateSelect}
         markedDates={{
           ...markedDates,
-          [selectedDate]: { selected: true, selectedColor: '#50E3C2', marked: markedDates[selectedDate]?.marked }
+          [selectedDate]: { 
+            ...markedDates[selectedDate],
+            selected: true,
+            selectedColor: '#50E3C2'
+          }
         }}
         theme={{
           backgroundColor: '#ffffff',
@@ -155,42 +260,46 @@ const ScheduleScreen = ({ navigation }) => {
         }}
         style={styles.calendar}
       />
-      <View style={styles.card}>
-        <Text style={styles.dateTitle}>{moment(selectedDate).format('D MMMM YYYY')}</Text>
+      <View style={styles.tabContainer}>
+        <TabButton
+          title="นัดหมาย"
+          active={activeTab === 'appointments'}
+          onPress={() => setActiveTab('appointments')}
+        />
+        <TabButton
+          title="ตารางงาน"
+          active={activeTab === 'tasks'}
+          onPress={() => setActiveTab('tasks')}
+        />
+        <TabButton
+          title="ตรวจเสร็จสิ้น"
+          active={activeTab === 'completed'}
+          onPress={() => setActiveTab('completed')}
+        />
       </View>
-    </>
-  );
-
-  const renderEmptyComponent = () => (
-    <View style={styles.noTasksContainer}>
-      <Icon name="event-busy" size={48} color="#CED4DA" />
-      <Text style={styles.noTasksText}>ไม่มีงานสำหรับวันนี้</Text>
-    </View>
-  );
-
-  if (!fontsLoaded) {
-    return null; // หรือแสดงคอมโพเนนต์ Loading
-  }
-
-  return (
-    <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-      <StatusBar barStyle="light-content" />
-      <LinearGradient
-        colors={['#4A90E2', '#50E3C2']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.header}
-      >
-        <Text style={styles.headerTitle}>ตารางงาน</Text>
-      </LinearGradient>
-      <FlatList
-        data={tasks}
-        renderItem={renderTask}
-        keyExtractor={(item) => item.id}
-        ListHeaderComponent={renderHeader}
-        ListEmptyComponent={renderEmptyComponent}
-        contentContainerStyle={styles.listContent}
-      />
+      {loading ? (
+        <ActivityIndicator size="large" color="#4A90E2" />
+      ) : (
+        <FlatList
+          data={
+            activeTab === 'appointments' ? appointments :
+            activeTab === 'tasks' ? tasks :
+            completedAppointments
+          }
+          renderItem={
+            activeTab === 'appointments' ? renderAppointment :
+            activeTab === 'tasks' ? renderTask :
+            renderCompletedAppointment
+          }
+          keyExtractor={(item) => item.id}
+          ListEmptyComponent={() => (
+            <View style={styles.emptyContainer}>
+              <Icon name="event-busy" size={48} color="#CED4DA" />
+              <Text style={styles.emptyText}>ไม่มีข้อมูลสำหรับวันนี้</Text>
+            </View>
+          )}
+        />
+      )}
       <TouchableOpacity
         style={styles.addButton}
         onPress={() => navigation.navigate('AddTaskScreen')}
@@ -204,7 +313,7 @@ const ScheduleScreen = ({ navigation }) => {
           <Icon name="add" size={24} color="#fff" />
         </LinearGradient>
       </TouchableOpacity>
-    </Animated.View>
+    </SafeAreaView>
   );
 };
 
@@ -214,7 +323,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8F9FA',
   },
   header: {
-    paddingTop: 40,
+    paddingTop: 20,
     paddingBottom: 20,
     paddingHorizontal: 20,
   },
@@ -223,82 +332,74 @@ const styles = StyleSheet.create({
     fontFamily: 'Kanit-Bold',
     color: '#FFFFFF',
   },
-  listContent: {
-    flexGrow: 1,
-  },
   calendar: {
-    marginBottom: 20,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    marginBottom: 10,
   },
-  card: {
-    backgroundColor: '#FFFFFF',
+  tabContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 10,
+    paddingHorizontal: 10,
+  },
+  tabButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
     borderRadius: 20,
-    padding: 20,
-    marginHorizontal: 20,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 5,
+    backgroundColor: '#F1F3F5',
   },
-  dateTitle: {
-    fontSize: 20,
-    fontFamily: 'Kanit-Bold',
-    color: '#4A90E2',
-    marginBottom: 15,
+  activeTabButton: {
+    backgroundColor: '#4A90E2',
   },
-  taskItem: {
+  tabButtonText: {
+    fontFamily: 'Kanit-Regular',
+    color: '#495057',
+  },
+  activeTabButtonText: {
+    color: '#FFFFFF',
+  },
+  itemContainer: {
     flexDirection: 'row',
     borderRadius: 10,
-    padding: 15,
+    marginHorizontal: 10,
     marginBottom: 10,
-    marginHorizontal: 20,
+    padding: 15,
     alignItems: 'center',
   },
-  taskTimeContainer: {
+  timeContainer: {
     backgroundColor: '#4A90E2',
     borderRadius: 5,
     padding: 5,
     marginRight: 15,
   },
-  taskTime: {
-    fontSize: 14,
+  timeText: {
     color: '#FFFFFF',
     fontFamily: 'Kanit-Bold',
+    fontSize: 14,
   },
-  taskContent: {
+  contentContainer: {
     flex: 1,
   },
-  taskTitle: {
-    fontSize: 16,
+  titleText: {
     fontFamily: 'Kanit-Bold',
-    color: '#333',
+    fontSize: 16,
+    color: '#343A40',
     marginBottom: 5,
   },
-  taskDescription: {
-    fontSize: 14,
+  descriptionText: {
     fontFamily: 'Kanit-Regular',
+    fontSize: 14,
     color: '#6C757D',
   },
-  taskIcon: {
-    padding: 5,
-  },
-  noTasksContainer: {
+  emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
   },
-  noTasksText: {
-    fontSize: 16,
+  emptyText: {
     fontFamily: 'Kanit-Regular',
+    fontSize: 16,
     color: '#ADB5BD',
     marginTop: 10,
-    fontStyle: 'italic',
   },
   addButton: {
     position: 'absolute',
