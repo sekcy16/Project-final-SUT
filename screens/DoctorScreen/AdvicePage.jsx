@@ -36,6 +36,10 @@ const AdvicePage = ({ route, navigation }) => {
     message: "",
   });
 
+  // State for active tab and send mode
+  const [activeTab, setActiveTab] = useState('advice');
+  const [sendMode, setSendMode] = useState('advice'); // 'advice' or 'notification'
+
   const toggleAdviceType = (type) => {
     setAdviceTypes(prev => ({
       ...prev,
@@ -52,54 +56,63 @@ const AdvicePage = ({ route, navigation }) => {
 
   const handleConfirm = async () => {
     if (!patientId) {
-      Alert.alert("Error", "Patient ID is missing. Cannot send advice.");
+      Alert.alert("Error", "Patient ID is missing. Cannot send.");
       return;
     }
 
     try {
-      // Prepare advice data
-      const adviceData = {
-        date: new Date().toISOString(),
-        sentBy: "Doctor",
-      };
-
-      // Only include enabled advice types
-      Object.entries(adviceTypes).forEach(([type, data]) => {
-        if (data.enabled && data.content.trim()) {
-          adviceData[`${type}Advice`] = data.content.trim();
-        }
-      });
-
-      // Check if any advice is enabled and has content
-      const hasAdvice = Object.values(adviceTypes).some(
-        type => type.enabled && type.content.trim()
-      );
-
-      if (!hasAdvice) {
-        Alert.alert("Error", "Please enable and fill at least one advice type.");
-        return;
+      if (sendMode === 'advice') {
+        await sendAdvice();
+      } else {
+        await sendNotification();
       }
 
-      const patientAdviceRef = doc(firebaseDB, "users", patientId, "advice", new Date().toISOString());
-      await setDoc(patientAdviceRef, adviceData);
-
-      if (notification.title.trim() && notification.message.trim()) {
-        await addDoc(collection(firebaseDB, "Notidetails"), {
-          title: notification.title,
-          message: notification.message,
-          userId: patientId, 
-          sentBy: "Doctor",
-          date: new Date().toISOString(),
-          read: false,
-        });
-      }
-
-      Alert.alert("Success", "Advice sent successfully!");
+      Alert.alert("Success", `${sendMode === 'advice' ? 'Advice' : 'Notification'} sent successfully!`);
       navigation.goBack();
     } catch (error) {
-      console.error("Error sending advice:", error);
-      Alert.alert("Error", "Failed to send advice.");
+      console.error(`Error sending ${sendMode}:`, error);
+      Alert.alert("Error", `Failed to send ${sendMode}.`);
     }
+  };
+
+  const sendAdvice = async () => {
+    const adviceData = {
+      date: new Date().toISOString(),
+      sentBy: "Doctor",
+      read: false,
+    };
+
+    Object.entries(adviceTypes).forEach(([type, data]) => {
+      if (data.enabled && data.content.trim()) {
+        adviceData[`${type}Advice`] = data.content.trim();
+      }
+    });
+
+    const hasAdvice = Object.values(adviceTypes).some(
+      type => type.enabled && type.content.trim()
+    );
+
+    if (!hasAdvice) {
+      throw new Error("Please enable and fill at least one advice type.");
+    }
+
+    const patientAdviceRef = doc(firebaseDB, "users", patientId, "advice", new Date().toISOString());
+    await setDoc(patientAdviceRef, adviceData);
+  };
+
+  const sendNotification = async () => {
+    if (!notification.title.trim() || !notification.message.trim()) {
+      throw new Error("Please fill both notification title and message.");
+    }
+
+    await addDoc(collection(firebaseDB, "Notidetails"), {
+      title: notification.title,
+      message: notification.message,
+      userId: patientId, 
+      sentBy: "Doctor",
+      date: new Date().toISOString(),
+      read: false,
+    });
   };
 
   const renderAdviceSection = (type, title, icon) => (
@@ -128,6 +141,38 @@ const AdvicePage = ({ route, navigation }) => {
     </View>
   );
 
+  const renderAdviceTab = () => (
+    <View style={styles.tabContent}>
+      {renderAdviceSection("eating", "Eating Advice", "food-apple")}
+      {renderAdviceSection("exercise", "Exercise Advice", "run")}
+      {renderAdviceSection("additional", "Additional Advice", "note-text")}
+    </View>
+  );
+
+  const renderNotificationTab = () => (
+    <View style={styles.tabContent}>
+      <View style={styles.adviceSection}>
+        <Text style={styles.sectionTitle}>Notification</Text>
+        <TextInput
+          style={styles.input}
+          onChangeText={(title) => setNotification(prev => ({ ...prev, title }))}
+          value={notification.title}
+          placeholder="Notification Title"
+          placeholderTextColor="#999"
+        />
+        <TextInput
+          style={[styles.input, { marginTop: 10 }]}
+          multiline
+          numberOfLines={4}
+          onChangeText={(message) => setNotification(prev => ({ ...prev, message }))}
+          value={notification.message}
+          placeholder="Notification Message"
+          placeholderTextColor="#999"
+        />
+      </View>
+    </View>
+  );
+
   return (
     <LinearGradient colors={["#4A90E2", "#50E3C2"]} style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
@@ -139,30 +184,29 @@ const AdvicePage = ({ route, navigation }) => {
             </Text>
           </View>
 
-          <View style={styles.contentContainer}>
-            {renderAdviceSection("eating", "Eating Advice", "food-apple")}
-            {renderAdviceSection("exercise", "Exercise Advice", "run")}
-            {renderAdviceSection("additional", "Additional Advice", "note-text")}
+          <View style={styles.tabContainer}>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'advice' && styles.activeTab]}
+              onPress={() => {
+                setActiveTab('advice');
+                setSendMode('advice');
+              }}
+            >
+              <Text style={[styles.tabText, activeTab === 'advice' && styles.activeTabText]}>Advice</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'notification' && styles.activeTab]}
+              onPress={() => {
+                setActiveTab('notification');
+                setSendMode('notification');
+              }}
+            >
+              <Text style={[styles.tabText, activeTab === 'notification' && styles.activeTabText]}>Notification</Text>
+            </TouchableOpacity>
+          </View>
 
-            <View style={styles.adviceSection}>
-              <Text style={styles.sectionTitle}>Notification (Optional)</Text>
-              <TextInput
-                style={styles.input}
-                onChangeText={(title) => setNotification(prev => ({ ...prev, title }))}
-                value={notification.title}
-                placeholder="Notification Title"
-                placeholderTextColor="#999"
-              />
-              <TextInput
-                style={[styles.input, { marginTop: 10 }]}
-                multiline
-                numberOfLines={4}
-                onChangeText={(message) => setNotification(prev => ({ ...prev, message }))}
-                value={notification.message}
-                placeholder="Notification Message"
-                placeholderTextColor="#999"
-              />
-            </View>
+          <View style={styles.contentContainer}>
+            {activeTab === 'advice' ? renderAdviceTab() : renderNotificationTab()}
           </View>
         </ScrollView>
 
@@ -174,7 +218,7 @@ const AdvicePage = ({ route, navigation }) => {
             <Text style={styles.buttonText}>Back</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm}>
-            <Text style={styles.buttonText}>Confirm & Send</Text>
+            <Text style={styles.buttonText}>Send {sendMode === 'advice' ? 'Advice' : 'Notification'}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -211,8 +255,34 @@ const styles = StyleSheet.create({
     fontFamily: "Kanit-Regular",
     color: "#666",
   },
+  tabContainer: {
+    flexDirection: 'row',
+    marginBottom: 20,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  activeTab: {
+    borderBottomColor: '#1E88E5',
+  },
+  tabText: {
+    fontSize: 16,
+    fontFamily: "Kanit-Regular",
+    color: '#666',
+  },
+  activeTabText: {
+    color: '#1E88E5',
+    fontFamily: "Kanit-Bold",
+  },
   contentContainer: {
     padding: 20,
+  },
+  tabContent: {
+    // Add any specific styles for tab content here
   },
   adviceSection: {
     backgroundColor: "#FFF",

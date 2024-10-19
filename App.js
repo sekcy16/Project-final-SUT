@@ -50,6 +50,8 @@ import BlogDetail from "./screens/BlogDetail";
 import CreateBlogScreen from "./screens/CreateBlogScreen";
 import BookmarkListPage from "./screens/BookmarkListPage";
 import SummaryPage from "./screens/SummaryPage";
+import AdviceListScreen from "./screens/AdviceListScreen";
+import AdviceDetailScreen from "./screens/AdviceDetailScreen";
 import 'react-native-gesture-handler';
 import { TransitionPresets } from '@react-navigation/stack';
 
@@ -336,6 +338,8 @@ const RootNavigator = () => {
       />
       <Stack.Screen name="FoodQRPage" component={FoodQRPage} />
       <Stack.Screen name="FoodQRResult" component={FoodQRResult} />
+      <Stack.Screen name="AdviceListScreen" component={AdviceListScreen} />
+      <Stack.Screen name="AdviceDetailScreen" component={AdviceDetailScreen} />
     </Stack.Navigator>
   );
 };

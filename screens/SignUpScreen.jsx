@@ -19,7 +19,7 @@ import RNPickerSelect from "react-native-picker-select";
 import PagerView from "react-native-pager-view";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { firebaseAuth, firebaseDB } from "../config/firebase.config";
-import { doc, setDoc, collection, addDoc } from "firebase/firestore";
+import { doc, setDoc, collection, addDoc, getDocs } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import { useFocusEffect } from "@react-navigation/native";
 import { BackHandler } from "react-native";
@@ -222,11 +222,22 @@ const SignUpScreen = () => {
     }
 
     try {
+      
       const userCred = await createUserWithEmailAndPassword(
         firebaseAuth,
         email,
         password
       );
+      
+
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+
+      const usersCollectionRef = collection(firebaseDB, "users");
+      const usersSnapshot = await getDocs(usersCollectionRef);
+      const userCount = usersSnapshot.size;
+      const uidnum = userCount + 1;
+      const currentTime = new Date().toISOString(); 
 
       const calculatedBMI = calculateBMI(
         parseFloat(weight),
@@ -252,9 +263,15 @@ const SignUpScreen = () => {
       );
 
       const userData = {
-        _id: userCred?.user.uid,
+        _id: userCred.user.uid,
         fullName: name,
         profilePic: avatar,
+        providerData: {
+          ...userCred.user.providerData[0],
+          email: userCred.user.email,
+          uid: userCred.user.uid,
+          uidnum: uidnum,
+        },
         email: userCred.user.email,
         phoneNumber: phoneNumber,
         role: "User",
@@ -269,18 +286,22 @@ const SignUpScreen = () => {
         bmiStatus: calculatedBMI.bmiStatus,
         tdee: calculatedTDEE,
         macronutrients: calculatedMacros,
-        lastActive: new Date().toISOString(),
-        relatives: validRelatives, // เพิ่มข้อมูลญาติเข้าไปใน user document
+        lastActive: currentTime,
+        relatives: validRelatives,
       };
-
-      await setDoc(doc(firebaseDB, "users", userCred?.user.uid), userData);
+      
+      await setDoc(doc(firebaseDB, "users", userCred.user.uid), userData);
+      
 
       await signOut(firebaseAuth);
 
       Alert.alert("สำเร็จ", "สร้างบัญชีเรียบร้อยแล้ว!", [
-        { text: "ตกลง", onPress: () => navigation.navigate("HealthDashboard") },
+        { text: "ตกลง", onPress: () => navigation.navigate("LoginScreen") },
       ]);
     } catch (error) {
+      console.error("Detailed error in sign-up process:", error);
+      console.error("Error code:", error.code);
+      console.error("Error message:", error.message);
       console.error("Error signing up:", error);
       if (error.code === "auth/email-already-in-use") {
         Alert.alert(

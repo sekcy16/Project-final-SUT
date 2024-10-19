@@ -13,7 +13,7 @@ import {
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { useNavigation } from "@react-navigation/native";
 import { firebaseAuth, firebaseDB } from "../config/firebase.config";
-import { doc, getDoc, onSnapshot } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, collection, query, where } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { LinearGradient } from "expo-linear-gradient";
 
@@ -22,25 +22,28 @@ const ProfilePage = () => {
   const [userData, setUserData] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [unreadDoctorAdvice, setUnreadDoctorAdvice] = useState(0);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   useEffect(() => {
     let unsubscribeAuth = null;
     let unsubscribeFirestore = null;
+    let unsubscribeDoctorAdvice = null;
+    let unsubscribeNotifications = null;
 
     const setupSubscriptions = async () => {
       unsubscribeAuth = onAuthStateChanged(firebaseAuth, (user) => {
         if (user) {
           setIsAuthenticated(true);
           const userDocRef = doc(firebaseDB, "users", user.uid);
-          unsubscribeFirestore = onSnapshot(
-            userDocRef, 
+          unsubscribeFirestore = onSnapshot(userDocRef,
             (doc) => {
               if (doc.exists()) {
                 setUserData(doc.data());
               } else {
                 console.log("No such document!");
               }
-            }, 
+            },
             (error) => {
               console.error("Error fetching user data:", error);
               if (error.code === 'permission-denied') {
@@ -49,6 +52,26 @@ const ProfilePage = () => {
               }
             }
           );
+
+          // Doctor Advice
+          const doctorAdviceQuery = query(
+            collection(firebaseDB, "users", user.uid, "advice"),
+            where("read", "==", false)
+          );
+          unsubscribeDoctorAdvice = onSnapshot(doctorAdviceQuery, (querySnapshot) => {
+            setUnreadDoctorAdvice(querySnapshot.size);
+          });
+
+          // Notifications
+          const notificationsQuery = query(
+            collection(firebaseDB, "Notidetails"),
+            where("userId", "==", user.uid),
+            where("read", "==", false)
+          );
+          unsubscribeNotifications = onSnapshot(notificationsQuery, (querySnapshot) => {
+            setUnreadNotifications(querySnapshot.size);
+          });
+
         } else {
           setIsAuthenticated(false);
           setUserData(null);
@@ -66,6 +89,8 @@ const ProfilePage = () => {
     return () => {
       if (unsubscribeAuth) unsubscribeAuth();
       if (unsubscribeFirestore) unsubscribeFirestore();
+      if (unsubscribeDoctorAdvice) unsubscribeDoctorAdvice();
+      if (unsubscribeNotifications) unsubscribeNotifications();
     };
   }, [navigation]);
 
@@ -184,6 +209,14 @@ const ProfilePage = () => {
             label="การแจ้งเตือน"
             onPress={() => navigation.navigate("NotificationListScreen")}
             color="#FFD93D"
+            badgeCount={unreadNotifications}
+          />
+          <MenuItem
+            icon="doctor"
+            label="คำแนะนำจากหมอ"
+            onPress={() => navigation.navigate("AdviceListScreen")}
+            color="#42d3dc"
+            badgeCount={unreadDoctorAdvice}
           />
           <MenuItem
             icon="bookmark-outline"
@@ -214,15 +247,21 @@ const StatItem = ({ icon, label, value, color }) => (
     <Text style={[styles.statValue, { color: color }]}>{value}</Text>
   </View>
 );
-const MenuItem = ({ icon, label, onPress, color }) => (
+const MenuItem = ({ icon, label, onPress, color, badgeCount = 0 }) => (
   <TouchableOpacity style={styles.menuItem} onPress={onPress}>
     <View style={[styles.menuIconContainer, { backgroundColor: color }]}>
       <Icon name={icon} size={24} color="#FFF" />
+      {badgeCount > 0 && (
+        <View style={styles.badgeContainer}>
+          <Text style={styles.badgeText}>{badgeCount}</Text>
+        </View>
+      )}
     </View>
     <Text style={styles.menuLabel}>{label}</Text>
     <Icon name="chevron-right" size={24} color="#999" />
   </TouchableOpacity>
 );
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -375,6 +414,23 @@ const styles = StyleSheet.create({
     fontSize: 18,
     textAlign: "center",
     fontFamily: "Kanit-Bold",
+  },
+  badgeContainer: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: 'red',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 5,
+  },
+  badgeText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 });
 

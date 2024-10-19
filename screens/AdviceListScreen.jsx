@@ -8,45 +8,44 @@ import {
   SafeAreaView, 
   StatusBar 
 } from 'react-native';
-import { collection, onSnapshot, query, where, orderBy, doc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { firebaseDB } from '../config/firebase.config';
 import { getAuth } from 'firebase/auth';
 import { LinearGradient } from 'expo-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 
-export default function NotificationListScreen() {
-  const [notifications, setNotifications] = useState([]);
+export default function AdviceListScreen() {
+  const [adviceList, setAdviceList] = useState([]);
   const unsubscribeRef = useRef(null);
   const navigation = useNavigation();
 
   useEffect(() => {
-    const fetchNotifications = async () => {
+    const fetchAdvice = async () => {
       try {
         const userId = getAuth().currentUser?.uid;
         if (userId) {
-          const q = query(
-            collection(firebaseDB, 'Notidetails'),
-            where('userId', '==', userId),
-            orderBy('date', 'desc')
-          );
+          // Query the advice subcollection for the current user
+          const adviceRef = collection(firebaseDB, 'users', userId, 'advice');
+          const q = query(adviceRef, orderBy('date', 'desc'));
+          
           const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const notificationsList = querySnapshot.docs.map((doc) => ({
+            const adviceData = querySnapshot.docs.map((doc) => ({
               id: doc.id,
               ...doc.data(),
             }));
-            setNotifications(notificationsList);
+            setAdviceList(adviceData);
           });
           unsubscribeRef.current = unsubscribe;
         } else {
           console.error('No user is logged in.');
         }
       } catch (error) {
-        console.error('Error fetching notifications:', error);
+        console.error('Error fetching advice:', error);
       }
     };
 
-    fetchNotifications();
+    fetchAdvice();
 
     return () => {
       if (unsubscribeRef.current) {
@@ -54,6 +53,20 @@ export default function NotificationListScreen() {
       }
     };
   }, []);
+
+  const handleMarkAsRead = async (adviceId) => {
+    try {
+      const userId = getAuth().currentUser?.uid;
+      if (userId) {
+        const docRef = doc(firebaseDB, 'users', userId, 'advice', adviceId);
+        await updateDoc(docRef, { read: true });
+      } else {
+        console.error('No user is logged in.');
+      }
+    } catch (error) {
+      console.error("Error marking advice as read:", error);
+    }
+  };
 
   const formatDateTime = (timestamp) => {
     if (!timestamp) return 'Unknown date';
@@ -67,13 +80,18 @@ export default function NotificationListScreen() {
     });
   };
 
-  const handleMarkAsRead = async (notificationId) => {
-    try {
-      const docRef = doc(firebaseDB, "Notidetails", notificationId);
-      await updateDoc(docRef, { read: true });
-    } catch (error) {
-      console.error("Error marking notification as read:", error);
-    }
+  const getAdviceIcon = (advice) => {
+    if (advice.eatingAdvice) return "food-apple";
+    if (advice.exerciseAdvice) return "run";
+    return "note-text";
+  };
+
+  const getAdviceTitle = (advice) => {
+    const titles = [];
+    if (advice.eatingAdvice) titles.push('Eating');
+    if (advice.exerciseAdvice) titles.push('Exercise');
+    if (advice.additionalAdvice) titles.push('Additional');
+    return titles.join(' & ') + ' Advice';
   };
 
   const renderItem = ({ item }) => (
@@ -81,16 +99,26 @@ export default function NotificationListScreen() {
       style={[styles.item, item.read ? styles.read : styles.unread]}
       onPress={() => {
         handleMarkAsRead(item.id);
-        navigation.navigate('NotificationDetailScreen', { item });
+        navigation.navigate('AdviceDetailScreen', { advice: item });
       }}
     >
       <View style={styles.iconContainer}>
-        <Icon name="bell" size={24} color={item.read ? "#FFF" : "#FFEB3B"} />
+        <Icon name={getAdviceIcon(item)} size={24} color={item.read ? "#FFF" : "#FFEB3B"} />
         {!item.read && <View style={styles.unreadIndicator} />}
       </View>
       <View style={styles.textContainer}>
-        <Text style={[styles.title, !item.read && styles.unreadText]}>{item.title}</Text>
+        <Text style={[styles.title, !item.read && styles.unreadText]}>{getAdviceTitle(item)}</Text>
         <Text style={styles.date}>{formatDateTime(item.date)}</Text>
+        {item.eatingAdvice && (
+          <Text style={styles.preview} numberOfLines={1}>
+            Eating: {item.eatingAdvice}
+          </Text>
+        )}
+        {item.exerciseAdvice && (
+          <Text style={styles.preview} numberOfLines={1}>
+            Exercise: {item.exerciseAdvice}
+          </Text>
+        )}
       </View>
       <Icon name="chevron-right" size={24} color="#4A90E2" />
     </TouchableOpacity>
@@ -104,17 +132,17 @@ export default function NotificationListScreen() {
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <Icon name="arrow-left" size={24} color="#FFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>การแจ้งเตือน</Text>
+          <Text style={styles.headerTitle}>คำแนะนำ</Text>
         </View>
         <FlatList
-          data={notifications}
+          data={adviceList}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={() => (
             <View style={styles.emptyContainer}>
-              <Icon name="bell-off" size={50} color="#FFF" />
-              <Text style={styles.emptyText}>ไม่มีการแจ้งเตือน</Text>
+              <Icon name="text-box-remove" size={50} color="#FFF" />
+              <Text style={styles.emptyText}>ไม่มีคำแนะนำ</Text>
             </View>
           )}
         />
@@ -164,12 +192,6 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  read: {
-    opacity: 0.7,
-  },
-  unread: {
-    backgroundColor: '#FFF',
-  },
   iconContainer: {
     width: 40,
     height: 40,
@@ -187,14 +209,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 5,
     color: '#333',
-    fontFamily: 'Kanit-Regular',
-  },
-  unreadText: {
     fontFamily: 'Kanit-Bold',
-    color: '#4A90E2',
   },
   date: {
     fontSize: 12,
+    color: '#666',
+    fontFamily: 'Kanit-Regular',
+    marginBottom: 5,
+  },
+  preview: {
+    fontSize: 14,
     color: '#666',
     fontFamily: 'Kanit-Regular',
   },
@@ -210,15 +234,15 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontFamily: 'Kanit-Regular',
   },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#4A90E2',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 15,
-    position: 'relative', // Add this to position the unread indicator
+  read: {
+    opacity: 0.7,
+  },
+  unread: {
+    backgroundColor: '#FFF',
+  },
+  unreadText: {
+    fontFamily: 'Kanit-Bold',
+    color: '#4A90E2',
   },
   unreadIndicator: {
     position: 'absolute',

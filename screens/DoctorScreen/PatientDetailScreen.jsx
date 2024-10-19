@@ -23,6 +23,7 @@ const PatientDetailScreen = ({ route, navigation }) => {
   const [loading, setLoading] = useState(true);
   const [weightHistory, setWeightHistory] = useState([]);
   const [diaryEntries, setDiaryEntries] = useState([]);
+  const [error, setError] = useState(null);
 
   const fetchPatientData = async () => {
     try {
@@ -30,35 +31,40 @@ const PatientDetailScreen = ({ route, navigation }) => {
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
-        setPatientData(docSnap.data());
+        const data = docSnap.data();
+        // Ensure all required fields exist with default values
+        setPatientData({
+          fullName: data.fullName || "ไม่ระบุชื่อ",
+          age: data.age || "ไม่ระบุ",
+          diabetesType: data.diabetesType || "ไม่ระบุ",
+          bloodSugarHistory: data.bloodSugarHistory || [],
+          relatives: data.relatives || [],
+          ...data
+        });
       } else {
-        console.log("No such document!");
-        Alert.alert("Error", "ไม่พบข้อมูลผู้ป่วยในระบบ");
+        setError("ไม่พบข้อมูลผู้ป่วยในระบบ");
       }
     } catch (error) {
-      console.error("Error fetching patient data:", error.message); // ปรับปรุงการแสดงข้อผิดพลาด
-      Alert.alert("Error", "เกิดข้อผิดพลาดในการดึงข้อมูล");
-    } finally {
-      setLoading(false);
+      console.error("Error fetching patient data:", error.message);
+      setError("เกิดข้อผิดพลาดในการดึงข้อมูล");
     }
   };
 
   const fetchWeightHistory = async (patientId) => {
     try {
-      const weightHistoryRef = collection(
-        firebaseDB,
-        "users",
-        patientId,
-        "weightHistory"
-      );
+      const weightHistoryRef = collection(firebaseDB, "users", patientId, "weightHistory");
       const querySnapshot = await getDocs(weightHistoryRef);
 
-      const weightHistoryData = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-
-      console.log("weightHistoryData:", weightHistoryData);
+      const weightHistoryData = querySnapshot.docs
+        .map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+          // Ensure required fields exist
+          date: doc.data().date || "ไม่ระบุวันที่",
+          weight: doc.data().weight || 0,
+          time: doc.data().time || "ไม่ระบุเวลา"
+        }))
+        .sort((a, b) => new Date(a.date) - new Date(b.date)); // Sort by date
 
       return weightHistoryData;
     } catch (error) {
@@ -69,19 +75,26 @@ const PatientDetailScreen = ({ route, navigation }) => {
 
   const fetchBloodSugarHistory = async () => {
     try {
-      const q = query(
-        collection(firebaseDB, "users", patientId, "bloodSugarHistory")
-      );
+      const q = query(collection(firebaseDB, "users", patientId, "bloodSugarHistory"));
       const querySnapshot = await getDocs(q);
       const bloodSugarHistory = [];
 
       querySnapshot.forEach((doc) => {
-        bloodSugarHistory.push(doc.data());
+        const data = doc.data();
+        bloodSugarHistory.push({
+          date: data.date || "ไม่ระบุวันที่",
+          time: data.time || "ไม่ระบุเวลา",
+          level: data.level || 0,
+          status: data.status || "ไม่ระบุ"
+        });
       });
+
+      // Sort by date
+      bloodSugarHistory.sort((a, b) => new Date(a.date) - new Date(b.date));
 
       setPatientData((prevState) => ({
         ...prevState,
-        bloodSugarHistory: bloodSugarHistory,
+        bloodSugarHistory
       }));
     } catch (error) {
       console.error("Error fetching blood sugar history:", error);
@@ -109,19 +122,26 @@ const PatientDetailScreen = ({ route, navigation }) => {
       const entries = [];
 
       querySnapshot.forEach((doc) => {
-        entries.push({ id: doc.id, ...doc.data() });
+        const data = doc.data();
+        entries.push({
+          id: doc.id,
+          date: data.date || "ไม่ระบุวันที่",
+          meals: data.meals || {},
+          exercises: data.exercises || []
+        });
       });
 
       setDiaryEntries(entries);
     } catch (error) {
       console.error("Error fetching diary entries:", error);
-      Alert.alert("Error", "เกิดข้อผิดพลาดในการดึงข้อมูลไดอารี่");
+      setDiaryEntries([]);
     }
   };
 
   useEffect(() => {
     const fetchAllData = async () => {
       setLoading(true);
+      setError(null);
       try {
         await fetchPatientData();
         await fetchBloodSugarHistory();
@@ -130,7 +150,7 @@ const PatientDetailScreen = ({ route, navigation }) => {
         await fetchDiaryEntries();
       } catch (error) {
         console.error("Error fetching data:", error);
-        Alert.alert("Error", "เกิดข้อผิดพลาดในการดึงข้อมูล");
+        setError("เกิดข้อผิดพลาดในการดึงข้อมูล");
       } finally {
         setLoading(false);
       }
@@ -143,6 +163,14 @@ const PatientDetailScreen = ({ route, navigation }) => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#2196F3" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>{error}</Text>
       </View>
     );
   }
@@ -162,11 +190,13 @@ const PatientDetailScreen = ({ route, navigation }) => {
         return (
           <View style={styles.tabContent}>
             <Text style={styles.sectionTitle}>ระดับน้ำตาลในเลือด</Text>
-            {patientData.bloodSugarHistory ? (
+            {patientData?.bloodSugarHistory?.length > 0 ? (
               <LineChart
                 data={{
-                  labels: patientData.bloodSugarHistory.map((entry) => entry.date),
-                  datasets: [{ data: patientData.bloodSugarHistory.map((entry) => entry.level) }],
+                  labels: patientData.bloodSugarHistory.map(entry => entry.date),
+                  datasets: [{
+                    data: patientData.bloodSugarHistory.map(entry => Number(entry.level) || 0)
+                  }]
                 }}
                 width={350}
                 height={220}
@@ -213,46 +243,42 @@ const PatientDetailScreen = ({ route, navigation }) => {
             )}
           </View>
         );
-      case "weight":
-        return (
-          <View>
-            <Text style={styles.statsText}>น้ำหนัก</Text>
-            {weightHistory && weightHistory.length > 0 ? (
-              <LineChart
-                data={{
-                  labels: weightHistory.map((entry) => entry.date),
-                  datasets: [
-                    {
-                      data: weightHistory.map((entry) => entry.weight),
-                      color: (opacity = 1) => `rgba(0, 0, 255, ${opacity})`,
-                      strokeWidth: 2,
+        case "weight":
+          return (
+            <View style={styles.tabContent}>
+              <Text style={styles.sectionTitle}>น้ำหนัก</Text>
+              {weightHistory?.length > 0 ? (
+                <LineChart
+                  data={{
+                    labels: weightHistory.map(entry => entry.date),
+                    datasets: [{
+                      data: weightHistory.map(entry => Number(entry.weight) || 0)
+                    }]
+                  }}
+                  width={350}
+                  height={220}
+                  chartConfig={{
+                    backgroundColor: "#ffffff",
+                    backgroundGradientFrom: "#ffffff",
+                    backgroundGradientTo: "#ffffff",
+                    decimalPlaces: 1,
+                    color: (opacity = 1) => `rgba(33, 150, 243, ${opacity})`,
+                    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                    style: {
+                      borderRadius: 16
                     },
-                  ],
-                }}
-                width={350}
-                height={220}
-                chartConfig={{
-                  backgroundColor: "#fff",
-                  backgroundGradientFrom: "#fff",
-                  backgroundGradientTo: "#fff",
-                  decimalPlaces: 1,
-                  color: (opacity = 1) => `rgba(0, 123, 255, ${opacity})`,
-                  labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                  style: {
-                    borderRadius: 16
-                  },
-                  propsForDots: {
-                    r: "6",
-                    strokeWidth: "2",
-                    stroke: "#0000FF"
-                  }
-                }}
-                bezier
-                style={styles.chart}
-              />
-            ) : (
-              <Text style={styles.noDataText}>ไม่มีข้อมูลน้ำหนัก</Text>
-            )}
+                    propsForDots: {
+                      r: "6",
+                      strokeWidth: "2",
+                      stroke: "#2196F3"
+                    }
+                  }}
+                  bezier
+                  style={styles.chart}
+                />
+              ) : (
+                <Text style={styles.noDataText}>ไม่มีข้อมูลน้ำหนัก</Text>
+              )}
             <Text style={styles.historyTitle}>ประวัติ</Text>
             {weightHistory && weightHistory.length > 0 ? (
               weightHistory.map((entry, index) => (
@@ -267,13 +293,13 @@ const PatientDetailScreen = ({ route, navigation }) => {
             )}
           </View>
         );
-      case "diary":
-        return (
-          <View style={styles.diaryContainer}>
-            <Text style={styles.diaryTitle}>ไดอารี่อาหารและการออกกำลังกาย</Text>
-            {diaryEntries.length > 0 ? (
-              diaryEntries.map((entry, index) => (
-                <View key={index} style={styles.diaryEntry}>
+        case "diary":
+          return (
+            <View style={styles.diaryContainer}>
+              <Text style={styles.diaryTitle}>ไดอารี่อาหารและการออกกำลังกาย</Text>
+              {diaryEntries?.length > 0 ? (
+                diaryEntries.map((entry, index) => (
+                  <View key={index} style={styles.diaryEntry}>
                   <View style={styles.diaryHeader}>
                     <Text style={styles.diaryDate}>{new Date(entry.date).toLocaleDateString('th-TH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</Text>
                   </View>
@@ -330,26 +356,27 @@ const PatientDetailScreen = ({ route, navigation }) => {
           </View>
         );
         case "relatives":
-          return (
-            <View style={styles.relativesContainer}>
-              <Text style={styles.relativesTitle}>ข้อมูลญาติ</Text>
-              {patientData.relatives && patientData.relatives.length > 0 ? (
-                patientData.relatives.map((relative, index) => (
-                  <View key={index} style={styles.relativeItem}>
-                    <MaterialCommunityIcons name="account" size={24} color="#2196F3" />
-                    <View style={styles.relativeInfo}>
-                      <Text style={styles.relativeName}>{relative.name}</Text>
-                      <Text style={styles.relativePhone}>{relative.phoneNumber}</Text>
-                    </View>
+        return (
+          <View style={styles.relativesContainer}>
+            <Text style={styles.relativesTitle}>ข้อมูลญาติ</Text>
+            {patientData?.relatives?.length > 0 ? (
+              patientData.relatives.map((relative, index) => (
+                <View key={index} style={styles.relativeItem}>
+                  <MaterialCommunityIcons name="account" size={24} color="#2196F3" />
+                  <View style={styles.relativeInfo}>
+                    <Text style={styles.relativeName}>{relative.name || "ไม่ระบุชื่อ"}</Text>
+                    <Text style={styles.relativePhone}>{relative.phoneNumber || "ไม่ระบุเบอร์โทร"}</Text>
                   </View>
-                ))
-              ) : (
-                <Text style={styles.noDataText}>ไม่มีข้อมูลญาติ</Text>
-              )}
-            </View>
-          );
-        default:
-          return null;
+                </View>
+              ))
+            ) : (
+              <Text style={styles.noDataText}>ไม่มีข้อมูลญาติ</Text>
+            )}
+          </View>
+        );
+
+      default:
+        return null;
     }
   };
 
@@ -367,24 +394,41 @@ const PatientDetailScreen = ({ route, navigation }) => {
     }
   };
   const calculateTotalCalories = (entry) => {
-    let total = 0;
-    Object.values(entry.meals).forEach(meal => {
-      meal.items.forEach(item => {
-        total += item.calories || 0;
-      });
-    });
-    
-    return total.toFixed(0);
+    try {
+      let total = 0;
+      if (entry?.meals) {
+        Object.values(entry.meals).forEach(meal => {
+          if (meal?.items) {
+            meal.items.forEach(item => {
+              total += Number(item.calories) || 0;
+            });
+          }
+        });
+      }
+      return total.toFixed(0);
+    } catch (error) {
+      console.error("Error calculating calories:", error);
+      return "0";
+    }
   };
 
   const calculateTotalMacro = (entry, macro) => {
-    let total = 0;
-    Object.values(entry.meals).forEach(meal => {
-      meal.items.forEach(item => {
-        total += item[macro] || 0;
-      });
-    });
-    return total.toFixed(1);
+    try {
+      let total = 0;
+      if (entry?.meals) {
+        Object.values(entry.meals).forEach(meal => {
+          if (meal?.items) {
+            meal.items.forEach(item => {
+              total += Number(item[macro]) || 0;
+            });
+          }
+        });
+      }
+      return total.toFixed(1);
+    } catch (error) {
+      console.error(`Error calculating ${macro}:`, error);
+      return "0.0";
+    }
   };
 
 
