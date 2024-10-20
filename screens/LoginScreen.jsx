@@ -1,4 +1,4 @@
-import { View, Text, Dimensions, Image, TouchableOpacity, BackHandler } from "react-native";
+import { View, Text, Dimensions, Image, TouchableOpacity, BackHandler, ActivityIndicator } from "react-native";
 import React, { useState, useEffect } from "react";
 import { BGimage, Logo } from "../assets";
 import { UserTextinput } from "../components";
@@ -18,6 +18,7 @@ const LoginScreen = () => {
   const [getEmailValidationStatus, setGetEmailValidationStatus] = useState(false);
   const [alert, setAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const navigation = useNavigation();
   const dispatch = useDispatch();
@@ -40,8 +41,10 @@ const LoginScreen = () => {
     return () => backHandler.remove();
   }, [isFocused]);
 
-   const handleLogin = async () => {
-    if (getEmailValidationStatus && email !== "") {
+  const handleLogin = async () => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (emailRegex.test(email) && email !== "" && password !== "") {
+      setIsLoading(true);
       try {
         const userCred = await signInWithEmailAndPassword(firebaseAuth, email, password);
         if (userCred) {
@@ -63,15 +66,28 @@ const LoginScreen = () => {
             } else {
               navigation.navigate('Main', { screen: 'HealthDashboard' });
             }
+          } else {
+            console.log("ไม่พบข้อมูลผู้ใช้");
+            showAlert("ไม่พบข้อมูลผู้ใช้ โปรดติดต่อผู้ดูแลระบบ");
           }
         }
       } catch (err) {
         console.error("ข้อผิดพลาดในการเข้าสู่ระบบ:", err);
         handleFirebaseError(err.code);
+      } finally {
+        setIsLoading(false);
       }
     } else {
-      console.log("การตรวจสอบอีเมลล้มเหลวหรืออีเมลว่างเปล่า");
-      showAlert("อีเมลไม่ถูกต้อง");
+      if (!emailRegex.test(email) || email === "") {
+        console.log("อีเมลไม่ถูกต้องหรือว่างเปล่า");
+        showAlert("กรุณากรอกอีเมลให้ถูกต้อง");
+      } else if (password === "") {
+        console.log("รหัสผ่านว่างเปล่า");
+        showAlert("กรุณากรอกรหัสผ่าน");
+      } else {
+        console.log("ข้อมูลไม่ถูกต้อง");
+        showAlert("กรุณาตรวจสอบอีเมลและรหัสผ่านของคุณ");
+      }
     }
   };
 
@@ -112,6 +128,7 @@ const LoginScreen = () => {
         style={{ width: screenWidth }}
       />
 
+
       {/* Main View */}
       <View
         className="w-full h-full bg-white rounded-tl-[90px] -mt-44 flex items-center 
@@ -143,17 +160,22 @@ const LoginScreen = () => {
           {/* Login Button */}
           <TouchableOpacity
             onPress={handleLogin}
+            disabled={isLoading}
             className="w-full rounded-xl overflow-hidden my-3"
           >
             <LinearGradient
               colors={['#FF69B4', '#8A2BE2']}
-              start={{x: 0, y: 0}}
-              end={{x: 1, y: 0}}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
               className="px-4 py-2 flex items-center justify-center"
             >
-              <Text className="py-2 text-white text-xl font-semibold">
-                เข้าสู่ระบบ
-              </Text>
+              {isLoading ? (
+                <ActivityIndicator size="large" color="#FFFFFF" />
+              ) : (
+                <Text className="py-2 text-white text-xl font-semibold">
+                  เข้าสู่ระบบ
+                </Text>
+              )}
             </LinearGradient>
           </TouchableOpacity>
           <View className="w-full py-12 flex-row items-center justify-center space-x-2">
