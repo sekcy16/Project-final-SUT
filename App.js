@@ -1,14 +1,23 @@
 import React, { useState, useEffect, useRef } from "react";
-import { View, StyleSheet, TouchableOpacity, Text, TextInput, Modal, Animated, Dimensions } from "react-native";
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  Text,
+  TextInput,
+  Modal,
+  Animated,
+  Dimensions,
+} from "react-native";
 import { NavigationContainer, useNavigation } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Provider, useSelector } from "react-redux";
 import Icon from "react-native-vector-icons/Ionicons";
 import Store from "./context/store";
-import * as Font from 'expo-font';
-import * as SplashScreen from 'expo-splash-screen';
-import { LinearGradient } from 'expo-linear-gradient';
+import * as Font from "expo-font";
+import * as SplashScreen from "expo-splash-screen";
+import { LinearGradient } from "expo-linear-gradient";
 // Import your screens and components
 import {
   LoginScreen,
@@ -52,13 +61,12 @@ import BookmarkListPage from "./screens/BookmarkListPage";
 import SummaryPage from "./screens/SummaryPage";
 import AdviceListScreen from "./screens/AdviceListScreen";
 import AdviceDetailScreen from "./screens/AdviceDetailScreen";
-import 'react-native-gesture-handler';
-import { TransitionPresets } from '@react-navigation/stack';
+import "react-native-gesture-handler";
+import { TransitionPresets } from "@react-navigation/stack";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
-const { height } = Dimensions.get('window');
-
+const { height } = Dimensions.get("window");
 
 // SearchModal Component
 const SearchModal = ({ visible, onClose }) => {
@@ -99,7 +107,12 @@ const SearchModal = ({ visible, onClose }) => {
           ]}
         >
           <View style={styles.searchInputContainer}>
-            <Icon name="search" size={20} color="#333" style={styles.searchIcon} />
+            <Icon
+              name="search"
+              size={20}
+              color="#333"
+              style={styles.searchIcon}
+            />
             <TextInput
               style={styles.searchInput}
               placeholder="ค้นหาอาหาร"
@@ -119,11 +132,11 @@ const SearchBar = () => {
   const navigation = useNavigation();
 
   const handleSearchPress = () => {
-    navigation.navigate('AddFood');
+    navigation.navigate("AddFood");
   };
 
   const handleBarcodePress = () => {
-    navigation.navigate('FoodQRPage');
+    navigation.navigate("FoodQRPage");
   };
 
   return (
@@ -132,19 +145,26 @@ const SearchBar = () => {
         <Icon name="search" size={20} color="#fff" style={styles.searchIcon} />
         <Text style={styles.searchPlaceholder}>ค้นหาอาหาร</Text>
       </TouchableOpacity>
-      <TouchableOpacity onPress={handleBarcodePress} style={styles.barcodeButton}>
+      <TouchableOpacity
+        onPress={handleBarcodePress}
+        style={styles.barcodeButton}
+      >
         <Icon name="barcode-outline" size={20} color="#fff" />
       </TouchableOpacity>
     </View>
   );
 };
 
-
 // Updated CustomTabBar Component
-const CustomTabBar = ({ state, descriptors, navigation, showSearch = false }) => {
+const CustomTabBar = ({
+  state,
+  descriptors,
+  navigation,
+  showSearch = false,
+}) => {
   return (
     <LinearGradient
-      colors={['#4A90E2', '#50E3C2']}
+      colors={["#4A90E2", "#50E3C2"]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 0 }}
       style={styles.tabContainer}
@@ -165,7 +185,7 @@ const CustomTabBar = ({ state, descriptors, navigation, showSearch = false }) =>
 
             const onPress = () => {
               const event = navigation.emit({
-                type: 'tabPress',
+                type: "tabPress",
                 target: route.key,
               });
 
@@ -185,11 +205,22 @@ const CustomTabBar = ({ state, descriptors, navigation, showSearch = false }) =>
                 style={styles.tabButton}
               >
                 <Icon
-                  name={options.tabBarIcon({ focused: isFocused, color: isFocused ? '#FFFFFF' : 'rgba(255,255,255,0.7)', size: 24 }).props.name}
+                  name={
+                    options.tabBarIcon({
+                      focused: isFocused,
+                      color: isFocused ? "#FFFFFF" : "rgba(255,255,255,0.7)",
+                      size: 24,
+                    }).props.name
+                  }
                   size={24}
-                  color={isFocused ? '#FFFFFF' : 'rgba(255,255,255,0.7)'}
+                  color={isFocused ? "#FFFFFF" : "rgba(255,255,255,0.7)"}
                 />
-                <Text style={[styles.tabLabel, { color: isFocused ? '#FFFFFF' : 'rgba(255,255,255,0.7)' }]}>
+                <Text
+                  style={[
+                    styles.tabLabel,
+                    { color: isFocused ? "#FFFFFF" : "rgba(255,255,255,0.7)" },
+                  ]}
+                >
                   {label}
                 </Text>
               </TouchableOpacity>
@@ -291,8 +322,8 @@ const RootNavigator = () => {
     user?.role === "Doctor" ? DoctorTabNavigator : MainTabNavigator;
 
   return (
-    <Stack.Navigator 
-      screenOptions={{ 
+    <Stack.Navigator
+      screenOptions={{
         headerShown: false,
         ...TransitionPresets.ModalPresentationIOS, // This adds a slide-up animation
       }}
@@ -310,9 +341,18 @@ const RootNavigator = () => {
       <Stack.Screen name="ExerciseEntry" component={ExerciseEntry} />
       <Stack.Screen name="BloodSugar" component={BloodSugar} />
       <Stack.Screen name="WeightProgress" component={WeightProgress} />
-      <Stack.Screen name="PatientDetailScreen" component={PatientDetailScreen} />
-      <Stack.Screen name="NotificationListScreen" component={NotificationListScreen} />
-      <Stack.Screen name="NotificationDetailScreen" component={NotificationDetailScreen} />
+      <Stack.Screen
+        name="PatientDetailScreen"
+        component={PatientDetailScreen}
+      />
+      <Stack.Screen
+        name="NotificationListScreen"
+        component={NotificationListScreen}
+      />
+      <Stack.Screen
+        name="NotificationDetailScreen"
+        component={NotificationDetailScreen}
+      />
       <Stack.Screen name="AdvicePage" component={AdvicePage} />
       <Stack.Screen name="EditProfilePage" component={EditProfilePage} />
       <Stack.Screen name="BlogList" component={BlogList} />
@@ -325,10 +365,20 @@ const RootNavigator = () => {
       <Stack.Screen name="SummaryPage" component={SummaryPage} />
       <Stack.Screen name="UserProfilePage" component={UserProfilePage} />
       <Stack.Screen name="DoctorProfilePage" component={DoctorProfilePage} />
-      <Stack.Screen name="Schedule" component={ScheduleScreen} />
-      <Stack.Screen name="RelativesListScreen" component={RelativesListScreen} />
-      <Stack.Screen 
-        name="AddFood" 
+      <Stack.Screen
+        name="ScheduleScreen"
+        component={ScheduleScreen}
+        options={{
+          headerShown: false,
+        }}
+        initialParams={{ date: new Date().toISOString().split("T")[0] }}
+      />
+      <Stack.Screen
+        name="RelativesListScreen"
+        component={RelativesListScreen}
+      />
+      <Stack.Screen
+        name="AddFood"
         component={AddFood}
         options={{
           gestureEnabled: true,
@@ -353,9 +403,9 @@ const App = () => {
       try {
         await SplashScreen.preventAutoHideAsync();
         await Font.loadAsync({
-          'Kanit-Light' : require('./assets/fonts/Kanit-Light.ttf'),
-          'Kanit-Regular': require('./assets/fonts/Kanit-Regular.ttf'),
-          'Kanit-Bold': require('./assets/fonts/Kanit-Bold.ttf'),
+          "Kanit-Light": require("./assets/fonts/Kanit-Light.ttf"),
+          "Kanit-Regular": require("./assets/fonts/Kanit-Regular.ttf"),
+          "Kanit-Bold": require("./assets/fonts/Kanit-Bold.ttf"),
         });
       } catch (e) {
         console.warn(e);
@@ -391,7 +441,7 @@ const styles = StyleSheet.create({
   tabContainer: {
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    overflow: 'hidden',
+    overflow: "hidden",
     elevation: 8,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -2 },
@@ -402,8 +452,8 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
   searchBarContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 15,
     paddingBottom: 10,
   },
@@ -421,13 +471,13 @@ const styles = StyleSheet.create({
   },
   searchPlaceholder: {
     color: "rgba(255,255,255,0.7)",
-    fontFamily: 'Kanit-Regular',
+    fontFamily: "Kanit-Regular",
   },
   searchInput: {
     flex: 1,
     height: 40,
     color: "#fff",
-    fontFamily: 'Kanit-Regular',
+    fontFamily: "Kanit-Regular",
   },
   barcodeIcon: {
     marginLeft: 10,
@@ -439,7 +489,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   tabButtonContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     height: 60,
   },
   tabBar: {
@@ -448,33 +498,33 @@ const styles = StyleSheet.create({
   },
   tabButton: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   tabLabel: {
     fontSize: 12,
     marginTop: 4,
-    fontFamily: 'Kanit-Regular',
+    fontFamily: "Kanit-Regular",
   },
   tabBarLabel: {
     fontSize: 12,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
   },
   modalContent: {
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
-    height: '80%', // You can adjust this value
+    height: "80%", // You can adjust this value
   },
   searchInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f0f0f0',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f0f0f0",
     borderRadius: 20,
     paddingHorizontal: 10,
     marginBottom: 20,
@@ -482,8 +532,8 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     height: 40,
-    color: '#333',
-    fontFamily: 'Kanit-Regular',
+    color: "#333",
+    fontFamily: "Kanit-Regular",
   },
 });
 

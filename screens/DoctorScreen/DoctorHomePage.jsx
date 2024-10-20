@@ -311,17 +311,17 @@ const DoctorHomePage = () => {
     try {
       const notificationDate = new Date(`${item.date}T${item.time}`);
       const currentTime = new Date();
-
+  
       if (notificationDate <= currentTime) {
         return;
       }
-
+  
       notificationDate.setMinutes(notificationDate.getMinutes() - 60);
-
+  
       if (notificationDate <= currentTime) {
         return;
       }
-
+  
       let title, body;
       if (type === "appointment") {
         title = "เตือนนัดหมายแพทย์";
@@ -330,16 +330,16 @@ const DoctorHomePage = () => {
         title = "เตือนตารางงาน";
         body = `คุณมีงาน "${item.task}" ในอีก 1 ชม`;
       }
-
+  
       const notificationId = await Notifications.scheduleNotificationAsync({
         content: {
           title,
           body,
-          data: { type, id: item.id },
+          data: { type, id: item.id, date: item.date },
         },
         trigger: notificationDate,
       });
-
+  
       console.log(
         `Notification scheduled: ${notificationId} for ${type} at ${notificationDate}`
       );
