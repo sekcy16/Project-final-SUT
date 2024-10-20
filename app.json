@@ -38,43 +38,47 @@
         "android.permission.ACCESS_BACKGROUND_LOCATION",
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.VIBRATE",
-        "android.permission.SCHEDULE_EXACT_ALARM"
+        "android.permission.SCHEDULE_EXACT_ALARM",
+        "RECEIVE_BOOT_COMPLETED",
+        "SCHEDULE_EXACT_ALARM"
       ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": [
-    "expo-font",
-      [
-        "expo-location",
-        {
-          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location."
-        }
-      ],
-      [
-        "expo-sensors",
-        {
-          "motionPermission": "Allow $(PRODUCT_NAME) to access your device motion."
-        }
-      ],
-      [
-        "expo-build-properties",
-        {
-          "android": {
-            "compileSdkVersion": 34,
-            "targetSdkVersion": 34,
-            "buildToolsVersion": "34.0.0"
-          }
-        }
-      ],
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/notification.png",
-          "color": "#ffffff"
-        }
-      ]
+"plugins": [
+  "expo-font",
+  [
+    "expo-location",
+    {
+      "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location."
+    }
+  ],
+  [
+    "expo-sensors",
+    {
+      "motionPermission": "Allow $(PRODUCT_NAME) to access your device motion."
+    }
+  ],
+  [
+    "expo-build-properties",
+    {
+      "android": {
+        "compileSdkVersion": 34,
+        "targetSdkVersion": 34,
+        "buildToolsVersion": "34.0.0"
+      }
+    }
+  ],
+  [
+    "expo-notifications",
+    {
+      "icon": "./assets/notification.png",
+      "color": "#ffffff"
+    }
+  ],
+  "expo-background-fetch",
+  "expo-task-manager"
     ],
     "extra": {
       "eas": {

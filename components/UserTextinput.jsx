@@ -21,7 +21,9 @@ const UserTextinput = ({
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       const status = emailRegex.test(text);
       setIsEmailValid(status);
-      setGetEmailValidationStatus(status);
+      if (setGetEmailValidationStatus) {
+        setGetEmailValidationStatus(status);
+      }
     }
   };
 

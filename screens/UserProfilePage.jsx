@@ -32,70 +32,111 @@ const ProfilePage = () => {
     let unsubscribeNotifications = null;
 
     const setupSubscriptions = async () => {
-      unsubscribeAuth = onAuthStateChanged(firebaseAuth, (user) => {
+      // First, set up auth listener
+      unsubscribeAuth = onAuthStateChanged(firebaseAuth, async (user) => {
         if (user) {
           setIsAuthenticated(true);
-          const userDocRef = doc(firebaseDB, "users", user.uid);
-          unsubscribeFirestore = onSnapshot(userDocRef,
-            (doc) => {
-              if (doc.exists()) {
-                setUserData(doc.data());
-              } else {
-                console.log("No such document!");
-              }
-            },
-            (error) => {
-              console.error("Error fetching user data:", error);
-              if (error.code === 'permission-denied') {
-                console.log("Permission denied. User might be logged out.");
-                handleSignOut();
-              }
+          
+          // Immediately fetch user data
+          try {
+            const userDocRef = doc(firebaseDB, "users", user.uid);
+            const userSnapshot = await getDoc(userDocRef);
+            if (userSnapshot.exists()) {
+              setUserData(userSnapshot.data());
             }
-          );
+          } catch (error) {
+            console.log("Error fetching initial user data:", error);
+          }
 
-          // Doctor Advice
-          const doctorAdviceQuery = query(
-            collection(firebaseDB, "users", user.uid, "advice"),
-            where("read", "==", false)
-          );
-          unsubscribeDoctorAdvice = onSnapshot(doctorAdviceQuery, (querySnapshot) => {
-            setUnreadDoctorAdvice(querySnapshot.size);
-          });
+          // Set up real-time listeners with error handling
+          try {
+            // User data listener
+            const userDocRef = doc(firebaseDB, "users", user.uid);
+            unsubscribeFirestore = onSnapshot(
+              userDocRef,
+              (doc) => {
+                if (doc.exists()) {
+                  setUserData(doc.data());
+                }
+              },
+              (error) => {
+                if (error.code === 'permission-denied') {
+                  console.log("Permission denied, attempting to refresh auth...");
+                  // Instead of signing out, we'll try to refresh the page
+                  onRefresh();
+                }
+              }
+            );
 
-          // Notifications
-          const notificationsQuery = query(
-            collection(firebaseDB, "Notidetails"),
-            where("userId", "==", user.uid),
-            where("read", "==", false)
-          );
-          unsubscribeNotifications = onSnapshot(notificationsQuery, (querySnapshot) => {
-            setUnreadNotifications(querySnapshot.size);
-          });
+            // Doctor Advice listener
+            const doctorAdviceQuery = query(
+              collection(firebaseDB, "users", user.uid, "advice"),
+              where("read", "==", false)
+            );
+            unsubscribeDoctorAdvice = onSnapshot(
+              doctorAdviceQuery,
+              (querySnapshot) => {
+                setUnreadDoctorAdvice(querySnapshot.size);
+              },
+              (error) => console.log("Doctor advice listener error:", error)
+            );
 
+            // Notifications listener
+            const notificationsQuery = query(
+              collection(firebaseDB, "Notidetails"),
+              where("userId", "==", user.uid),
+              where("read", "==", false)
+            );
+            unsubscribeNotifications = onSnapshot(
+              notificationsQuery,
+              (querySnapshot) => {
+                setUnreadNotifications(querySnapshot.size);
+              },
+              (error) => console.log("Notifications listener error:", error)
+            );
+
+          } catch (error) {
+            console.error("Error setting up listeners:", error);
+          }
         } else {
+          // User is logged out
           setIsAuthenticated(false);
           setUserData(null);
-          if (unsubscribeFirestore) {
-            unsubscribeFirestore();
-            unsubscribeFirestore = null;
-          }
+          cleanupListeners();
           navigation.navigate("LoginScreen");
         }
       });
     };
 
+    const cleanupListeners = () => {
+      if (unsubscribeFirestore) {
+        unsubscribeFirestore();
+        unsubscribeFirestore = null;
+      }
+      if (unsubscribeDoctorAdvice) {
+        unsubscribeDoctorAdvice();
+        unsubscribeDoctorAdvice = null;
+      }
+      if (unsubscribeNotifications) {
+        unsubscribeNotifications();
+        unsubscribeNotifications = null;
+      }
+    };
+
     setupSubscriptions();
 
+    // Cleanup function
     return () => {
-      if (unsubscribeAuth) unsubscribeAuth();
-      if (unsubscribeFirestore) unsubscribeFirestore();
-      if (unsubscribeDoctorAdvice) unsubscribeDoctorAdvice();
-      if (unsubscribeNotifications) unsubscribeNotifications();
+      cleanupListeners();
+      if (unsubscribeAuth) {
+        unsubscribeAuth();
+      }
     };
   }, [navigation]);
 
   const handleSignOut = async () => {
     try {
+      // Cleanup listeners before signing out
       await firebaseAuth.signOut();
       setIsAuthenticated(false);
       setUserData(null);
@@ -105,7 +146,6 @@ const ProfilePage = () => {
       Alert.alert("Error", "Failed to sign out. Please try again.");
     }
   };
-
 
   const onRefresh = async () => {
     if (!isAuthenticated) {
@@ -122,6 +162,21 @@ const ProfilePage = () => {
         }
       } catch (error) {
         console.error("เกิดข้อผิดพลาดในการรีเฟรชข้อมูล:", error);
+        // If we get a permission error during refresh, we might need to re-authenticate
+        if (error.code === 'permission-denied') {
+          Alert.alert(
+            "Session Expired",
+            "Please log in again to continue.",
+            [
+              {
+                text: "OK",
+                onPress: () => {
+                  handleSignOut();
+                }
+              }
+            ]
+          );
+        }
       }
     }
     setRefreshing(false);
