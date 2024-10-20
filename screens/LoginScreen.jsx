@@ -8,6 +8,7 @@ import { firebaseAuth, firebaseDB } from "../config/firebase.config";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { useDispatch } from "react-redux";
 import { SET_USER } from "../context/actions/userActions";
+import { LinearGradient } from 'expo-linear-gradient';
 
 const LoginScreen = () => {
   const screenWidth = Math.round(Dimensions.get("window").width);
@@ -39,7 +40,7 @@ const LoginScreen = () => {
     return () => backHandler.remove();
   }, [isFocused]);
 
-  const handleLogin = async () => {
+   const handleLogin = async () => {
     if (getEmailValidationStatus && email !== "") {
       try {
         const userCred = await signInWithEmailAndPassword(firebaseAuth, email, password);
@@ -50,7 +51,7 @@ const LoginScreen = () => {
           if (docSnap.exists()) {
             const userData = docSnap.data();
             
-            // Update Last Active Timestamp
+            // อัปเดตเวลาเข้าใช้งานล่าสุด
             await updateDoc(userDocRef, {
               lastActive: new Date().toISOString(),
             });
@@ -65,28 +66,28 @@ const LoginScreen = () => {
           }
         }
       } catch (err) {
-        console.error("Login error:", err);
+        console.error("ข้อผิดพลาดในการเข้าสู่ระบบ:", err);
         handleFirebaseError(err.code);
       }
     } else {
-      console.log("Email validation failed or email is empty");
-      showAlert("Invalid Email Address");
+      console.log("การตรวจสอบอีเมลล้มเหลวหรืออีเมลว่างเปล่า");
+      showAlert("อีเมลไม่ถูกต้อง");
     }
   };
 
   const handleFirebaseError = (errorCode) => {
     switch (errorCode) {
       case "auth/wrong-password":
-        showAlert("Password Mismatch");
+        showAlert("รหัสผ่านไม่ถูกต้อง");
         break;
       case "auth/user-not-found":
-        showAlert("User Not Found");
+        showAlert("ไม่พบผู้ใช้");
         break;
       case "auth/invalid-email":
-        showAlert("Invalid Email Address");
+        showAlert("อีเมลไม่ถูกต้อง");
         break;
       default:
-        showAlert("Authentication Failed. Please check your credentials.");
+        showAlert("การยืนยันตัวตนล้มเหลว โปรดตรวจสอบข้อมูลของคุณ");
         break;
     }
   };
@@ -100,6 +101,8 @@ const LoginScreen = () => {
     }, 2000);
   };
 
+
+  
   return (
     <View className="flex-1 items-center justify-start">
       <Image
@@ -114,11 +117,7 @@ const LoginScreen = () => {
         className="w-full h-full bg-white rounded-tl-[90px] -mt-44 flex items-center 
             justify-start py-6 px-6 space-y-6"
       >
-        <Image source={Logo} className="w-16 h-16" resizeMode="contain" />
-
-        <Text className="py-2 text-primaryText text-xl font-semibold">
-          Welcome
-        </Text>
+        <Image source={Logo} className="w-32 h-32" resizeMode="contain" />
 
         <View className="w-full flex items-center justify-center">
           {/* Alert */}
@@ -128,7 +127,7 @@ const LoginScreen = () => {
 
           {/* Email */}
           <UserTextinput
-            placeholder="Email"
+            placeholder="อีเมล"
             isPass={false}
             setStatValue={setEmail}
             setGetEmailValidationStatus={setGetEmailValidationStatus}
@@ -136,7 +135,7 @@ const LoginScreen = () => {
 
           {/* Password */}
           <UserTextinput
-            placeholder="Password"
+            placeholder="รหัสผ่าน"
             isPass={true}
             setStatValue={setPassword}
           />
@@ -144,21 +143,28 @@ const LoginScreen = () => {
           {/* Login Button */}
           <TouchableOpacity
             onPress={handleLogin}
-            className="w-full px-4 py-2 rounded-xl bg-Primary my-3 flex items-center justify-center"
+            className="w-full rounded-xl overflow-hidden my-3"
           >
-            <Text className="py-2 text-white text-xl font-semibold">
-              Sign In
-            </Text>
+            <LinearGradient
+              colors={['#FF69B4', '#8A2BE2']}
+              start={{x: 0, y: 0}}
+              end={{x: 1, y: 0}}
+              className="px-4 py-2 flex items-center justify-center"
+            >
+              <Text className="py-2 text-white text-xl font-semibold">
+                เข้าสู่ระบบ
+              </Text>
+            </LinearGradient>
           </TouchableOpacity>
           <View className="w-full py-12 flex-row items-center justify-center space-x-2">
             <Text className="text-base text-primaryText">
-              Don't have account?
+              ยังไม่มีบัญชี?
             </Text>
             <TouchableOpacity
               onPress={() => navigation.navigate("SignUpScreen")}
             >
               <Text className="text-base font-semibold text-primaryBold">
-                Create Here
+                สร้างบัญชีที่นี่
               </Text>
             </TouchableOpacity>
           </View>

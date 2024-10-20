@@ -19,27 +19,26 @@ import RNPickerSelect from "react-native-picker-select";
 import PagerView from "react-native-pager-view";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { firebaseAuth, firebaseDB } from "../config/firebase.config";
-import { doc, setDoc, collection, addDoc, getDocs } from "firebase/firestore";
+import { doc, setDoc, collection, getDocs } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import { useFocusEffect } from "@react-navigation/native";
 import { BackHandler } from "react-native";
-import { Ionicons } from "@expo/vector-icons"; // ต้องติดตั้ง expo-vector-icons ก่อน
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 
 const SignUpScreen = () => {
-  const screenWidth = Math.round(Dimensions.get("window").width);
-
+  // สร้าง state สำหรับเก็บข้อมูลผู้ใช้
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [avatar, setAvatar] = useState(avatars[0]?.image.asset.url);
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [relativePhoneNumbers, setRelativePhoneNumbers] = useState([""]);
   const [getEmailValidationStatus, setGetEmailValidationStatus] =
     useState(false);
   const [currentPage, setCurrentPage] = useState(0);
   const pagerRef = React.useRef(null);
 
-  // Additional fields
+  // สร้าง state สำหรับข้อมูลเพิ่มเติม
   const [diabetesType, setDiabetesType] = useState("");
   const [weight, setWeight] = useState("");
   const [height, setHeight] = useState("");
@@ -53,10 +52,12 @@ const SignUpScreen = () => {
 
   const navigation = useNavigation();
 
+  // ฟังก์ชันสำหรับเลือกรูปประจำตัว
   const handleAvatar = (item) => {
     setAvatar(item?.image.asset.url);
   };
 
+  // ฟังก์ชันสำหรับจัดการปุ่มย้อนกลับ
   useFocusEffect(
     React.useCallback(() => {
       const onBackPress = () => {
@@ -87,6 +88,7 @@ const SignUpScreen = () => {
     return phonePattern.test(phone);
   };
 
+  // ฟังก์ชันคำนวณ TDEE
   const calculateTDEE = (
     weight,
     height,
@@ -109,7 +111,7 @@ const SignUpScreen = () => {
         3.9485 * height -
         5.0035 * age;
     }
-  
+
     // Multiply BMR by activity level to get TDEE
     let activityMultiplier;
     switch (activityLevel) {
@@ -128,9 +130,9 @@ const SignUpScreen = () => {
       default:
         activityMultiplier = 1.2;
     }
-  
+
     let TDEE = BMR * activityMultiplier;
-  
+
     // Adjust TDEE based on diabetes type
     switch (diabetesType) {
       case "Type 2":
@@ -143,15 +145,16 @@ const SignUpScreen = () => {
         // No adjustment needed
         break;
       default:
-        // No adjustment if type is unknown
+      // No adjustment if type is unknown
     }
-  
+
     return Math.round(TDEE);
   };
-  
+
+  // ฟังก์ชันคำนวณสัดส่วนสารอาหาร
   const calculateMacros = (TDEE, diabetesType, goal) => {
     let carbPercentage, proteinPercentage, fatPercentage;
-  
+
     switch (diabetesType) {
       case "Type 2":
         carbPercentage = 0.4;
@@ -173,7 +176,7 @@ const SignUpScreen = () => {
         proteinPercentage = 0.25;
         fatPercentage = 0.3;
     }
-  
+
     // Adjust macros based on goal
     if (goal === "Lose Weight") {
       carbPercentage -= 0.05;
@@ -183,15 +186,15 @@ const SignUpScreen = () => {
       proteinPercentage += 0.05;
       fatPercentage -= 0.1;
     }
-  
+
     const carbs = Math.round((TDEE * carbPercentage) / 4);
     const protein = Math.round((TDEE * proteinPercentage) / 4);
     const fat = Math.round((TDEE * fatPercentage) / 9);
-  
+
     return { carbs, protein, fat };
   };
-  
 
+  // ฟังก์ชันสำหรับการสมัครสมาชิก
   const handleSignUp = async () => {
     // ตรวจสอบข้อมูลที่จำเป็นและความถูกต้องของอีเมลและเบอร์โทร
     if (
@@ -222,22 +225,22 @@ const SignUpScreen = () => {
     }
 
     try {
-      
+      // สร้างบัญชีผู้ใช้ใน Firebase Authentication
       const userCred = await createUserWithEmailAndPassword(
         firebaseAuth,
         email,
         password
       );
-      
 
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      // รอ 1 วินาทีเพื่อให้แน่ใจว่าข้อมูลถูกบันทึกเรียบร้อย
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
+      // เตรียมข้อมูลผู้ใช้
       const usersCollectionRef = collection(firebaseDB, "users");
       const usersSnapshot = await getDocs(usersCollectionRef);
       const userCount = usersSnapshot.size;
       const uidnum = userCount + 1;
-      const currentTime = new Date().toISOString(); 
+      const currentTime = new Date().toISOString();
 
       const calculatedBMI = calculateBMI(
         parseFloat(weight),
@@ -261,7 +264,7 @@ const SignUpScreen = () => {
       const validRelatives = relatives.filter(
         (relative) => relative.name && relative.phoneNumber
       );
-
+      // สร้างออบเจ็กต์ข้อมูลผู้ใช้
       const userData = {
         _id: userCred.user.uid,
         fullName: name,
@@ -287,22 +290,20 @@ const SignUpScreen = () => {
         tdee: calculatedTDEE,
         macronutrients: calculatedMacros,
         lastActive: currentTime,
-        relatives: validRelatives,
+        relatives: validRelatives, // ใช้ข้อมูลญาติที่ผ่านการกรองแล้ว
       };
-      
+      // บันทึกข้อมูลผู้ใช้ลง Firestore
       await setDoc(doc(firebaseDB, "users", userCred.user.uid), userData);
-      
 
+      // ออกจากระบบหลังจากสร้างบัญชีเสร็จ
       await signOut(firebaseAuth);
 
+      // แสดงข้อความแจ้งเตือนเมื่อสมัครสมาชิกสำเร็จ
       Alert.alert("สำเร็จ", "สร้างบัญชีเรียบร้อยแล้ว!", [
         { text: "ตกลง", onPress: () => navigation.navigate("LoginScreen") },
       ]);
     } catch (error) {
-      console.error("Detailed error in sign-up process:", error);
-      console.error("Error code:", error.code);
-      console.error("Error message:", error.message);
-      console.error("Error signing up:", error);
+      console.error("ข้อผิดพลาดในการสมัครสมาชิก:", error);
       if (error.code === "auth/email-already-in-use") {
         Alert.alert(
           "อีเมลนี้ถูกใช้งานแล้ว",
@@ -314,21 +315,21 @@ const SignUpScreen = () => {
     }
   };
 
-  // Updated calculateBMI function to return values
+  // ฟังก์ชันคำนวณ BMI
   const calculateBMI = (weight, height) => {
     if (weight && height) {
-      const bmiValue = (weight / Math.pow(height / 100, 2)).toFixed(1); // Calculate BMI
+      const bmiValue = (weight / Math.pow(height / 100, 2)).toFixed(1);
       setBmi(bmiValue);
 
       let status = "";
       if (bmiValue < 18.5) {
-        status = "Underweight";
+        status = "น้ำหนักต่ำกว่าเกณฑ์";
       } else if (bmiValue >= 18.5 && bmiValue < 24.9) {
-        status = "Normal weight";
+        status = "น้ำหนักปกติ";
       } else if (bmiValue >= 25 && bmiValue < 29.9) {
-        status = "Overweight";
+        status = "น้ำหนักเกิน";
       } else {
-        status = "Obesity";
+        status = "อ้วน";
       }
       setBmiStatus(status);
 
@@ -336,20 +337,24 @@ const SignUpScreen = () => {
     }
     return { bmiValue: null, bmiStatus: "" };
   };
+
+  // ฟังก์ชันเรียกใช้การคำนวณ BMI
   const handleCalculateBMI = () => {
     calculateBMI(parseFloat(weight), parseFloat(height));
   };
 
+  // ฟังก์ชันคำนวณเปอร์เซ็นต์การเติมแถบ BMI
   const calculateBmiFill = (bmi) => {
-    const fillPercentage = Math.min(Math.max((bmi / 40) * 100, 0), 100); // Cap at 40 for max BMI
+    const fillPercentage = Math.min(Math.max((bmi / 40) * 100, 0), 100);
     return `${fillPercentage}%`;
   };
 
+  // ฟังก์ชันกำหนดสีของแถบ BMI
   const determineBmiColor = (bmi) => {
-    if (bmi < 18.5) return "#FFD700"; // Yellow for underweight
-    if (bmi < 24.9) return "#4CAF50"; // Green for normal weight
-    if (bmi < 29.9) return "#FF8C00"; // Orange for overweight
-    return "#FF0000"; // Red for obesity
+    if (bmi < 18.5) return "#FFD700";
+    if (bmi < 24.9) return "#4CAF50";
+    if (bmi < 29.9) return "#FF8C00";
+    return "#FF0000";
   };
 
   const addRelativePhoneNumber = () => {
@@ -362,16 +367,19 @@ const SignUpScreen = () => {
     setRelativePhoneNumbers(updatedNumbers);
   };
 
+  // ฟังก์ชันเพิ่มญาติ
   const addRelative = () => {
     setRelatives([...relatives, { name: "", phoneNumber: "" }]);
   };
 
+  // ฟังก์ชันอัปเดตข้อมูลญาติ
   const updateRelative = (index, field, value) => {
     const updatedRelatives = [...relatives];
     updatedRelatives[index][field] = value;
     setRelatives(updatedRelatives);
   };
 
+  // ฟังก์ชันลบข้อมูลญาติ
   const removeRelative = (index) => {
     const updatedRelatives = [...relatives];
     updatedRelatives.splice(index, 1);
@@ -513,7 +521,14 @@ const SignUpScreen = () => {
               style={styles.calculateButton}
               onPress={handleCalculateBMI}
             >
-              <Text style={styles.calculateButtonText}>คำนวณ BMI</Text>
+              <LinearGradient
+                colors={["#FF69B4", "#8A2BE2"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.calculateButtonGradient}
+              >
+                <Text style={styles.calculateButtonText}>คำนวณ BMI</Text>
+              </LinearGradient>
             </TouchableOpacity>
             {bmi && (
               <View style={styles.bmiResult}>
@@ -569,7 +584,14 @@ const SignUpScreen = () => {
                 </View>
               ))}
               <TouchableOpacity style={styles.addButton} onPress={addRelative}>
-                <Text style={styles.addButtonText}>+ เพิ่มญาติ</Text>
+                <LinearGradient
+                  colors={["#FF69B4", "#8A2BE2"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.addButtonGradient}
+                >
+                  <Text style={styles.addButtonText}>+ เพิ่มญาติ</Text>
+                </LinearGradient>
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -585,7 +607,14 @@ const SignUpScreen = () => {
                 }
               }}
             >
-              <Text style={styles.nextButtonText}>ถัดไป</Text>
+              <LinearGradient
+                colors={["#FF69B4", "#8A2BE2"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.nextButtonGradient}
+              >
+                <Text style={styles.nextButtonText}>ถัดไป</Text>
+              </LinearGradient>
             </TouchableOpacity>
           </View>
         )}
@@ -596,7 +625,14 @@ const SignUpScreen = () => {
               style={styles.submitButton}
               onPress={handleSignUp}
             >
-              <Text style={styles.submitButtonText}>สมัครสมาชิก</Text>
+              <LinearGradient
+                colors={["#FF69B4", "#8A2BE2"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.submitButtonGradient}
+              >
+                <Text style={styles.submitButtonText}>สมัครสมาชิก</Text>
+              </LinearGradient>
             </TouchableOpacity>
           </View>
         )}
@@ -643,11 +679,13 @@ const styles = StyleSheet.create({
     fontFamily: "Kanit-Bold",
   },
   calculateButton: {
-    backgroundColor: "#4CAF50",
-    paddingVertical: 12,
     borderRadius: 8,
-    alignItems: "center",
+    overflow: "hidden",
     marginBottom: 10,
+  },
+  calculateButtonGradient: {
+    paddingVertical: 12,
+    alignItems: "center",
   },
   calculateButtonText: {
     color: "#fff",
@@ -681,9 +719,11 @@ const styles = StyleSheet.create({
     paddingBottom: 15,
   },
   nextButton: {
-    backgroundColor: "#4CAF50",
-    paddingVertical: 15,
     borderRadius: 8,
+    overflow: "hidden",
+  },
+  nextButtonGradient: {
+    paddingVertical: 15,
     alignItems: "center",
   },
   nextButtonText: {
@@ -697,9 +737,11 @@ const styles = StyleSheet.create({
     paddingBottom: 15,
   },
   submitButton: {
-    backgroundColor: "#4CAF50",
-    paddingVertical: 15,
     borderRadius: 8,
+    overflow: "hidden",
+  },
+  submitButtonGradient: {
+    paddingVertical: 15,
     alignItems: "center",
   },
   submitButtonText: {
@@ -709,11 +751,13 @@ const styles = StyleSheet.create({
     fontFamily: "Kanit-Bold",
   },
   addButton: {
-    backgroundColor: "#2196F3",
-    paddingVertical: 12,
     borderRadius: 8,
-    alignItems: "center",
+    overflow: "hidden",
     marginTop: 10,
+  },
+  addButtonGradient: {
+    paddingVertical: 12,
+    alignItems: "center",
   },
   addButtonText: {
     color: "#fff",
@@ -739,19 +783,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 5,
     right: 5,
-  },
-  addButton: {
-    backgroundColor: "#2196F3",
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 10,
-  },
-  addButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
-    fontFamily: "Kanit-Bold",
   },
 });
 
