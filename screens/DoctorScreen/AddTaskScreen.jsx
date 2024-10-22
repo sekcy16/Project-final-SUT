@@ -8,9 +8,10 @@ import { getFirestore, collection, doc, getDoc, setDoc, addDoc } from 'firebase/
 import { firebaseDB, firebaseAuth } from "../../config/firebase.config";
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
+import { useNavigation } from '@react-navigation/native';
 
 const AddTaskScreen = () => {
+  const navigation = useNavigation(); // ย้ายมาไว้ด้านบนพร้อมกับ state อื่นๆ
   const [selectedDate, setSelectedDate] = useState('');
   const [task, setTask] = useState('');
   const [description, setDescription] = useState('');
@@ -92,15 +93,17 @@ const AddTaskScreen = () => {
     }
   };
 
+  
+
   return (
     <LinearGradient colors={['#4A90E2', '#50E3C2']} style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.scrollViewContent}>
           <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
             <View style={styles.header}>
-              <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                <Icon name="arrow-back" size={24} color="#FFF" />
-              </TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Icon name="arrow-back" size={24} color="#FFF" />
+        </TouchableOpacity>
               <Text style={styles.title}>เพิ่มงานใหม่</Text>
             </View>
 

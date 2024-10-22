@@ -176,7 +176,7 @@ const DoctorProfilePage = () => {
             <MenuItem
               icon="calendar-clock"
               label="ตารางนัดหมาย"
-              onPress={() => navigation.navigate("Schedule")}
+              onPress={() => navigation.navigate("ScheduleScreen")}
               color="#FF6B6B"
             />
             <MenuItem
