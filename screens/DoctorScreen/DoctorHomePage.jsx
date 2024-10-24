@@ -543,7 +543,7 @@ const DoctorHomePage = () => {
 
       setSummaryData({ totalPatients, appointmentsToday, tasksToday });
     } catch (error) {
-      console.error("Error fetching summary data: ", error);
+      //console.error("Error fetching summary data: ", error);
     }
   };
 

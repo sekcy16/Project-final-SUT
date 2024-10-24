@@ -227,7 +227,8 @@ const DiaryPage = () => {
 
   const formatDate = (date) => {
     const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-    return localDate.toISOString().split('T')[0];
+    return localDate.toISOString().split('T')[0]; // ใช้ split('T') เพื่อแยกส่วนของวันที่ (2024-10-23) ออกจากเวลาที่ไม่ต้องการ (เช่น 14:00:00.000Z)
+    // ส่งคืนเฉพาะส่วนวันที่ที่อยู่ก่อนตัวอักษร 'T' นั่นคือ YYYY-MM-DD
   };
 
   const deleteFoodItem = async (mealType, index) => {
@@ -246,12 +247,12 @@ const DiaryPage = () => {
       if (!diarySnap.exists()) return;
 
       const data = diarySnap.data();
-      const currentMeals = data.meals || {};
-      const updatedMeals = { ...currentMeals };
+      const currentMeals = data.meals || {}; // ดึงข้อมูล meals (ข้อมูลมื้ออาหาร) จากไดอารี่ หากไม่มีข้อมูลก็ใช้ {} เป็นค่าเริ่มต้น
+      const updatedMeals = { ...currentMeals }; // ทำสำเนาของ currentMeals ไว้ใน updatedMeals เพื่อป้องกันการแก้ไขข้อมูลเดิมโดยตรง
 
-      if (updatedMeals[mealType]) {
+      if (updatedMeals[mealType]) { //เช็คว่ามื้ออาหารที่ผู้ใช้ระบุ (mealType) มีข้อมูลรายการอาหารอยู่หรือไม่ หากไม่มีจะข้ามการทำงานในบล็อกนี้
         const itemToRemove = updatedMeals[mealType].items[index];
-        updatedMeals[mealType].items.splice(index, 1);
+        updatedMeals[mealType].items.splice(index, 1); // ใช้ splice() เพื่อลบรายการอาหารออกจาก array ของรายการอาหารในมื้อนั้น
 
         // Update totals correctly
         updatedMeals[mealType].calories -= itemToRemove.calories;

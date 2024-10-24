@@ -49,12 +49,12 @@ const ExerciseEntry = () => {
 
   const addToDiary = async (exercise, duration) => {
     try {
-      const userId = auth.currentUser.uid;
-      const diaryRef = doc(db, 'users', userId, 'entries', date.split('T')[0]);
+      const userId = auth.currentUser.uid; // ดึง userId ของผู้ใช้ปัจจุบันที่ล็อกอินอยู่จาก Firebase Authentication
+      const diaryRef = doc(db, 'users', userId, 'entries', date.split('T')[0]); // สร้างอ้างอิง (reference) ไปยังเอกสารของผู้ใช้ที่เก็บใน Firebase โดยมีโครงสร้างในคอลเลกชัน:
       
-      const docSnap = await getDoc(diaryRef);
-      let currentExercises = docSnap.exists() ? (docSnap.data().exercises || []) : [];
-      let currentMeals = docSnap.exists() ? (docSnap.data().meals || {}) : {};
+      const docSnap = await getDoc(diaryRef); // ดึงข้อมูลจาก Firebase ในเอกสารที่อ้างอิงไว้ โดยใช้ await เพื่อรอผลลัพธ์ให้เสร็จก่อนที่จะไปทำงานบรรทัดถัดไป
+      let currentExercises = docSnap.exists() ? (docSnap.data().exercises || []) : []; //ถ้ามีอยู่: ดึงข้อมูลรายการการออกกำลังกาย (exercises) จากเอกสาร (ถ้าไม่มีค่า exercises จะใช้ค่าเริ่มต้นเป็น []
+      let currentMeals = docSnap.exists() ? (docSnap.data().meals || {}) : {}; 
       
       const caloriesBurned = calculateCaloriesBurned(exercise.met, userWeight, duration);
       
