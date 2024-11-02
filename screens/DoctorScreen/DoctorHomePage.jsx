@@ -41,11 +41,12 @@ import * as TaskManager from "expo-task-manager";
 
 const BACKGROUND_FETCH_TASK = "background-fetch";
 
+// กำหนดการจัดการการแจ้งเตือน
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
+    shouldShowAlert: true,    // แสดงการแจ้งเตือน
+    shouldPlaySound: true,    // เล่นเสียง
+    shouldSetBadge: false,    // ไม่แสดงเครื่องหมายบนไอคอน
   }),
 });
 
@@ -95,22 +96,24 @@ const DoctorHomePage = () => {
   const BACKGROUND_FETCH_TASK = "background-fetch";
 
   useEffect(() => {
+    // ขอสิทธิ์การแจ้งเตือน
     registerForPushNotificationsAsync().then((token) =>
       setExpoPushToken(token)
     );
-
+  
+    // ตั้งค่า listener สำหรับรับการแจ้งเตือน
     notificationListener.current =
       Notifications.addNotificationReceivedListener((notification) => {
         setNotification(notification);
       });
-
-      responseListener.current =
+  
+    // ตั้งค่า listener สำหรับการตอบสนองต่อการแจ้งเตือน
+    responseListener.current =
       Notifications.addNotificationResponseReceivedListener((response) => {
-        // แทนที่จะนำทางไปยัง TaskDetails หรือ AppointmentDetails
-        // เราจะนำทางไปยัง ScheduleScreen แทน
-        navigation.navigate("ScheduleScreen");
+        navigation.navigate("ScheduleScreen");  // นำทางไปยังหน้าตารางเวลา
       });
 
+       // ตรวจสอบสถานะแอพ 
     const subscription = AppState.addEventListener("change", (nextAppState) => {
       if (
         appState.current.match(/inactive|background/) &&
@@ -147,35 +150,39 @@ const DoctorHomePage = () => {
     };
   }, []);
 
+  // ฟังก์ชันที่ใช้อัพเดทและจัดการการแจ้งเตือนทั้งหมด
   const refreshNotifications = async () => {
     if (userId) {
+      // ดึงวันที่ของวันนั้นๆ
       const today = new Date().toISOString().split("T")[0];
+      
+      // ดึงข้อมูลนัดหมาย Firestore
       const appointmentsRef = collection(db, `users/${userId}/appointments`);
       const q = query(
         appointmentsRef,
-        where("date", "==", today),
-        orderBy("time", "asc")
+        where("date", "==", today),  // กรองเฉพาะนัดหมายวันนี้
+        orderBy("time", "asc")       // เรียงตามเวลา
       );
       const snapshot = await getDocs(q);
       const appointmentsData = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }));
-
+  
+      // ตั้งการแจ้งเตือนสำหรับแต่ละนัดหมาย
       for (const appointment of appointmentsData) {
         await scheduleNotification(appointment, "appointment");
       }
-
-      const tasksRef = collection(
-        db,
-        `users/${userId}/TasksByDate/${today}/tasks`
-      );
+  
+      // ดึงข้อมูลงาน Firestore
+      const tasksRef = collection(db, `users/${userId}/TasksByDate/${today}/tasks`);
       const tasksSnapshot = await getDocs(tasksRef);
       const tasksData = tasksSnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }));
-
+  
+      // ตั้งการแจ้งเตือนสำหรับแต่ละงาน
       for (const task of tasksData) {
         await scheduleNotification(task, "task");
       }
@@ -198,6 +205,7 @@ const DoctorHomePage = () => {
   //   }
   // };
 
+  // การขอสิทธิ์ในการแจ้งเตือน
   const registerForPushNotificationsAsync = async () => {
     let token;
     const { status: existingStatus } =
@@ -306,12 +314,13 @@ const DoctorHomePage = () => {
     }
   };
 
-  // แก้ไขฟังก์ชัน scheduleNotification
+  // การทำงานหลักของใชเ้กสนแจ้งเตือน
   const scheduleNotification = async (item, type) => {
     try {
       const notificationDate = new Date(`${item.date}T${item.time}`);
       const currentTime = new Date();
-  
+      
+      // ตรวจสอบเวลาวว่าเกินจากที่ต้องเตือนยัง
       if (notificationDate <= currentTime) {
         return;
       }
@@ -330,7 +339,7 @@ const DoctorHomePage = () => {
         title = "เตือนตารางงาน";
         body = `คุณมีงาน "${item.task}" ในอีก 1 ชม`;
       }
-  
+    // ตั้งเวลาแจ้งเตือน
       const notificationId = await Notifications.scheduleNotificationAsync({
         content: {
           title,
@@ -349,7 +358,7 @@ const DoctorHomePage = () => {
       Alert.alert("ข้อผิดพลาด", "ไม่สามารถตั้งค่าการแจ้งเตือนได้");
     }
   };
-
+  // เช็คว่าอันไหนต้องแจ้งเตือนบ้าง
   const checkScheduledNotifications = async () => {
     const scheduledNotifications =
       await Notifications.getAllScheduledNotificationsAsync();

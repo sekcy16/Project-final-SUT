@@ -20,7 +20,6 @@ export { default as AdvicePage} from './DoctorScreen/AdvicePage';
 export { default as EditProfilePage} from './EditProfilePage';
 export { default as FoodDetail } from './FoodDetail'
 export { default as AddTaskScreen } from './DoctorScreen/AddTaskScreen'
-export { default as ProfileDoctor } from './DoctorScreen/ProfileDoctor'
 export { default as DoctorProfilePage } from './DoctorScreen/DoctorProfilePage'
 export { default as ScheduleScreen  } from './DoctorScreen/ScheduleScreen'
 export { default as AddFood } from './Addfood'

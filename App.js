@@ -41,7 +41,6 @@ import {
   EditProfilePage,
   FoodDetail,
   AddTaskScreen,
-  ProfileDoctor,
   ScheduleScreen,
   AddFood,
   FoodQRPage,
@@ -360,7 +359,6 @@ const RootNavigator = () => {
       <Stack.Screen name="CreateBlogScreen" component={CreateBlogScreen} />
       <Stack.Screen name="FoodDetail" component={FoodDetail} />
       <Stack.Screen name="AddTaskScreen" component={AddTaskScreen} />
-      <Stack.Screen name="ProfileDoctor" component={ProfileDoctor} />
       <Stack.Screen name="BookmarkListPage" component={BookmarkListPage} />
       <Stack.Screen name="SummaryPage" component={SummaryPage} />
       <Stack.Screen name="UserProfilePage" component={UserProfilePage} />

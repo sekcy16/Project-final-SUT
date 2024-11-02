@@ -211,29 +211,7 @@ const ScheduleScreen = ({ navigation }) => {
     fetchData();
   };
 
-  const fetchTasksForDate = async (date) => {
-    if (!user) return;
 
-    const tasksRef = collection(
-      db,
-      `users/${user.uid}/TasksByDate/${date}/tasks`
-    );
-
-    try {
-      const querySnapshot = await getDocs(tasksRef);
-      const tasksData = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setTasks(
-        tasksData.sort((a, b) =>
-          moment(a.time, "HH:mm:ss").diff(moment(b.time, "HH:mm:ss"))
-        )
-      );
-    } catch (error) {
-      console.error("เกิดข้อผิดพลาดในการดึงข้อมูลงานสำหรับวันที่: ", error);
-    }
-  };
 
   const renderAppointment = ({ item }) => (
     <LinearGradient

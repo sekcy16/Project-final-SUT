@@ -156,6 +156,8 @@ const PatientListScreen = ({ navigation }) => {
       setAppointmentTime(selectedTime);
     }
   };
+
+  
   const checkUserRole = async (userId) => {
     try {
       const userRef = doc(firebaseDB, 'users', userId);
@@ -238,10 +240,10 @@ const PatientListScreen = ({ navigation }) => {
             อายุ: {item.age || 'N/A'} | เบาหวานระดับ: {item.diabetesType || 'N/A'}
           </Text>
           <View style={styles.patientStatus}>
-            <View style={[styles.statusIndicator, { backgroundColor: item.lastCheckup ? '#4CAF50' : '#FFC107' }]} />
-            <Text style={styles.statusText}>
+            {/* <View style={[styles.statusIndicator, { backgroundColor: item.lastCheckup ? '#4CAF50' : '#FFC107' }]} /> */}
+            {/* <Text style={styles.statusText}>
               {item.lastCheckup ? 'ตรวจล่าสุด: ' + item.lastCheckup : 'ยังไม่เคยตรวจ'}
-            </Text>
+            </Text> */}
           </View>
         </View>
       </TouchableOpacity>

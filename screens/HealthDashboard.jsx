@@ -8,7 +8,6 @@ import {
   Dimensions,
   RefreshControl,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import PagerView from "react-native-pager-view";
@@ -16,24 +15,16 @@ import { ProgressBar } from "react-native-paper";
 import { LinearGradient } from "expo-linear-gradient";
 import { firebaseAuth, firebaseDB } from "../config/firebase.config";
 import { doc, getDoc, getDocs, collection, query, where, onSnapshot, orderBy, limit } from "firebase/firestore";
-import { Svg, Circle, Path, G, Text as SvgText } from "react-native-svg";
-
-const { width, height } = Dimensions.get("window");
+import { Svg, Path, G, Text as SvgText } from "react-native-svg";
 
 const HealthDashboard = ({ navigation }) => {
   const [userData, setUserData] = useState(null);
   const [latestBloodSugar, setLatestBloodSugar] = useState(null);
   const [latestWeight, setLatestWeight] = useState(null);
-  const [carbIntake, setCarbIntake] = useState(null);
-  const [exerciseMinutes, setExerciseMinutes] = useState(null);
-  const [waterIntake, setWaterIntake] = useState(null);
-  const [averageBloodSugar, setAverageBloodSugar] = useState(null);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
 
-  const [bloodSugarHistory, setBloodSugarHistory] = useState([]);
-
-  // New state variables for calorie and macronutrient tracking
+  // State for calorie and macronutrient tracking
   const [caloriesAllowed, setCaloriesAllowed] = useState(0);
   const [caloriesConsumed, setCaloriesConsumed] = useState(0);
   const [proteinConsumed, setProteinConsumed] = useState(0);
@@ -104,6 +95,7 @@ const HealthDashboard = ({ navigation }) => {
       console.error("เกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้:", error);
     }
   };
+  
   const fetchLatestWeight = async (uid) => {
     try {
       const weightHistoryRef = collection(firebaseDB, "users", uid, "weightHistory");
