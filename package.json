@@ -68,7 +68,8 @@
     "react-native-wagmi-charts": "^2.5.3",
     "react-redux": "^9.1.2",
     "redux": "^5.0.1",
-    "yarn-git-install": "^0.4.7"
+    "yarn-git-install": "^0.4.7",
+    "expo-updates": "~0.25.27"
   },
   "devDependencies": {
     "@babel/core": "^7.24.0",
