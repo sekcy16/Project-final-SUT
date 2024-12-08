@@ -229,6 +229,7 @@ const HealthDashboard = ({ navigation }) => {
       { totalCalories: 0, totalProtein: 0, totalCarbs: 0, totalFat: 0 }
     );
   };
+  
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -331,6 +332,10 @@ const HealthDashboard = ({ navigation }) => {
         )}
       </View>
     );
+  };
+
+  const handleAddTakeMed = () => {
+    navigation.navigate("TakeMedScreen");
   };
 
   const CalorieInfo = ({
@@ -580,7 +585,7 @@ const HealthDashboard = ({ navigation }) => {
               )}
             </TouchableOpacity>
           </View>
-
+              
           <View style={styles.mainContent}>
             <CalorieInfo
               meals={meals}
@@ -589,6 +594,18 @@ const HealthDashboard = ({ navigation }) => {
               carbsGoal={carbsGoal}
               fatGoal={fatGoal}
             />
+
+            {/* เพิ่มปุ่มการกินยาตรงนี้ */}
+            <TouchableOpacity 
+              style={styles.medButton}
+              onPress={handleAddTakeMed}
+            >
+              <View style={styles.medButtonContent}>
+                <Icon name="pill" size={24} color="#FFF" />
+                <Text style={styles.medButtonText}>กำหนดเวลาการกินยา</Text>
+                <Icon name="chevron-right" size={24} color="#FFF" />
+              </View>
+            </TouchableOpacity>
 
             <View style={styles.cardContainer}>
               <HealthCard
@@ -696,6 +713,7 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingHorizontal: 15,
   },
+  
   cardContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -851,6 +869,30 @@ const styles = StyleSheet.create({
     color: "#777777",
     textAlign: "center",
   },
+    // เพิ่มสไตล์สำหรับปุ่มการกินยา
+    medButton: {
+      backgroundColor: '#4CAF50',  // สีเขียว
+      marginVertical: 15,
+      borderRadius: 15,
+      elevation: 3,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84,
+    },
+    medButtonContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: 15,
+    },
+    medButtonText: {
+      color: '#FFF',
+      fontSize: 18,
+      fontFamily: 'Kanit-Bold',
+      flex: 1,
+      marginLeft: 10,
+    },
 });
 
 export default HealthDashboard;

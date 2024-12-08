@@ -461,9 +461,9 @@ const SignUpScreen = () => {
               <RNPickerSelect
                 onValueChange={(value) => setGender(value)}
                 items={[
-                  { label: "ชาย", value: "ชาย" },
-                  { label: "หญิง", value: "หญิง" },
-                  { label: "อื่นๆ", value: "อื่นๆ" },
+                  { label: "ชาย", value: "Male" },
+                  { label: "หญิง", value: "Female" },
+                  { label: "อื่นๆ", value: "Other" },
                 ]}
                 placeholder={{ label: "เลือกเพศ", value: null }}
               />
@@ -497,22 +497,20 @@ const SignUpScreen = () => {
               <RNPickerSelect
                 onValueChange={(value) => setActivityLevel(value)}
                 items={[
-                  { label: "ไม่ค่อยออกกำลังกาย", value: "ไม่ค่อยออกกำลังกาย" },
-                  {
-                    label: "ออกกำลังกายเล็กน้อย",
-                    value: "ออกกำลังกายเล็กน้อย",
-                  },
-                  { label: "ออกกำลังกายปานกลาง", value: "ออกกำลังกายปานกลาง" },
-                  { label: "ออกกำลังกายหนัก", value: "ออกกำลังกายหนัก" },
+                  { label: "ไม่ค่อยออกกำลังกาย", value: "Sedentary" },
+                  { label: "ออกกำลังกายเล็กน้อย", value: "Lightly Active" },
+                  { label: "ออกกำลังกายปานกลาง", value: "Moderately Active" },
+                  { label: "ออกกำลังกายหนัก", value: "Very Active" },
                 ]}
                 placeholder={{ label: "เลือกระดับการออกกำลังกาย", value: null }}
               />
+
               <RNPickerSelect
                 onValueChange={(value) => setGoal(value)}
                 items={[
-                  { label: "ลดน้ำหนัก", value: "ลดน้ำหนัก" },
-                  { label: "รักษาน้ำหนัก", value: "รักษาน้ำหนัก" },
-                  { label: "เพิ่มน้ำหนัก", value: "เพิ่มน้ำหนัก" },
+                  { label: "ลดน้ำหนัก", value: "Lose Weight" },
+                  { label: "รักษาน้ำหนัก", value: "Maintain Weight" },
+                  { label: "เพิ่มน้ำหนัก", value: "Gain Weight" },
                 ]}
                 placeholder={{ label: "เลือกเป้าหมาย", value: null }}
               />

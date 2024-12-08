@@ -58,6 +58,7 @@ TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
     return BackgroundFetch.BackgroundFetchResult.Failed;
   }
 });
+
 const DoctorHomePage = () => {
   const navigation = useNavigation();
   const [tasks, setTasks] = useState([]);
@@ -316,7 +317,7 @@ const DoctorHomePage = () => {
         return;
       }
   
-      notificationDate.setMinutes(notificationDate.getMinutes() - 60);
+      notificationDate.setMinutes(notificationDate.getMinutes() - 1);
   
       if (notificationDate <= currentTime) {
         return;

@@ -13,13 +13,19 @@ const firebaseConfig = {
   measurementId: "G-6M1K204BGW"
 };
 
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+let app, firebaseAuth, firebaseDB;
 
-const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage)
-});
-
-const firebaseAuth = auth;
-const firebaseDB = getFirestore(app);
+try {
+  app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+  
+  const auth = initializeAuth(app, {
+    persistence: getReactNativePersistence(AsyncStorage)
+  });
+  
+  firebaseAuth = auth;
+  firebaseDB = getFirestore(app);
+} catch (error) {
+  console.error("Firebase initialization error:", error);
+}
 
 export { app, firebaseAuth, firebaseDB };
